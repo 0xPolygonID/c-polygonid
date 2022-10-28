@@ -4,6 +4,8 @@ include(CTest)
 
 find_library(POLYGONID polygonid-darwin-arm64 ../build)
 
-add_executable(test1 test.c)
-target_link_libraries(test1 PUBLIC ${POLYGONID})
-add_test(NAME Test1 COMMAND test1)
+add_executable(auth_v2_inputs auth_v2_inputs.c)
+target_link_libraries(auth_v2_inputs PUBLIC ${POLYGONID})
+add_test(NAME AuthV2Inputs
+    COMMAND auth_v2_inputs
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
