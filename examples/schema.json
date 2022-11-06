@@ -1,0 +1,115 @@
+{
+  "$id": "http://iden3.com/auth_v2_inputs.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Auth V2 inputs",
+  "type": "object",
+  "properties": {
+    "id": {
+      "description": "ID of the user",
+      "type": "string",
+      "pattern": "^[1-9A-HJ-NP-Za-km-z]{42}$"
+    },
+    "nonce": {
+      "description": "Nonce of revocation",
+      "$ref": "#/$defs/uint64Str"
+    },
+    "authClaim": {
+      "description": "Nonce of revocation",
+      "$ref": "#/$defs/authClaim"
+    },
+    "challenge": {
+      "description": "Challenge to sign",
+      "$ref": "#/$defs/hashAsIntStr"
+    },
+    "signature": {
+      "description": "Signature of the challenge",
+      "$ref": "#/$defs/signature"
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "hashAsIntStr": {
+      "description": "Merkletree hash as integer string",
+      "type": "string",
+      "pattern": "^[0-9]{1,77}$"
+    },
+    "uint64Str": {
+      "description": "Int64 number as string",
+      "type": "string",
+      "pattern": "^[0-9]{1,20}$"
+    },
+    "signature": {
+      "description": "Signature of the challenge",
+      "type": "string",
+      "pattern": "^[0-9a-f]{128}$"
+    },
+    "treeState": {
+      "type": "object",
+      "properties": {
+        "state": { "$ref": "#/$defs/hashAsIntStr" },
+        "claimsRoot": { "$ref": "#/$defs/hashAsIntStr" },
+        "revocationRoot": { "$ref": "#/$defs/hashAsIntStr" },
+        "rootOfRoots": { "$ref": "#/$defs/hashAsIntStr" }
+      },
+      "additionalProperties": false
+    },
+    "authClaim": {
+      "type": "object",
+      "properties": {
+        "claim": { "$ref": "#/$defs/coreClaim" },
+        "nonRevProof": { "$ref": "#/$defs/proofWithState" },
+        "mtProof": { "$ref": "#/$defs/proofWithState" },
+        "signatureProof": {
+          "description":  "this field is deprecated and should be removed in future versions"
+        },
+        "globalTree": { "$ref": "#/$defs/globalTree" }
+      },
+      "required": [
+        "claim", "nonRevProof", "mtProof", "signatureProof",
+        "globalTree" ],
+      "additionalProperties": false
+    },
+    "coreClaim": {
+      "type": "array",
+      "description": "Core claim is represented by 8 integers",
+      "items": { "$ref":  "#/$defs/hashAsIntStr" },
+      "minItems": 8,
+      "maxItems": 8
+    },
+    "proof": {
+      "type": "object",
+      "properties": {
+        "existence": {"type": "boolean"},
+        "siblings": {
+          "type": "array",
+          "items": { "$ref":  "#/$defs/hashAsIntStr" }
+        },
+        "node_aux": {
+          "type": "object",
+          "properties": {
+            "key": { "$ref":  "#/$defs/hashAsIntStr" },
+            "value": { "$ref":  "#/$defs/hashAsIntStr" }
+          },
+          "required": ["key", "value"]
+        }
+      },
+      "required": ["existence", "siblings"]
+    },
+    "proofWithState": {
+        "type": "object",
+        "properties": {
+            "proof": { "$ref": "#/$defs/proof" },
+            "treeState": { "$ref": "#/$defs/treeState" }
+        },
+        "required": ["proof", "treeState"]
+    },
+    "globalTree": {
+        "type": "object",
+        "properties": {
+            "root": { "$ref": "#/$defs/hashAsIntStr" },
+            "proof": { "$ref": "#/$defs/proof" }
+        },
+        "required": ["root", "proof"]
+    }
+  }
+}
