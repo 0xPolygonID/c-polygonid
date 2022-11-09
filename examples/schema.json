@@ -6,8 +6,7 @@
   "properties": {
     "id": {
       "description": "ID of the user",
-      "type": "string",
-      "pattern": "^[1-9A-HJ-NP-Za-km-z]{42}$"
+      "$ref": "#/$defs/coreID"
     },
     "nonce": {
       "description": "Nonce of revocation",
@@ -17,6 +16,7 @@
       "description": "Nonce of revocation",
       "$ref": "#/$defs/authClaim"
     },
+    "gistProof": { "$ref": "#/$defs/globalTree" },
     "challenge": {
       "description": "Challenge to sign",
       "$ref": "#/$defs/hashAsIntStr"
@@ -27,6 +27,7 @@
     }
   },
   "additionalProperties": false,
+  "required": ["id", "nonce", "authClaim", "gistProof", "challenge", "signature"],
   "$defs": {
     "hashAsIntStr": {
       "description": "Merkletree hash as integer string",
@@ -56,17 +57,17 @@
     "authClaim": {
       "type": "object",
       "properties": {
-        "claim": { "$ref": "#/$defs/coreClaim" },
-        "nonRevProof": { "$ref": "#/$defs/proofWithState" },
-        "mtProof": { "$ref": "#/$defs/proofWithState" },
-        "signatureProof": {
-          "description":  "this field is deprecated and should be removed in future versions"
+        "issuerId": {
+          "onfOf": [
+            { "type": "null" },
+            { "$ref": "#/$defs/coreID" }
+          ]
         },
-        "globalTree": { "$ref": "#/$defs/globalTree" }
+        "claim": { "$ref": "#/$defs/coreClaim" },
+        "incProof": { "$ref": "#/$defs/proofWithState" },
+        "nonRevProof": { "$ref": "#/$defs/proofWithState" }
       },
-      "required": [
-        "claim", "nonRevProof", "mtProof", "signatureProof",
-        "globalTree" ],
+      "required": ["issuerId", "claim", "incProof", "nonRevProof"],
       "additionalProperties": false
     },
     "coreClaim": {
@@ -110,6 +111,10 @@
             "proof": { "$ref": "#/$defs/proof" }
         },
         "required": ["root", "proof"]
+    },
+    "coreID": {
+        "type": "string",
+        "pattern": "^[1-9A-HJ-NP-Za-km-z]{41,42}$"
     }
   }
 }

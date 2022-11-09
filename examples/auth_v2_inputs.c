@@ -59,6 +59,32 @@ cleanup:
     return buffer;
 }
 
+void
+consume_status(PLGNStatus *status, char *msg) {
+  if (status == NULL) {
+        printf("status is NULL\n");
+        return;
+  }
+
+  char *error_msg;
+  if (msg == NULL) {
+        error_msg = "error message is empty";
+  } else {
+        error_msg = msg;
+  }
+
+  char *status_msg;
+  if (status->error_msg == NULL) {
+        status_msg = "status message is empty";
+  } else {
+        status_msg = status->error_msg;
+  }
+
+  printf("[code: %i] %s (%s)\n", status->status, status_msg, error_msg);
+
+  PLGNFreeStatus(status);
+}
+
 int
 main() {
     int ret_val = 0;
@@ -76,10 +102,11 @@ main() {
     want_output[strcspn(want_output, "\n")] = 0;
 
     char *resp = NULL;
-    bool ok = PLGNAuthV2InputsMarshal(&resp, input, NULL);
+    PLGNStatus *status = NULL;
+    bool ok = PLGNAuthV2InputsMarshal(&resp, input, &status);
     if (!ok) {
+        consume_status(status, "Error marshaling input");
         ret_val = 1;
-        fprintf(stderr, "Error marshaling input");
         goto cleanup;
     }
 
