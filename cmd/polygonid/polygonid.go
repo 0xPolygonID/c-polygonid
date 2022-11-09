@@ -18,6 +18,7 @@ typedef struct _PLGNStatus
 import "C"
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -25,8 +26,31 @@ import (
 
 	"github.com/iden3/go-circuits"
 	core "github.com/iden3/go-iden3-core"
+	"github.com/iden3/go-iden3-crypto/utils"
 	"github.com/iden3/go-merkletree-sql/v2"
 )
+
+type hexBytesStr []byte
+
+func (h *hexBytesStr) UnmarshalJSON(bytes []byte) error {
+	var s *string
+	err := json.Unmarshal(bytes, &s)
+	if err != nil {
+		return err
+	}
+	if s == nil {
+		*h = nil
+		return nil
+	}
+
+	decoded, err := hex.DecodeString(*s)
+	if err != nil {
+		return err
+	}
+	*h = append((*h)[:0], decoded...)
+
+	return nil
+}
 
 type jsonIntStr big.Int
 
@@ -45,6 +69,11 @@ func (i *jsonIntStr) UnmarshalJSON(bytes []byte) error {
 	if !ok {
 		return fmt.Errorf("invalid Int string")
 	}
+
+	if !utils.CheckBigIntInField((*big.Int)(i)) {
+		return fmt.Errorf("int is not in field")
+	}
+
 	return nil
 }
 
@@ -163,6 +192,79 @@ func PLGNCalculateGenesisID(jsonResponse **C.char, in *C.char,
 		ID:  coreID.String(),
 	}
 	respB, err := json.Marshal(resp)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		return false
+	}
+
+	*jsonResponse = C.CString(string(respB))
+	return true
+}
+
+//export PLGNCreateClaim
+func PLGNCreateClaim(jsonResponse **C.char, in *C.char,
+	status **C.PLGNStatus) (ok bool) {
+
+	req := struct {
+		Schema     hexBytesStr `json:"schema"`
+		Nonce      *jsonIntStr `json:"nonce"`
+		IndexSlotA *jsonIntStr `json:"indexSlotA"`
+		IndexSlotB *jsonIntStr `json:"indexSlotB"`
+	}{}
+
+	if in == nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_NIL_POINTER,
+			"pointer to request is nil")
+		return false
+	}
+
+	err := json.Unmarshal([]byte(C.GoString(in)), &req)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		return false
+	}
+
+	var schema core.SchemaHash
+	if len(req.Schema) != len(schema) {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR,
+			"invalid schema length")
+		return false
+	}
+
+	copy(schema[:], req.Schema)
+
+	c, err := core.NewClaim(schema)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		return false
+	}
+
+	if req.Nonce != nil {
+		if !req.Nonce.Int().IsUint64() {
+			maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR,
+				"nonce is too big")
+			return false
+		}
+		c.SetRevocationNonce(req.Nonce.Int().Uint64())
+	}
+
+	if req.IndexSlotA != nil || req.IndexSlotB != nil {
+		var slotA = big.NewInt(0)
+		var slotB = big.NewInt(0)
+		if req.IndexSlotA != nil {
+			slotA = req.IndexSlotA.Int()
+		}
+		if req.IndexSlotB != nil {
+			slotB = req.IndexSlotB.Int()
+		}
+		err = c.SetIndexDataInts(slotA, slotB)
+		if err != nil {
+			maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+			return false
+		}
+	}
+
+	respB, err := json.Marshal(c)
 	if err != nil {
 		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
 		return false
