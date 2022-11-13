@@ -25,6 +25,16 @@ TEST testCases[] = {
 	.in = "testdata/create_claim_all_fields_2_in.json",
 	.out = "testdata/create_claim_all_fields_2_out.json",
 	.fn = &PLGNCreateClaim
+  },
+  {
+	.in = "testdata/auth_v2_inputs_in.json",
+	.out = "testdata/auth_v2_inputs_out.json",
+	.fn = &PLGNAuthV2InputsMarshal
+  },
+  {
+	.in = "testdata/calculate_genesis_id_in.json",
+	.out = "testdata/calculate_genesis_id_out.json",
+	.fn = &PLGNCalculateGenesisID
   }
 };
 
