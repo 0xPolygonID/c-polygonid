@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"time"
 	"unsafe"
 
 	"github.com/iden3/go-circuits"
@@ -50,6 +51,32 @@ func (h *hexBytesStr) UnmarshalJSON(bytes []byte) error {
 	*h = append((*h)[:0], decoded...)
 
 	return nil
+}
+
+type coreIDStr core.ID
+
+func (id *coreIDStr) UnmarshalJSON(bytes []byte) error {
+	var s *string
+	err := json.Unmarshal(bytes, &s)
+	if err != nil {
+		return err
+	}
+	if s == nil {
+		*id = coreIDStr(core.ID{})
+		return nil
+	}
+
+	coreID, err := core.IDFromString(*s)
+	if err != nil {
+		return err
+	}
+
+	*id = coreIDStr(coreID)
+	return nil
+}
+
+func (id *coreIDStr) ID() core.ID {
+	return core.ID(*id)
 }
 
 type jsonIntStr big.Int
@@ -206,10 +233,19 @@ func PLGNCreateClaim(jsonResponse **C.char, in *C.char,
 	status **C.PLGNStatus) (ok bool) {
 
 	req := struct {
-		Schema     hexBytesStr `json:"schema"`
-		Nonce      *jsonIntStr `json:"nonce"`
-		IndexSlotA *jsonIntStr `json:"indexSlotA"`
-		IndexSlotB *jsonIntStr `json:"indexSlotB"`
+		Schema             hexBytesStr `json:"schema"`
+		FlagUpdatable      *bool       `json:"flagUpdatable"`
+		Version            *uint32     `json:"version"`
+		IndexMerklizedRoot *jsonIntStr `json:"indexMerklizedRoot"`
+		ValueMerklizedRoot *jsonIntStr `json:"valueMerklizedRoot"`
+		IndexID            *coreIDStr  `json:"indexID"`
+		ValueID            *coreIDStr  `json:"valueID"`
+		Nonce              *jsonIntStr `json:"nonce"`
+		ExpirationDate     *time.Time  `json:"expirationDate"`
+		IndexSlotA         *jsonIntStr `json:"indexSlotA"`
+		IndexSlotB         *jsonIntStr `json:"indexSlotB"`
+		ValueSlotA         *jsonIntStr `json:"valueSlotA"`
+		ValueSlotB         *jsonIntStr `json:"valueSlotB"`
 	}{}
 
 	if in == nil {
@@ -239,6 +275,38 @@ func PLGNCreateClaim(jsonResponse **C.char, in *C.char,
 		return false
 	}
 
+	if req.FlagUpdatable != nil {
+		c.SetFlagUpdatable(*req.FlagUpdatable)
+	}
+
+	if req.Version != nil {
+		c.SetVersion(*req.Version)
+	}
+
+	if req.IndexMerklizedRoot != nil {
+		err = c.SetIndexMerklizedRoot(req.IndexMerklizedRoot.Int())
+		if err != nil {
+			maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+			return false
+		}
+	}
+
+	if req.ValueMerklizedRoot != nil {
+		err = c.SetValueMerklizedRoot(req.ValueMerklizedRoot.Int())
+		if err != nil {
+			maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+			return false
+		}
+	}
+
+	if req.IndexID != nil {
+		c.SetIndexID(req.IndexID.ID())
+	}
+
+	if req.ValueID != nil {
+		c.SetValueID(req.IndexID.ID())
+	}
+
 	if req.Nonce != nil {
 		if !req.Nonce.Int().IsUint64() {
 			maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR,
@@ -246,6 +314,10 @@ func PLGNCreateClaim(jsonResponse **C.char, in *C.char,
 			return false
 		}
 		c.SetRevocationNonce(req.Nonce.Int().Uint64())
+	}
+
+	if req.ExpirationDate != nil {
+		c.SetExpirationDate(*req.ExpirationDate)
 	}
 
 	if req.IndexSlotA != nil || req.IndexSlotB != nil {
@@ -258,6 +330,22 @@ func PLGNCreateClaim(jsonResponse **C.char, in *C.char,
 			slotB = req.IndexSlotB.Int()
 		}
 		err = c.SetIndexDataInts(slotA, slotB)
+		if err != nil {
+			maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+			return false
+		}
+	}
+
+	if req.ValueSlotA != nil || req.ValueSlotB != nil {
+		var slotA = big.NewInt(0)
+		var slotB = big.NewInt(0)
+		if req.ValueSlotA != nil {
+			slotA = req.ValueSlotA.Int()
+		}
+		if req.ValueSlotB != nil {
+			slotB = req.ValueSlotB.Int()
+		}
+		err = c.SetValueDataInts(slotA, slotB)
 		if err != nil {
 			maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
 			return false
