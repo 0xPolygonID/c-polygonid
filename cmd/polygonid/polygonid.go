@@ -304,7 +304,7 @@ func PLGNCreateClaim(jsonResponse **C.char, in *C.char,
 	}
 
 	if req.ValueID != nil {
-		c.SetValueID(req.IndexID.ID())
+		c.SetValueID(req.ValueID.ID())
 	}
 
 	if req.Nonce != nil {
