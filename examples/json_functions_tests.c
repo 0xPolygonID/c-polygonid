@@ -12,18 +12,18 @@ typedef struct _TEST {
 
 TEST testCases[] = {
   {
-	.in = "create_claim_in.json",
-	.out = "create_claim_out.json",
+	.in = "testdata/create_claim_in.json",
+	.out = "testdata/create_claim_out.json",
 	.fn = &PLGNCreateClaim
   },
   {
-	.in = "create_claim_all_fields_1_in.json",
-	.out = "create_claim_all_fields_1_out.json",
+	.in = "testdata/create_claim_all_fields_1_in.json",
+	.out = "testdata/create_claim_all_fields_1_out.json",
 	.fn = &PLGNCreateClaim
   },
   {
-	.in = "create_claim_all_fields_2_in.json",
-	.out = "create_claim_all_fields_2_out.json",
+	.in = "testdata/create_claim_all_fields_2_in.json",
+	.out = "testdata/create_claim_all_fields_2_out.json",
 	.fn = &PLGNCreateClaim
   }
 };
@@ -32,6 +32,9 @@ TEST testCases[] = {
 int
 run_test(char *in, char *out, FN fn) {
   int ret_val = 0;
+  char *resp = NULL;
+  PLGNStatus *status = NULL;
+
   char *input = read_file(in);
   if (!input) {
 	ret_val = 1;
@@ -45,8 +48,6 @@ run_test(char *in, char *out, FN fn) {
   // remove trailing newline
   want_output[strcspn(want_output, "\n")] = 0;
 
-  char *resp = NULL;
-  PLGNStatus *status = NULL;
   bool ok = fn(&resp, input, &status);
   if (!ok) {
 	consume_status(status, "Error marshaling input");

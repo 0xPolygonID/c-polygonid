@@ -10,13 +10,13 @@ read_file(char *path) {
 
     FILE *f = fopen(path, "r");
     if (!f) {
-        fprintf(stderr, "Error opening file %s: %s", path, strerror(errno));
+        fprintf(stderr, "Error opening file %s: %s\n", path, strerror(errno));
         return NULL;
     }
 
     int r = fseek(f, 0, SEEK_END);
     if (r) {
-        fprintf(stderr, "Error seeking to end of file %s: %s", path, strerror(errno));
+        fprintf(stderr, "Error seeking to end of file %s: %s\n", path, strerror(errno));
         goto cleanup;
     }
 
@@ -27,19 +27,19 @@ read_file(char *path) {
 
     r = fseek(f, 0, SEEK_SET);
     if (r) {
-        fprintf(stderr, "Error seeking to begin of file %s: %s", path, strerror(errno));
+        fprintf(stderr, "Error seeking to begin of file %s: %s\n", path, strerror(errno));
         goto cleanup;
     }
 
     buffer = malloc(sz + 1);
     if (!buffer) {
-        fprintf(stderr, "Error allocating memory for file %s: %s", path, strerror(errno));
+        fprintf(stderr, "Error allocating memory for file %s: %s\n", path, strerror(errno));
         goto cleanup;
     }
 
     r = fread(buffer, sz, 1, f);
     if (!r) {
-        fprintf(stderr, "Error reading file %s: %s", path, strerror(errno));
+        fprintf(stderr, "Error reading file %s: %s\n", path, strerror(errno));
         goto cleanup;
     }
 
@@ -48,7 +48,7 @@ read_file(char *path) {
 cleanup:
     r = fclose(f);
     if (r != 0) {
-        fprintf(stderr, "Error closing file %s: %s", path, strerror(errno));
+        fprintf(stderr, "Error closing file %s: %s\n", path, strerror(errno));
         if (buffer) {
             free(buffer);
         }
