@@ -1,0 +1,27 @@
+name: CTests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-20.04
+    container: golang:1.19.3
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/go-build
+            /go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      - run: |
+          go build -buildmode=c-archive -o build/libpolygonid-linux-amd64.a ./cmd/polygonid
+          cp build/libpolygonid-linux-amd64.h build/libpolygonid-darwin-arm64.h
+          cd examples/
+          gcc json_functions_tests.c -L../build -lpolygonid-linux-amd64 -pthread && ./a.out
