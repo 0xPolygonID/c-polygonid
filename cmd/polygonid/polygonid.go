@@ -212,11 +212,13 @@ func PLGNCalculateGenesisID(jsonResponse **C.char, in *C.char,
 	}
 
 	resp := struct {
-		DID string `json:"did"`
-		ID  string `json:"id"`
+		DID     string `json:"did"`
+		ID      string `json:"id"`
+		IDAsInt string `json:"idAsInt"`
 	}{
-		DID: did.String(),
-		ID:  coreID.String(),
+		DID:     did.String(),
+		ID:      coreID.String(),
+		IDAsInt: coreID.BigInt().String(),
 	}
 	respB, err := json.Marshal(resp)
 	if err != nil {
