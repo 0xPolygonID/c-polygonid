@@ -35,6 +35,11 @@ TEST testCases[] = {
 	.in = "testdata/calculate_genesis_id_in.json",
 	.out = "testdata/calculate_genesis_id_out.json",
 	.fn = &PLGNCalculateGenesisID
+  },
+  {
+	.in = "testdata/id_to_int_in.json",
+	.out = "testdata/id_to_int_out.json",
+	.fn = &PLGNIDToInt
   }
 };
 

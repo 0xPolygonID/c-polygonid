@@ -362,6 +362,43 @@ func PLGNCreateClaim(jsonResponse **C.char, in *C.char,
 	return true
 }
 
+// PLGNIDToInt returns the ID as a big int string
+// Input should be a valid JSON object: string enclosed by double quotes.
+// Output is a valid JSON object to: string enclosed by double quotes.
+//
+//export PLGNIDToInt
+func PLGNIDToInt(jsonResponse **C.char, in *C.char,
+	status **C.PLGNStatus) (ok bool) {
+
+	if in == nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_NIL_POINTER,
+			"pointer to request is nil")
+		return false
+	}
+
+	var idStr string
+	err := json.Unmarshal([]byte(C.GoString(in)), &idStr)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		return false
+	}
+
+	id, err := core.IDFromString(idStr)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		return false
+	}
+
+	resp, err := json.Marshal(id.BigInt().Text(10))
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		return false
+	}
+
+	*jsonResponse = C.CString(string(resp))
+	return true
+}
+
 //export PLGNFreeStatus
 func PLGNFreeStatus(status *C.PLGNStatus) {
 	if status == nil {
