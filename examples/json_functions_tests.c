@@ -40,6 +40,11 @@ TEST testCases[] = {
 	.in = "testdata/id_to_int_in.json",
 	.out = "testdata/id_to_int_out.json",
 	.fn = &PLGNIDToInt
+  },
+  {
+	.in = "testdata/proof_from_smart_contract_in.json",
+	.out = "testdata/proof_from_smart_contract_out.json",
+	.fn = &PLGNProofFromSmartContract
   }
 };
 
