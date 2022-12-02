@@ -25,6 +25,7 @@ import (
 	"time"
 	"unsafe"
 
+	c_polygonid "github.com/0xPolygonID/c-polygonid"
 	"github.com/iden3/go-circuits"
 	core "github.com/iden3/go-iden3-core"
 	"github.com/iden3/go-iden3-crypto/utils"
@@ -212,11 +213,13 @@ func PLGNCalculateGenesisID(jsonResponse **C.char, in *C.char,
 	}
 
 	resp := struct {
-		DID string `json:"did"`
-		ID  string `json:"id"`
+		DID     string `json:"did"`
+		ID      string `json:"id"`
+		IDAsInt string `json:"idAsInt"`
 	}{
-		DID: did.String(),
-		ID:  coreID.String(),
+		DID:     did.String(),
+		ID:      coreID.String(),
+		IDAsInt: coreID.BigInt().String(),
 	}
 	respB, err := json.Marshal(resp)
 	if err != nil {
@@ -353,6 +356,83 @@ func PLGNCreateClaim(jsonResponse **C.char, in *C.char,
 	}
 
 	respB, err := json.Marshal(c)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		return false
+	}
+
+	*jsonResponse = C.CString(string(respB))
+	return true
+}
+
+// PLGNIDToInt returns the ID as a big int string
+// Input should be a valid JSON object: string enclosed by double quotes.
+// Output is a valid JSON object to: string enclosed by double quotes.
+//
+//export PLGNIDToInt
+func PLGNIDToInt(jsonResponse **C.char, in *C.char,
+	status **C.PLGNStatus) (ok bool) {
+
+	if in == nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_NIL_POINTER,
+			"pointer to request is nil")
+		return false
+	}
+
+	var idStr string
+	err := json.Unmarshal([]byte(C.GoString(in)), &idStr)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		return false
+	}
+
+	id, err := core.IDFromString(idStr)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		return false
+	}
+
+	resp, err := json.Marshal(id.BigInt().Text(10))
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		return false
+	}
+
+	*jsonResponse = C.CString(string(resp))
+	return true
+}
+
+//export PLGNProofFromSmartContract
+func PLGNProofFromSmartContract(jsonResponse **C.char, in *C.char,
+	status **C.PLGNStatus) (ok bool) {
+
+	if in == nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_NIL_POINTER,
+			"pointer to request is nil")
+		return false
+	}
+
+	var scProof c_polygonid.SmartContractProof
+	err := json.Unmarshal([]byte(C.GoString(in)), &scProof)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		return false
+	}
+
+	proof, root, err := c_polygonid.ProofFromSmartContract(scProof)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		return false
+	}
+
+	resp := struct {
+		Root  *merkletree.Hash  `json:"root"`
+		Proof *merkletree.Proof `json:"proof"`
+	}{
+		Root:  root,
+		Proof: proof,
+	}
+	respB, err := json.Marshal(resp)
 	if err != nil {
 		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
 		return false
