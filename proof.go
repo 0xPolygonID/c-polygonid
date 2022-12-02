@@ -35,12 +35,12 @@ func (s *SmartContractProof) UnmarshalJSON(bytes []byte) error {
 }
 
 type smartContractProofJson struct {
-	Root     jsonInt
-	Siblings [32]jsonInt
-	OldKey   jsonInt
-	OldValue jsonInt
-	IsOld0   bool
-	Fnc      jsonInt
+	Root     jsonInt     `json:"root"`
+	Siblings [32]jsonInt `json:"siblings"`
+	OldKey   jsonInt     `json:"oldKey"`
+	OldValue jsonInt     `json:"oldValue"`
+	IsOld0   bool        `json:"isOld0"`
+	Fnc      jsonInt     `json:"fnc"`
 }
 
 type jsonInt big.Int
