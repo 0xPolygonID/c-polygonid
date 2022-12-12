@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"math/big"
 	"net/http"
 	"strings"
@@ -148,7 +147,7 @@ func getByPath(obj jsonObj, path string) (any, error) {
 		}
 		curObj, ok = nextObj.(jsonObj)
 		if !ok {
-			return nil, errors.New("[2] not a json object")
+			return nil, errors.New("not a json object")
 		}
 	}
 
@@ -230,7 +229,6 @@ func claimWithSigProofFromObj(obj jsonObj) (circuits.ClaimWithSigProof, error) {
 	if err != nil {
 		return out, err
 	}
-	log.Printf("[3] %v", out.NonRevProof.TreeState.ClaimsRoot)
 	out.SignatureProof, err = signatureProofFromObj(proof)
 	if err != nil {
 		return out, err
@@ -257,10 +255,7 @@ func signatureProofFromObj(
 	if err != nil {
 		return out, err
 	}
-	log.Printf("[4] %v", out.IssuerAuthIncProof.TreeState)
-	log.Printf("[5] %v", out.IssuerAuthIncProof.TreeState.RevocationRoot)
-	out.IssuerAuthIncProof.Proof, err = proofByPath(proof,
-		"issuerData.mtp")
+	out.IssuerAuthIncProof.Proof, err = proofByPath(proof, "issuerData.mtp")
 	if err != nil {
 		return out, err
 	}
@@ -275,7 +270,6 @@ func signatureProofFromObj(
 	if err != nil {
 		return out, err
 	}
-	log.Printf("[1] X: %v", out.IssuerAuthIncProof.Proof)
 
 	return out, nil
 }
@@ -294,7 +288,6 @@ func stateFromObjByPaths(obj jsonObj,
 	}
 	ts.RevocationRoot, err = hashByPath(obj, rtrPath)
 	if errors.Is(err, errNotFound(rtrPath)) {
-		log.Printf("[7] revocation tree root not found at %v", rtrPath)
 		// pass, revocation root is optional
 		ts.RevocationRoot = &merkletree.Hash{}
 	} else if err != nil {
@@ -350,7 +343,7 @@ func findProofByType(obj jsonObj, proofType string) (jsonObj, error) {
 		for _, proof := range v {
 			proofObj, ok := proof.(jsonObj)
 			if !ok {
-				return nil, errors.New("[3] not a json object")
+				return nil, errors.New("not a json object")
 			}
 			t, err := stringByPath(proofObj, "type")
 			if err != nil {
