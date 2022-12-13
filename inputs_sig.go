@@ -248,7 +248,6 @@ func signatureProofFromObj(
 	if err != nil {
 		return out, err
 	}
-	// TODO: check last two paths with Vlad
 	out.IssuerAuthIncProof.TreeState, err = stateFromObjByPaths(proof,
 		"issuerData.state.value", "issuerData.state.claimsTreeRoot",
 		"issuerData.state.revocationTreeRoot", "issuerData.state.rootOfRoots")
@@ -485,7 +484,9 @@ func queryFromObj(obj jsonObj) (out circuits.Query, err error) {
 	if err != nil {
 		return out, err
 	}
-	// TODO: is it possible to be more than one field?
+	if len(reqObj) != 1 {
+		return out, errors.New("for now it is supported only one field query")
+	}
 	for field, op := range reqObj {
 		var path merklize.Path
 		path, err = merklize.NewFieldPathFromContext(contextBytes,
@@ -520,7 +521,10 @@ func queryFromObj(obj jsonObj) (out circuits.Query, err error) {
 		if !ok {
 			return out, errors.New("operation on field is not a json object")
 		}
-		// TODO: is it possible to be more than one operation?
+		if len(opObj) != 1 {
+			return out, errors.New(
+				"for now it is supported only one operation per field")
+		}
 		for opStr, val := range opObj {
 			out.Operator, ok = circuits.QueryOperators[opStr]
 			if !ok {
