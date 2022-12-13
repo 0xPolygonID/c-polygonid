@@ -22,7 +22,7 @@
       "type": "KYCAgeCredential"
     },
     "credentialStatus": {
-      "id": "{{ .MockServer }}/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/2376431481",
+      "id": "http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/2376431481",
       "revocationNonce": 2376431481,
       "type": "SparseMerkleTreeProof"
     },
@@ -46,7 +46,7 @@
             "siblings": []
           },
           "credentialStatus": {
-            "id": "{{ .MockServer }}/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/0",
+            "id": "http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/0",
             "revocationNonce": 0,
             "type": "SparseMerkleTreeProof"
           }

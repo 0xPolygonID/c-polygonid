@@ -162,7 +162,7 @@ func resolveRevocationStatus(url string) (out circuits.MTProof, err error) {
 	if err != nil {
 		return out, err
 	}
-	httpResp, err := http.DefaultClient.Do(httpReq)
+	httpResp, err := httpClient.Do(httpReq)
 	if err != nil {
 		return out, err
 	}
