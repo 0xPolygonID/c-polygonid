@@ -37,20 +37,6 @@ func stringByPath(obj jsonObj, path string) (string, error) {
 	return s, nil
 }
 
-func coreIDByPath(obj jsonObj, path string) (*core.ID, error) {
-	s, err := stringByPath(obj, path)
-	if err != nil {
-		return nil, err
-	}
-
-	coreID, err := core.IDFromString(s)
-	if err != nil {
-		return nil, err
-	}
-
-	return &coreID, nil
-}
-
 func coreDIDByPath(obj jsonObj, path string) (*core.DID, error) {
 	s, err := stringByPath(obj, path)
 	if err != nil {
@@ -370,9 +356,22 @@ var x = map[string]any{}
 func atomicQuerySigV2InputsFromJson(
 	in []byte) (circuits.AtomicQuerySigV2Inputs, error) {
 
-	var obj jsonObj
 	var out circuits.AtomicQuerySigV2Inputs
-	err := json.Unmarshal(in, &obj)
+
+	var obj2 struct {
+		ID                       core.ID         `json:"id"`
+		ProfileNonce             jsonInt         `json:"profileNonce"`
+		ClaimSubjectProfileNonce jsonInt         `json:"claimSubjectProfileNonce"`
+		VerifiableCredentials    json.RawMessage `json:"verifiableCredentials"`
+		Request                  jsonObj         `json:"request"`
+	}
+	err := json.Unmarshal(in, &obj2)
+	if err != nil {
+		return out, err
+	}
+
+	var obj jsonObj
+	err = json.Unmarshal(in, &obj)
 	if err != nil {
 		return out, err
 	}
@@ -381,19 +380,9 @@ func atomicQuerySigV2InputsFromJson(
 	if err != nil {
 		return out, err
 	}
-	out.ID, err = coreIDByPath(obj, "id")
-	if err != nil {
-		return out, err
-	}
-	out.ProfileNonce, err = bigIntByPath(obj, "profileNonce", false)
-	if err != nil {
-		return out, err
-	}
-	out.ClaimSubjectProfileNonce, err = bigIntByPath(obj,
-		"claimSubjectProfileNonce", false)
-	if err != nil {
-		return out, err
-	}
+	out.ID = &obj2.ID
+	out.ProfileNonce = obj2.ProfileNonce.BigInt()
+	out.ClaimSubjectProfileNonce = obj2.ClaimSubjectProfileNonce.BigInt()
 
 	circuitID, err := stringByPath(obj, "request.circuitId")
 	if err != nil {

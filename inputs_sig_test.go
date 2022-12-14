@@ -1,11 +1,13 @@
 package c_polygonid
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
 
+	"github.com/iden3/go-schema-processor/verifiable"
 	"github.com/stretchr/testify/require"
 )
 
@@ -70,7 +72,19 @@ func TestAtomicQuerySigV2InputsFromJson(t *testing.T) {
 	inputsBytes, err := out.InputsMarshal()
 	require.NoError(t, err)
 
-	t.Log(string(inputsBytes))
+	var inputsObj jsonObj
+	err = json.Unmarshal(inputsBytes, &inputsObj)
+	require.NoError(t, err)
+
+	jsonWant, err := os.ReadFile("testdata/atomic_query_mtp_v2_output.json")
+	require.NoError(t, err)
+	var wantObj jsonObj
+	err = json.Unmarshal(jsonWant, &wantObj)
+	require.NoError(t, err)
+	wantObj["timestamp"] = inputsObj["timestamp"]
+
+	require.Equal(t, wantObj, inputsObj)
+	//t.Log(string(inputsBytes))
 }
 
 func TestHexHash_UnmarshalJSON(t *testing.T) {
@@ -78,4 +92,23 @@ func TestHexHash_UnmarshalJSON(t *testing.T) {
 	var h hexHash
 	err := h.UnmarshalJSON([]byte(s))
 	require.NoError(t, err)
+}
+
+func TestW3CCredentialUnmarshal(t *testing.T) {
+	var y struct {
+		VC json.RawMessage `json:"verifiableCredentials"`
+	}
+
+	jsonIn, err := os.ReadFile("testdata/atomic_query_mtp_v2_inputs.json")
+	require.NoError(t, err)
+
+	err = json.Unmarshal(jsonIn, &y)
+	require.NoError(t, err)
+
+	var x verifiable.W3CCredential
+	err = json.Unmarshal(y.VC, &x)
+
+	xBytes, err := json.Marshal(x)
+	require.NoError(t, err)
+	t.Log(string(xBytes))
 }
