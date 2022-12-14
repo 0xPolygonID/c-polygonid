@@ -1,7 +1,6 @@
 package c_polygonid
 
 import (
-	"bytes"
 	"context"
 	"encoding/hex"
 	"encoding/json"
@@ -19,6 +18,7 @@ import (
 	"github.com/iden3/go-iden3-crypto/utils"
 	"github.com/iden3/go-merkletree-sql/v2"
 	"github.com/iden3/go-schema-processor/merklize"
+	"github.com/iden3/go-schema-processor/verifiable"
 )
 
 type jsonObj = map[string]any
@@ -188,7 +188,9 @@ func resolveRevocationStatus(url string) (out circuits.MTProof, err error) {
 	return out, nil
 }
 
-func claimWithSigProofFromObj(obj jsonObj) (circuits.ClaimWithSigProof, error) {
+func claimWithSigProofFromObj(obj jsonObj,
+	w3cCred verifiable.W3CCredential) (circuits.ClaimWithSigProof, error) {
+
 	var out circuits.ClaimWithSigProof
 	var err error
 
@@ -391,13 +393,18 @@ func atomicQuerySigV2InputsFromJson(
 	if circuitID != "credentialAtomicQuerySigV2" {
 		return out, errors.New("wrong circuit")
 	}
-
-	out.Claim, err = claimWithSigProofFromObj(obj)
+	var w3cCred verifiable.W3CCredential
+	err = json.Unmarshal(obj2.VerifiableCredentials, &w3cCred)
 	if err != nil {
 		return out, err
 	}
 
-	out.Query, err = queryFromObj(obj)
+	out.Claim, err = claimWithSigProofFromObj(obj, w3cCred)
+	if err != nil {
+		return out, err
+	}
+
+	out.Query, err = queryFromObj(obj, w3cCred)
 	if err != nil {
 		return out, err
 	}
@@ -407,7 +414,14 @@ func atomicQuerySigV2InputsFromJson(
 	return out, nil
 }
 
-func queryFromObj(obj jsonObj) (out circuits.Query, err error) {
+func queryFromObj(obj jsonObj,
+	w3cCred verifiable.W3CCredential) (out circuits.Query, err error) {
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	mz, err := w3cCred.Merklize(ctx)
+
 	var claimObj jsonObj
 	claimObj, err = objByBath(obj, "verifiableCredentials")
 	if err != nil {
@@ -421,20 +435,6 @@ func queryFromObj(obj jsonObj) (out circuits.Query, err error) {
 			continue
 		}
 		newObj[k] = v
-	}
-	var claimBytes []byte
-	claimBytes, err = json.Marshal(newObj)
-	if err != nil {
-		return out, err
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	var mz *merklize.Merklizer
-	mz, err = merklize.MerklizeJSONLD(ctx, bytes.NewReader(claimBytes))
-	if err != nil {
-		return out, err
 	}
 
 	var contextURL string

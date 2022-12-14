@@ -107,6 +107,7 @@ func TestW3CCredentialUnmarshal(t *testing.T) {
 
 	var x verifiable.W3CCredential
 	err = json.Unmarshal(y.VC, &x)
+	require.NoError(t, err)
 
 	xBytes, err := json.Marshal(x)
 	require.NoError(t, err)
