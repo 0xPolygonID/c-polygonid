@@ -381,12 +381,6 @@ func atomicQuerySigV2InputsFromJson(
 		return out, err
 	}
 
-	var obj jsonObj
-	err = json.Unmarshal(in, &obj)
-	if err != nil {
-		return out, err
-	}
-
 	out.RequestID, err = bigIntByPath(obj2.Request, "id", true)
 	if err != nil {
 		return out, err
@@ -413,7 +407,7 @@ func atomicQuerySigV2InputsFromJson(
 		return out, err
 	}
 
-	out.Query, err = queryFromObj(obj, w3cCred)
+	out.Query, err = queryFromObj(w3cCred, obj2.Request)
 	if err != nil {
 		return out, err
 	}
@@ -423,8 +417,8 @@ func atomicQuerySigV2InputsFromJson(
 	return out, nil
 }
 
-func queryFromObj(obj jsonObj,
-	w3cCred verifiable.W3CCredential) (out circuits.Query, err error) {
+func queryFromObj(w3cCred verifiable.W3CCredential,
+	requestObj jsonObj) (out circuits.Query, err error) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -432,12 +426,12 @@ func queryFromObj(obj jsonObj,
 	mz, err := w3cCred.Merklize(ctx)
 
 	var contextURL string
-	contextURL, err = stringByPath(obj, "request.query.context")
+	contextURL, err = stringByPath(requestObj, "query.context")
 	if err != nil {
 		return out, err
 	}
 	var contextType string
-	contextType, err = stringByPath(obj, "request.query.type")
+	contextType, err = stringByPath(requestObj, "query.type")
 	if err != nil {
 		return out, err
 	}
@@ -463,7 +457,7 @@ func queryFromObj(obj jsonObj,
 		return out, err
 	}
 
-	reqObj, err := objByBath(obj, "request.query.req")
+	reqObj, err := objByBath(requestObj, "query.req")
 	if err != nil {
 		return out, err
 	}
