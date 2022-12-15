@@ -194,7 +194,7 @@ func claimWithSigProofFromObj(obj jsonObj,
 	var out circuits.ClaimWithSigProof
 	var err error
 
-	proof, err := findProofByType(obj, "BJJSignature2021")
+	proof, err := bjjSignatureProof2021(w3cCred)
 	if err != nil {
 		return out, err
 	}
@@ -227,6 +227,7 @@ func claimWithSigProofFromObj(obj jsonObj,
 
 func signatureProofFromObj(
 	proof jsonObj) (out circuits.BJJSignatureProof, err error) {
+
 	out.Signature, err = sigByPath(proof, "signature")
 	if err != nil {
 		return out, err
@@ -319,41 +320,45 @@ func hashByPath(proof jsonObj, s string) (*merkletree.Hash, error) {
 	return merkletree.NewHashFromHex(hashStr)
 }
 
-func findProofByType(obj jsonObj, proofType string) (jsonObj, error) {
-	o, err := getByPath(obj, "verifiableCredentials.proof")
-	if err != nil {
-		return nil, err
-	}
+func extractProof(
+	proof interface{}) (jsonObj, verifiable.ProofType, error) {
 
-	switch v := o.(type) {
+	switch p := proof.(type) {
+	case jsonObj:
+		defaultProofType, ok := p["type"].(string)
+		if !ok {
+			return nil, "", errors.New("proof type is not specified")
+		}
+		return p, verifiable.ProofType(defaultProofType), nil
+	default:
+		return nil, "", errors.New("unexpected proof object")
+	}
+}
+
+func bjjSignatureProof2021(w3cCred verifiable.W3CCredential) (jsonObj, error) {
+	switch p := w3cCred.Proof.(type) {
 	case []any:
-		for _, proof := range v {
-			proofObj, ok := proof.(jsonObj)
-			if !ok {
-				return nil, errors.New("not a json object")
-			}
-			t, err := stringByPath(proofObj, "type")
+		for _, proof := range p {
+			proofObj, proofType, err := extractProof(proof)
 			if err != nil {
 				return nil, err
 			}
-			if t == proofType {
+			if proofType == verifiable.BJJSignatureProofType {
 				return proofObj, nil
 			}
 		}
-	case jsonObj:
-		t, err := stringByPath(v, "type")
+	case any:
+		proofObj, proofType, err := extractProof(p)
 		if err != nil {
 			return nil, err
 		}
-		if t == proofType {
-			return v, nil
+		if proofType == verifiable.BJJSignatureProofType {
+			return proofObj, nil
 		}
 	}
 
-	return nil, errors.New("proof not found")
+	return nil, fmt.Errorf("no BJJSignatureProof2021 proof found")
 }
-
-var x = map[string]any{}
 
 func atomicQuerySigV2InputsFromJson(
 	in []byte) (circuits.AtomicQuerySigV2Inputs, error) {
