@@ -87,6 +87,29 @@ func TestAtomicQuerySigV2InputsFromJson(t *testing.T) {
 	//t.Log(string(inputsBytes))
 }
 
+func TestAtomicQuerySigV2InputsFromJson2(t *testing.T) {
+	oldRoundTripper := httpClient.Transport
+	defer func() {
+		httpClient.Transport = oldRoundTripper
+	}()
+	httpClient.Transport = mockedRouterTripper{}
+
+	jsonIn, err := os.ReadFile("testdata/atomic_query_mtp_v2_inputs_2.json")
+	require.NoError(t, err)
+
+	out, err := atomicQuerySigV2InputsFromJson(jsonIn)
+	require.NoError(t, err)
+
+	inputsBytes, err := out.InputsMarshal()
+	require.NoError(t, err)
+
+	var inputsObj jsonObj
+	err = json.Unmarshal(inputsBytes, &inputsObj)
+	require.NoError(t, err)
+
+	t.Log(string(inputsBytes))
+}
+
 func TestHexHash_UnmarshalJSON(t *testing.T) {
 	s := `"2b9d4abe9012cc337d3d347b66659cc45091f822dccb004d88d9f1459e2de306"`
 	var h hexHash
