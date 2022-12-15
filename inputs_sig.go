@@ -369,27 +369,27 @@ func atomicQuerySigV2InputsFromJson(
 
 	var out circuits.AtomicQuerySigV2Inputs
 
-	var obj2 struct {
+	var obj struct {
 		ID                       core.ID         `json:"id"`
 		ProfileNonce             jsonInt         `json:"profileNonce"`
 		ClaimSubjectProfileNonce jsonInt         `json:"claimSubjectProfileNonce"`
 		VerifiableCredentials    json.RawMessage `json:"verifiableCredentials"`
 		Request                  jsonObj         `json:"request"`
 	}
-	err := json.Unmarshal(in, &obj2)
+	err := json.Unmarshal(in, &obj)
 	if err != nil {
 		return out, err
 	}
 
-	out.RequestID, err = bigIntByPath(obj2.Request, "id", true)
+	out.RequestID, err = bigIntByPath(obj.Request, "id", true)
 	if err != nil {
 		return out, err
 	}
-	out.ID = &obj2.ID
-	out.ProfileNonce = obj2.ProfileNonce.BigInt()
-	out.ClaimSubjectProfileNonce = obj2.ClaimSubjectProfileNonce.BigInt()
+	out.ID = &obj.ID
+	out.ProfileNonce = obj.ProfileNonce.BigInt()
+	out.ClaimSubjectProfileNonce = obj.ClaimSubjectProfileNonce.BigInt()
 
-	circuitID, err := stringByPath(obj2.Request, "circuitId")
+	circuitID, err := stringByPath(obj.Request, "circuitId")
 	if err != nil {
 		return out, err
 	}
@@ -397,7 +397,7 @@ func atomicQuerySigV2InputsFromJson(
 		return out, errors.New("wrong circuit")
 	}
 	var w3cCred verifiable.W3CCredential
-	err = json.Unmarshal(obj2.VerifiableCredentials, &w3cCred)
+	err = json.Unmarshal(obj.VerifiableCredentials, &w3cCred)
 	if err != nil {
 		return out, err
 	}
@@ -407,7 +407,7 @@ func atomicQuerySigV2InputsFromJson(
 		return out, err
 	}
 
-	out.Query, err = queryFromObj(w3cCred, obj2.Request)
+	out.Query, err = queryFromObj(w3cCred, obj.Request)
 	if err != nil {
 		return out, err
 	}
