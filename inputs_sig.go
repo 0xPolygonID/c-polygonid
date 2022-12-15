@@ -188,7 +188,7 @@ func resolveRevocationStatus(url string) (out circuits.MTProof, err error) {
 	return out, nil
 }
 
-func claimWithSigProofFromObj(obj jsonObj,
+func claimWithSigProofFromObj(
 	w3cCred verifiable.W3CCredential) (circuits.ClaimWithSigProof, error) {
 
 	var out circuits.ClaimWithSigProof
@@ -208,8 +208,12 @@ func claimWithSigProofFromObj(obj jsonObj,
 	if err != nil {
 		return out, err
 	}
-	revocationStatusURL, err := stringByPath(obj,
-		"verifiableCredentials.credentialStatus.id")
+
+	credStatus, ok := w3cCred.CredentialStatus.(jsonObj)
+	if !ok {
+		return out, errors.New("not a json object")
+	}
+	revocationStatusURL, err := stringByPath(credStatus, "id")
 	if err != nil {
 		return out, err
 	}
@@ -383,7 +387,7 @@ func atomicQuerySigV2InputsFromJson(
 		return out, err
 	}
 
-	out.RequestID, err = bigIntByPath(obj, "request.id", true)
+	out.RequestID, err = bigIntByPath(obj2.Request, "id", true)
 	if err != nil {
 		return out, err
 	}
@@ -391,7 +395,7 @@ func atomicQuerySigV2InputsFromJson(
 	out.ProfileNonce = obj2.ProfileNonce.BigInt()
 	out.ClaimSubjectProfileNonce = obj2.ClaimSubjectProfileNonce.BigInt()
 
-	circuitID, err := stringByPath(obj, "request.circuitId")
+	circuitID, err := stringByPath(obj2.Request, "circuitId")
 	if err != nil {
 		return out, err
 	}
@@ -404,7 +408,7 @@ func atomicQuerySigV2InputsFromJson(
 		return out, err
 	}
 
-	out.Claim, err = claimWithSigProofFromObj(obj, w3cCred)
+	out.Claim, err = claimWithSigProofFromObj(w3cCred)
 	if err != nil {
 		return out, err
 	}
@@ -426,21 +430,6 @@ func queryFromObj(obj jsonObj,
 	defer cancel()
 
 	mz, err := w3cCred.Merklize(ctx)
-
-	var claimObj jsonObj
-	claimObj, err = objByBath(obj, "verifiableCredentials")
-	if err != nil {
-		return out, err
-	}
-
-	// create new object without proof (proof not need to be merkleized)
-	newObj := make(jsonObj, len(claimObj)-1)
-	for k, v := range claimObj {
-		if k == "proof" {
-			continue
-		}
-		newObj[k] = v
-	}
 
 	var contextURL string
 	contextURL, err = stringByPath(obj, "request.query.context")
