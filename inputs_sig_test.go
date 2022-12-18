@@ -63,7 +63,7 @@ func TestAtomicQuerySigV2InputsFromJson(t *testing.T) {
 	}()
 	httpClient.Transport = mockedRouterTripper{}
 
-	jsonIn, err := os.ReadFile("testdata/atomic_query_mtp_v2_inputs.json")
+	jsonIn, err := os.ReadFile("testdata/atomic_query_sig_v2_inputs.json")
 	require.NoError(t, err)
 
 	out, err := atomicQuerySigV2InputsFromJson(jsonIn)
@@ -76,7 +76,7 @@ func TestAtomicQuerySigV2InputsFromJson(t *testing.T) {
 	err = json.Unmarshal(inputsBytes, &inputsObj)
 	require.NoError(t, err)
 
-	jsonWant, err := os.ReadFile("testdata/atomic_query_mtp_v2_output.json")
+	jsonWant, err := os.ReadFile("testdata/atomic_query_sig_v2_output.json")
 	require.NoError(t, err)
 	var wantObj jsonObj
 	err = json.Unmarshal(jsonWant, &wantObj)
@@ -94,7 +94,7 @@ func TestAtomicQuerySigV2InputsFromJson2(t *testing.T) {
 	}()
 	httpClient.Transport = mockedRouterTripper{}
 
-	jsonIn, err := os.ReadFile("testdata/atomic_query_mtp_v2_inputs_2.json")
+	jsonIn, err := os.ReadFile("testdata/atomic_query_sig_v2_inputs_2.json")
 	require.NoError(t, err)
 
 	out, err := atomicQuerySigV2InputsFromJson(jsonIn)
@@ -122,7 +122,7 @@ func TestW3CCredentialUnmarshal(t *testing.T) {
 		VC json.RawMessage `json:"verifiableCredentials"`
 	}
 
-	jsonIn, err := os.ReadFile("testdata/atomic_query_mtp_v2_inputs.json")
+	jsonIn, err := os.ReadFile("testdata/atomic_query_sig_v2_inputs.json")
 	require.NoError(t, err)
 
 	err = json.Unmarshal(jsonIn, &y)
