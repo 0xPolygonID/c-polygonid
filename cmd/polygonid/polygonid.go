@@ -478,6 +478,60 @@ func PLGNProofFromSmartContract(jsonResponse **C.char, in *C.char,
 	return true
 }
 
+//export PLGNProfileID
+func PLGNProfileID(jsonResponse **C.char, in *C.char,
+	status **C.PLGNStatus) bool {
+
+	if jsonResponse == nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_NIL_POINTER,
+			"jsonResponse pointer is nil")
+		return false
+	}
+
+	var req struct {
+		GenesisID string `json:"genesisID"`
+		Nonce     uint64 `json:"nonce"`
+	}
+
+	err := json.Unmarshal([]byte(C.GoString(in)), &req)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		return false
+	}
+
+	did, err := core.ParseDID(req.GenesisID)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		return false
+	}
+
+	id, err := core.ProfileID(did.ID, new(big.Int).SetUint64(req.Nonce))
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		return false
+	}
+
+	profileDID, err := core.ParseDIDFromID(id)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		return false
+	}
+
+	resp := struct {
+		ProfileID string `json:"profileID"`
+	}{ProfileID: profileDID.String()}
+
+	circuitInputJSON, err := json.Marshal(resp)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR,
+			"response marshal error: %v", err)
+		return false
+	}
+
+	*jsonResponse = C.CString(string(circuitInputJSON))
+	return true
+}
+
 //export PLGNFreeStatus
 func PLGNFreeStatus(status *C.PLGNStatus) {
 	if status == nil {

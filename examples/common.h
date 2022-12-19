@@ -2,7 +2,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <sys/errno.h>
-#include "../build/libpolygonid-darwin-arm64.h"
+#include "../ios/libpolygonid-darwin-arm64.h"
 
 char *
 read_file(char *path) {
