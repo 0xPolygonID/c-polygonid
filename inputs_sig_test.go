@@ -136,3 +136,20 @@ func TestW3CCredentialUnmarshal(t *testing.T) {
 	require.NoError(t, err)
 	t.Log(string(xBytes))
 }
+
+func TestAtomicQueryMtpV2InputsFromJson(t *testing.T) {
+	jsonIn, err := os.ReadFile("testdata/atomic_query_mtp_v2_inputs.json")
+	require.NoError(t, err)
+
+	out, err := atomicQueryMtpV2InputsFromJson(jsonIn)
+	require.NoError(t, err)
+
+	inputsBytes, err := out.InputsMarshal()
+	require.NoError(t, err)
+
+	var inputsObj jsonObj
+	err = json.Unmarshal(inputsBytes, &inputsObj)
+	require.NoError(t, err)
+
+	t.Log(string(inputsBytes))
+}

@@ -194,7 +194,7 @@ func claimWithSigProofFromObj(
 	var out circuits.ClaimWithSigProof
 	var err error
 
-	proof, err := bjjSignatureProof2021(w3cCred)
+	proof, err := findProofObjByType(w3cCred, verifiable.BJJSignatureProofType)
 	if err != nil {
 		return out, err
 	}
@@ -339,43 +339,46 @@ func extractProof(
 	}
 }
 
-func bjjSignatureProof2021(w3cCred verifiable.W3CCredential) (jsonObj, error) {
+func findProofObjByType(w3cCred verifiable.W3CCredential,
+	proofType verifiable.ProofType) (jsonObj, error) {
 	switch p := w3cCred.Proof.(type) {
 	case []any:
 		for _, proof := range p {
-			proofObj, proofType, err := extractProof(proof)
+			proofObj, pType, err := extractProof(proof)
 			if err != nil {
 				return nil, err
 			}
-			if proofType == verifiable.BJJSignatureProofType {
+			if pType == proofType {
 				return proofObj, nil
 			}
 		}
 	case any:
-		proofObj, proofType, err := extractProof(p)
+		proofObj, pType, err := extractProof(p)
 		if err != nil {
 			return nil, err
 		}
-		if proofType == verifiable.BJJSignatureProofType {
+		if pType == proofType {
 			return proofObj, nil
 		}
 	}
 
-	return nil, fmt.Errorf("no BJJSignatureProof2021 proof found")
+	return nil, fmt.Errorf("no proofs found of type %v", proofType)
 }
 
-func atomicQuerySigV2InputsFromJson(
-	in []byte) (circuits.AtomicQuerySigV2Inputs, error) {
+type inputsRequest struct {
+	ID                       core.ID         `json:"id"`
+	ProfileNonce             jsonInt         `json:"profileNonce"`
+	ClaimSubjectProfileNonce jsonInt         `json:"claimSubjectProfileNonce"`
+	VerifiableCredentials    json.RawMessage `json:"verifiableCredentials"`
+	Request                  jsonObj         `json:"request"`
+}
 
-	var out circuits.AtomicQuerySigV2Inputs
+func atomicQueryMtpV2InputsFromJson(
+	in []byte) (circuits.AtomicQueryMTPV2Inputs, error) {
 
-	var obj struct {
-		ID                       core.ID         `json:"id"`
-		ProfileNonce             jsonInt         `json:"profileNonce"`
-		ClaimSubjectProfileNonce jsonInt         `json:"claimSubjectProfileNonce"`
-		VerifiableCredentials    json.RawMessage `json:"verifiableCredentials"`
-		Request                  jsonObj         `json:"request"`
-	}
+	var out circuits.AtomicQueryMTPV2Inputs
+
+	var obj inputsRequest
 	err := json.Unmarshal(in, &obj)
 	if err != nil {
 		return out, err
@@ -393,7 +396,54 @@ func atomicQuerySigV2InputsFromJson(
 	if err != nil {
 		return out, err
 	}
-	if circuitID != "credentialAtomicQuerySigV2" {
+	if circuitID != string(circuits.AtomicQueryMTPV2CircuitID) {
+		return out, errors.New("wrong circuit")
+	}
+	var w3cCred verifiable.W3CCredential
+	err = json.Unmarshal(obj.VerifiableCredentials, &w3cCred)
+	if err != nil {
+		return out, err
+	}
+
+	out.Claim, err = claimWithMtpProofFromObj(w3cCred)
+	if err != nil {
+		return out, err
+	}
+
+	out.Query, err = queryFromObj(w3cCred, obj.Request)
+	if err != nil {
+		return out, err
+	}
+
+	out.CurrentTimeStamp = time.Now().Unix()
+
+	return out, nil
+}
+
+func atomicQuerySigV2InputsFromJson(
+	in []byte) (circuits.AtomicQuerySigV2Inputs, error) {
+
+	var out circuits.AtomicQuerySigV2Inputs
+
+	var obj inputsRequest
+	err := json.Unmarshal(in, &obj)
+	if err != nil {
+		return out, err
+	}
+
+	out.RequestID, err = bigIntByPath(obj.Request, "id", true)
+	if err != nil {
+		return out, err
+	}
+	out.ID = &obj.ID
+	out.ProfileNonce = obj.ProfileNonce.BigInt()
+	out.ClaimSubjectProfileNonce = obj.ClaimSubjectProfileNonce.BigInt()
+
+	circuitID, err := stringByPath(obj.Request, "circuitId")
+	if err != nil {
+		return out, err
+	}
+	if circuitID != string(circuits.AtomicQuerySigV2CircuitID) {
 		return out, errors.New("wrong circuit")
 	}
 	var w3cCred verifiable.W3CCredential
@@ -568,4 +618,61 @@ func proofByPath(obj jsonObj, path string) (*merkletree.Proof, error) {
 		return nil, err
 	}
 	return &p, nil
+}
+
+func claimWithMtpProofFromObj(
+	w3cCred verifiable.W3CCredential) (circuits.ClaimWithMTPProof, error) {
+
+	var out circuits.ClaimWithMTPProof
+	var err error
+
+	proof, err := findProofObjByType(w3cCred,
+		verifiable.Iden3SparseMerkleProofType)
+	if err != nil {
+		return out, err
+	}
+
+	issuerDID, err := coreDIDByPath(proof, "issuerData.id")
+	if err != nil {
+		return out, err
+	}
+	out.IssuerID = &issuerDID.ID
+	out.Claim, err = coreClaimByPath(proof, "coreClaim")
+	if err != nil {
+		return out, err
+	}
+
+	credStatus, ok := w3cCred.CredentialStatus.(jsonObj)
+	if !ok {
+		return out, errors.New("not a json object")
+	}
+	revocationStatusURL, err := stringByPath(credStatus, "id")
+	if err != nil {
+		return out, err
+	}
+	out.NonRevProof, err = resolveRevocationStatus(revocationStatusURL)
+	if err != nil {
+		return out, err
+	}
+	out.IncProof, err = mtpProofFromObj(proof)
+	if err != nil {
+		return out, err
+	}
+
+	return out, nil
+}
+
+func mtpProofFromObj(proof jsonObj) (out circuits.MTProof, err error) {
+	out.Proof, err = proofByPath(proof, "mtp")
+	if err != nil {
+		return out, err
+	}
+	out.TreeState, err = stateFromObjByPaths(proof,
+		"issuerData.state.value", "issuerData.state.claimsTreeRoot",
+		"issuerData.state.revocationTreeRoot", "issuerData.state.rootOfRoots")
+	if err != nil {
+		return out, err
+	}
+
+	return out, nil
 }
