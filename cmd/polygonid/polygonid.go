@@ -143,9 +143,45 @@ func PLGNAuthV2InputsMarshal(jsonResponse **C.char, in *C.char,
 		return false
 	}
 
-	in2 := C.GoString(in)
+	var obj map[string]any
+	err := json.Unmarshal([]byte(C.GoString(in)), &obj)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		return false
+	}
+
+	didI, ok := obj["genesisDID"]
+	if !ok {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR,
+			"PLGNAuthV2InputsMarshal: No genesisDID field found")
+		return false
+	}
+
+	didS, ok := didI.(string)
+	if !ok {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR,
+			"PLGNAuthV2InputsMarshal: No genesisDID field found")
+		return false
+	}
+
+	did, err := core.ParseDID(didS)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR,
+			"PLGNAuthV2InputsMarshal: DID parse error: %v", err)
+		return false
+	}
+
+	obj["genesisID"] = did.ID.String()
+
+	authV2InputsData, err := json.Marshal(obj)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR,
+			"PLGNAuthV2InputsMarshal: error marshal data %v", err)
+		return false
+	}
+
 	var inputs circuits.AuthV2Inputs
-	err := json.Unmarshal([]byte(in2), &inputs)
+	err = json.Unmarshal(authV2InputsData, &inputs)
 	if err != nil {
 		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR,
 			"PLGNAuthV2InputsMarshal: inputs unmarshal error: %v", err)
