@@ -489,8 +489,8 @@ func PLGNProfileID(jsonResponse **C.char, in *C.char,
 	}
 
 	var req struct {
-		GenesisID string      `json:"genesisID"`
-		Nonce     json.Number `json:"nonce"`
+		GenesisDID string      `json:"genesisDID"`
+		Nonce      json.Number `json:"nonce"`
 	}
 
 	err := json.Unmarshal([]byte(C.GoString(in)), &req)
@@ -499,7 +499,7 @@ func PLGNProfileID(jsonResponse **C.char, in *C.char,
 		return false
 	}
 
-	did, err := core.ParseDID(req.GenesisID)
+	did, err := core.ParseDID(req.GenesisDID)
 	if err != nil {
 		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
 		return false
@@ -525,8 +525,8 @@ func PLGNProfileID(jsonResponse **C.char, in *C.char,
 	}
 
 	resp := struct {
-		ProfileID string `json:"profileID"`
-	}{ProfileID: profileDID.String()}
+		ProfileDID string `json:"profileDID"`
+	}{ProfileDID: profileDID.String()}
 
 	circuitInputJSON, err := json.Marshal(resp)
 	if err != nil {
