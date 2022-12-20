@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/iden3/go-circuits v1.0.1-alpha.2.0.20221202164329-51af81fc3be5
-	github.com/iden3/go-iden3-core v0.1.1-0.20221110160238-4f9f3a6658f0
+	github.com/iden3/go-iden3-core v0.1.1-0.20221219095955-92aedd7d12fa
 	github.com/iden3/go-iden3-crypto v0.0.13
 	github.com/iden3/go-merkletree-sql/v2 v2.0.0
 	github.com/stretchr/testify v1.7.4
