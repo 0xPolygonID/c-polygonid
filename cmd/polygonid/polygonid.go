@@ -489,8 +489,8 @@ func PLGNProfileID(jsonResponse **C.char, in *C.char,
 	}
 
 	var req struct {
-		GenesisDID string      `json:"genesisDID"`
-		Nonce      json.Number `json:"nonce"`
+		GenesisDID string                  `json:"genesisDID"`
+		Nonce      *c_polygonid.JsonBigInt `json:"nonce"`
 	}
 
 	err := json.Unmarshal([]byte(C.GoString(in)), &req)
@@ -505,14 +505,7 @@ func PLGNProfileID(jsonResponse **C.char, in *C.char,
 		return false
 	}
 
-	bigNonce, ok := new(big.Int).SetString(req.Nonce.String(), 10)
-	if !ok {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR,
-			"nonce is not a number")
-		return false
-	}
-
-	id, err := core.ProfileID(did.ID, bigNonce)
+	id, err := core.ProfileID(did.ID, req.Nonce.BigInt())
 	if err != nil {
 		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
 		return false
