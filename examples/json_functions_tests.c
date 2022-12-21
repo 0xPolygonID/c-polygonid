@@ -45,6 +45,11 @@ TEST testCases[] = {
 	.in = "testdata/proof_from_smart_contract_in.json",
 	.out = "testdata/proof_from_smart_contract_out.json",
 	.fn = &PLGNProofFromSmartContract
+  },
+  {
+	.in = "testdata/profile_id_in.json",
+	.out = "testdata/profile_id_out.json",
+	.fn = &PLGNProfileID
   }
 };
 

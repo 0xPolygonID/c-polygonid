@@ -143,9 +143,45 @@ func PLGNAuthV2InputsMarshal(jsonResponse **C.char, in *C.char,
 		return false
 	}
 
-	in2 := C.GoString(in)
+	var obj map[string]any
+	err := json.Unmarshal([]byte(C.GoString(in)), &obj)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		return false
+	}
+
+	didI, ok := obj["genesisDID"]
+	if !ok {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR,
+			"PLGNAuthV2InputsMarshal: No genesisDID field found")
+		return false
+	}
+
+	didS, ok := didI.(string)
+	if !ok {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR,
+			"PLGNAuthV2InputsMarshal: No genesisDID field found")
+		return false
+	}
+
+	did, err := core.ParseDID(didS)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR,
+			"PLGNAuthV2InputsMarshal: DID parse error: %v", err)
+		return false
+	}
+
+	obj["genesisID"] = did.ID.String()
+
+	authV2InputsData, err := json.Marshal(obj)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR,
+			"PLGNAuthV2InputsMarshal: error marshal data %v", err)
+		return false
+	}
+
 	var inputs circuits.AuthV2Inputs
-	err := json.Unmarshal([]byte(in2), &inputs)
+	err = json.Unmarshal(authV2InputsData, &inputs)
 	if err != nil {
 		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR,
 			"PLGNAuthV2InputsMarshal: inputs unmarshal error: %v", err)
@@ -439,6 +475,60 @@ func PLGNProofFromSmartContract(jsonResponse **C.char, in *C.char,
 	}
 
 	*jsonResponse = C.CString(string(respB))
+	return true
+}
+
+//export PLGNProfileID
+func PLGNProfileID(jsonResponse **C.char, in *C.char,
+	status **C.PLGNStatus) bool {
+
+	if jsonResponse == nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_NIL_POINTER,
+			"jsonResponse pointer is nil")
+		return false
+	}
+
+	var req struct {
+		GenesisDID string                  `json:"genesisDID"`
+		Nonce      *c_polygonid.JsonBigInt `json:"nonce"`
+	}
+
+	err := json.Unmarshal([]byte(C.GoString(in)), &req)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		return false
+	}
+
+	did, err := core.ParseDID(req.GenesisDID)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		return false
+	}
+
+	id, err := core.ProfileID(did.ID, req.Nonce.BigInt())
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		return false
+	}
+
+	profileDID, err := core.ParseDIDFromID(id)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		return false
+	}
+
+	resp := struct {
+		ProfileDID string `json:"profileDID"`
+	}{ProfileDID: profileDID.String()}
+
+	circuitInputJSON, err := json.Marshal(resp)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR,
+			"response marshal error: %v", err)
+		return false
+	}
+
+	*jsonResponse = C.CString(string(circuitInputJSON))
 	return true
 }
 

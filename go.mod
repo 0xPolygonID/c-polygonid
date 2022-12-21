@@ -3,8 +3,8 @@ module github.com/0xPolygonID/c-polygonid
 go 1.19
 
 require (
-	github.com/iden3/go-circuits v1.0.1-alpha.2.0.20221207090341-24566b82dd85
-	github.com/iden3/go-iden3-core v0.1.1-0.20221202150047-1dcbfdda8b90
+	github.com/iden3/go-circuits v1.0.1-alpha.2.0.20221220201624-2e0df33ff6ab
+	github.com/iden3/go-iden3-core v0.1.1-0.20221220095125-4b274af11521
 	github.com/iden3/go-iden3-crypto v0.0.13
 	github.com/iden3/go-merkletree-sql/v2 v2.0.0
 	github.com/iden3/go-schema-processor v0.2.1-0.20221203141913-1e43f92b5977
