@@ -66,7 +66,7 @@ func TestAtomicQuerySigV2InputsFromJson(t *testing.T) {
 	jsonIn, err := os.ReadFile("testdata/atomic_query_sig_v2_inputs.json")
 	require.NoError(t, err)
 
-	out, err := atomicQuerySigV2InputsFromJson(jsonIn)
+	out, err := AtomicQuerySigV2InputsFromJson(jsonIn)
 	require.NoError(t, err)
 
 	inputsBytes, err := out.InputsMarshal()
@@ -97,7 +97,7 @@ func TestAtomicQuerySigV2InputsFromJson2(t *testing.T) {
 	jsonIn, err := os.ReadFile("testdata/atomic_query_sig_v2_inputs_2.json")
 	require.NoError(t, err)
 
-	out, err := atomicQuerySigV2InputsFromJson(jsonIn)
+	out, err := AtomicQuerySigV2InputsFromJson(jsonIn)
 	require.NoError(t, err)
 
 	inputsBytes, err := out.InputsMarshal()
@@ -141,7 +141,7 @@ func TestAtomicQueryMtpV2InputsFromJson(t *testing.T) {
 	jsonIn, err := os.ReadFile("testdata/atomic_query_mtp_v2_inputs.json")
 	require.NoError(t, err)
 
-	out, err := atomicQueryMtpV2InputsFromJson(jsonIn)
+	out, err := AtomicQueryMtpV2InputsFromJson(jsonIn)
 	require.NoError(t, err)
 
 	inputsBytes, err := out.InputsMarshal()

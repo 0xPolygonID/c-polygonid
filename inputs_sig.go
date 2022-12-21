@@ -373,7 +373,7 @@ type inputsRequest struct {
 	Request                  jsonObj         `json:"request"`
 }
 
-func atomicQueryMtpV2InputsFromJson(
+func AtomicQueryMtpV2InputsFromJson(
 	in []byte) (circuits.AtomicQueryMTPV2Inputs, error) {
 
 	var out circuits.AtomicQueryMTPV2Inputs
@@ -420,7 +420,7 @@ func atomicQueryMtpV2InputsFromJson(
 	return out, nil
 }
 
-func atomicQuerySigV2InputsFromJson(
+func AtomicQuerySigV2InputsFromJson(
 	in []byte) (circuits.AtomicQuerySigV2Inputs, error) {
 
 	var out circuits.AtomicQuerySigV2Inputs
