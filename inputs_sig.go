@@ -367,8 +367,8 @@ func findProofObjByType(w3cCred verifiable.W3CCredential,
 
 type inputsRequest struct {
 	ID                       core.ID         `json:"id"`
-	ProfileNonce             jsonInt         `json:"profileNonce"`
-	ClaimSubjectProfileNonce jsonInt         `json:"claimSubjectProfileNonce"`
+	ProfileNonce             JsonBigInt      `json:"profileNonce"`
+	ClaimSubjectProfileNonce JsonBigInt      `json:"claimSubjectProfileNonce"`
 	VerifiableCredentials    json.RawMessage `json:"verifiableCredentials"`
 	Request                  jsonObj         `json:"request"`
 }
