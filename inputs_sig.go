@@ -180,6 +180,9 @@ func claimWithSigProofFromObj(
 
 	out.IssuerID = &issuerDID.ID
 	out.Claim, err = proof.GetCoreClaim()
+	if err != nil {
+		return out, err
+	}
 
 	credStatus, ok := w3cCred.CredentialStatus.(jsonObj)
 	if !ok {
