@@ -7,7 +7,7 @@ require (
 	github.com/iden3/go-iden3-core v0.1.1-0.20221220095125-4b274af11521
 	github.com/iden3/go-iden3-crypto v0.0.13
 	github.com/iden3/go-merkletree-sql/v2 v2.0.0
-	github.com/iden3/go-schema-processor v0.2.1-0.20221203141913-1e43f92b5977
+	github.com/iden3/go-schema-processor v0.2.1-0.20221227110143-949594a33e90
 	github.com/stretchr/testify v1.7.4
 )
 

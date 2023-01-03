@@ -37,32 +37,6 @@ func stringByPath(obj jsonObj, path string) (string, error) {
 	return s, nil
 }
 
-func coreDIDByPath(obj jsonObj, path string) (*core.DID, error) {
-	s, err := stringByPath(obj, path)
-	if err != nil {
-		return nil, err
-	}
-
-	return core.ParseDID(s)
-}
-
-func coreClaimByPath(obj jsonObj, path string) (*core.Claim, error) {
-	s, err := stringByPath(obj, path)
-	if err != nil {
-		return nil, err
-	}
-	claimBytes, err := hex.DecodeString(s)
-	if err != nil {
-		return nil, err
-	}
-	var claim core.Claim
-	err = claim.UnmarshalBinary(claimBytes)
-	if err != nil {
-		return nil, err
-	}
-	return &claim, nil
-}
-
 // if allowNumbers is true, then the value can also be a number, not only strings
 func bigIntByPath(obj jsonObj, path string,
 	allowNumbers bool) (*big.Int, error) {
@@ -93,12 +67,6 @@ func bigIntByPath(obj jsonObj, path string,
 	}
 }
 
-type errNotFound string
-
-func (e errNotFound) Error() string {
-	return fmt.Sprintf("path not found in object: %v", string(e))
-}
-
 func objByBath(proof jsonObj, s string) (jsonObj, error) {
 	v, err := getByPath(proof, s)
 	if err != nil {
@@ -122,7 +90,8 @@ func getByPath(obj jsonObj, path string) (any, error) {
 		if i == len(parts)-1 {
 			v, ok := curObj[part]
 			if !ok {
-				return nil, errNotFound(path)
+				return nil,
+					fmt.Errorf("path not found in object: %v", path)
 			}
 			return v, nil
 		}
@@ -192,19 +161,25 @@ func claimWithSigProofFromObj(
 	w3cCred verifiable.W3CCredential) (circuits.ClaimWithSigProof, error) {
 
 	var out circuits.ClaimWithSigProof
+
+	proofI := findProofByType(w3cCred, verifiable.BJJSignatureProofType)
+	if proofI == nil {
+		return out, fmt.Errorf("no %v proofs found",
+			verifiable.BJJSignatureProofType)
+	}
+
 	var err error
-
-	proof, err := findProofObjByType(w3cCred, verifiable.BJJSignatureProofType)
+	proof, ok := proofI.(*verifiable.BJJSignatureProof2021)
+	if !ok {
+		return out, errors.New("proof is not of type BJJSignatureProof2021")
+	}
+	issuerDID, err := core.ParseDID(proof.IssuerData.ID)
 	if err != nil {
 		return out, err
 	}
 
-	issuerDID, err := coreDIDByPath(proof, "issuerData.id")
-	if err != nil {
-		return out, err
-	}
 	out.IssuerID = &issuerDID.ID
-	out.Claim, err = coreClaimByPath(proof, "coreClaim")
+	out.Claim, err = proof.GetCoreClaim()
 	if err != nil {
 		return out, err
 	}
@@ -221,7 +196,7 @@ func claimWithSigProofFromObj(
 	if err != nil {
 		return out, err
 	}
-	out.SignatureProof, err = signatureProofFromObj(proof)
+	out.SignatureProof, err = signatureProof(*proof)
 	if err != nil {
 		return out, err
 	}
@@ -229,74 +204,8 @@ func claimWithSigProofFromObj(
 	return out, nil
 }
 
-func signatureProofFromObj(
-	proof jsonObj) (out circuits.BJJSignatureProof, err error) {
-
-	out.Signature, err = sigByPath(proof, "signature")
-	if err != nil {
-		return out, err
-	}
-	out.IssuerAuthClaim, err = coreClaimByPath(proof,
-		"issuerData.authCoreClaim")
-	if err != nil {
-		return out, err
-	}
-	out.IssuerAuthIncProof.TreeState, err = stateFromObjByPaths(proof,
-		"issuerData.state.value", "issuerData.state.claimsTreeRoot",
-		"issuerData.state.revocationTreeRoot", "issuerData.state.rootOfRoots")
-	if err != nil {
-		return out, err
-	}
-	out.IssuerAuthIncProof.Proof, err = proofByPath(proof, "issuerData.mtp")
-	if err != nil {
-		return out, err
-	}
-
-	revocationStatusURL, err := stringByPath(proof,
-		"issuerData.credentialStatus.id")
-	if err != nil {
-		return out, err
-	}
-	out.IssuerAuthNonRevProof, err = resolveRevocationStatus(
-		revocationStatusURL)
-	if err != nil {
-		return out, err
-	}
-
-	return out, nil
-}
-
-func stateFromObjByPaths(obj jsonObj,
-	statePath, ctrPath, rtrPath, rorPath string) (circuits.TreeState, error) {
-	var ts circuits.TreeState
-	var err error
-	ts.State, err = hashByPath(obj, statePath)
-	if err != nil {
-		return ts, err
-	}
-	ts.ClaimsRoot, err = hashByPath(obj, ctrPath)
-	if err != nil {
-		return ts, err
-	}
-	ts.RevocationRoot, err = hashByPath(obj, rtrPath)
-	if errors.Is(err, errNotFound(rtrPath)) {
-		// pass, revocation root is optional
-		ts.RevocationRoot = &merkletree.Hash{}
-	} else if err != nil {
-		return ts, err
-	}
-	ts.RootOfRoots, err = hashByPath(obj, rorPath)
-	if errors.Is(err, errNotFound(rorPath)) {
-		// pass, "root of roots" root is optional
-		ts.RootOfRoots = &merkletree.Hash{}
-	} else if err != nil {
-		return ts, err
-	}
-	return ts, nil
-}
-
-func sigByPath(proof jsonObj, s string) (*babyjub.Signature, error) {
-	sigBytes, err := bytesFromHexByPath(proof, s)
+func sigFromHex(sigHex string) (*babyjub.Signature, error) {
+	sigBytes, err := hex.DecodeString(sigHex)
 	if err != nil {
 		return nil, err
 	}
@@ -308,67 +217,56 @@ func sigByPath(proof jsonObj, s string) (*babyjub.Signature, error) {
 	return compSig.Decompress()
 }
 
-func bytesFromHexByPath(proof jsonObj, s string) ([]byte, error) {
-	hexStr, err := stringByPath(proof, s)
+func signatureProof(proof verifiable.BJJSignatureProof2021,
+) (out circuits.BJJSignatureProof, err error) {
+
+	out.Signature, err = sigFromHex(proof.Signature)
 	if err != nil {
-		return nil, err
+		return out, err
 	}
-	return hex.DecodeString(hexStr)
-}
-
-func hashByPath(proof jsonObj, s string) (*merkletree.Hash, error) {
-	hashStr, err := stringByPath(proof, s)
+	out.IssuerAuthClaim = new(core.Claim)
+	err = out.IssuerAuthClaim.FromHex(proof.IssuerData.AuthCoreClaim)
 	if err != nil {
-		return nil, err
+		return
 	}
-	return merkletree.NewHashFromHex(hashStr)
+	out.IssuerAuthIncProof.TreeState, err = treeState(proof.IssuerData.State)
+	if err != nil {
+		return out, err
+	}
+	out.IssuerAuthIncProof.Proof = proof.IssuerData.MTP
+	credStatus, ok := proof.IssuerData.CredentialStatus.(jsonObj)
+	if !ok {
+		return out, errors.New("credential status is not of object type")
+	}
+	revocationStatusURL, err := stringByPath(credStatus, "id")
+	if err != nil {
+		return out, err
+	}
+	out.IssuerAuthNonRevProof, err =
+		resolveRevocationStatus(revocationStatusURL)
+	if err != nil {
+		return out, err
+	}
+
+	return out, nil
 }
 
-func extractProof(
-	proof interface{}) (jsonObj, verifiable.ProofType, error) {
+func findProofByType(w3cCred verifiable.W3CCredential,
+	proofType verifiable.ProofType) verifiable.CredentialProof {
 
-	switch p := proof.(type) {
-	case jsonObj:
-		defaultProofType, ok := p["type"].(string)
-		if !ok {
-			return nil, "", errors.New("proof type is not specified")
-		}
-		return p, verifiable.ProofType(defaultProofType), nil
-	default:
-		return nil, "", errors.New("unexpected proof object")
-	}
-}
-
-func findProofObjByType(w3cCred verifiable.W3CCredential,
-	proofType verifiable.ProofType) (jsonObj, error) {
-	switch p := w3cCred.Proof.(type) {
-	case []any:
-		for _, proof := range p {
-			proofObj, pType, err := extractProof(proof)
-			if err != nil {
-				return nil, err
-			}
-			if pType == proofType {
-				return proofObj, nil
-			}
-		}
-	case any:
-		proofObj, pType, err := extractProof(p)
-		if err != nil {
-			return nil, err
-		}
-		if pType == proofType {
-			return proofObj, nil
+	for _, p := range w3cCred.Proof {
+		if p.ProofType() == proofType {
+			return p
 		}
 	}
 
-	return nil, fmt.Errorf("no proofs found of type %v", proofType)
+	return nil
 }
 
 type inputsRequest struct {
 	ID                       core.ID         `json:"id"`
-	ProfileNonce             jsonInt         `json:"profileNonce"`
-	ClaimSubjectProfileNonce jsonInt         `json:"claimSubjectProfileNonce"`
+	ProfileNonce             JsonBigInt      `json:"profileNonce"`
+	ClaimSubjectProfileNonce JsonBigInt      `json:"claimSubjectProfileNonce"`
 	VerifiableCredentials    json.RawMessage `json:"verifiableCredentials"`
 	Request                  jsonObj         `json:"request"`
 }
@@ -603,41 +501,29 @@ func (h *hexHash) UnmarshalJSON(i []byte) error {
 	return nil
 }
 
-func proofByPath(obj jsonObj, path string) (*merkletree.Proof, error) {
-	obj2, err := getByPath(obj, path)
-	if err != nil {
-		return nil, err
-	}
-	proofBytes, err := json.Marshal(obj2)
-	if err != nil {
-		return nil, err
-	}
-	var p merkletree.Proof
-	err = json.Unmarshal(proofBytes, &p)
-	if err != nil {
-		return nil, err
-	}
-	return &p, nil
-}
-
 func claimWithMtpProofFromObj(
 	w3cCred verifiable.W3CCredential) (circuits.ClaimWithMTPProof, error) {
 
 	var out circuits.ClaimWithMTPProof
+
+	proofI := findProofByType(w3cCred, verifiable.Iden3SparseMerkleProofType)
+	if proofI == nil {
+		return out, fmt.Errorf("no %v proofs found",
+			verifiable.Iden3SparseMerkleProofType)
+	}
+
 	var err error
-
-	proof, err := findProofObjByType(w3cCred,
-		verifiable.Iden3SparseMerkleProofType)
+	proof, ok := proofI.(*verifiable.Iden3SparseMerkleProof)
+	if !ok {
+		return out, errors.New("proof is not a sparse merkle proof")
+	}
+	issuerDID, err := core.ParseDID(proof.IssuerData.ID)
 	if err != nil {
 		return out, err
 	}
 
-	issuerDID, err := coreDIDByPath(proof, "issuerData.id")
-	if err != nil {
-		return out, err
-	}
 	out.IssuerID = &issuerDID.ID
-	out.Claim, err = coreClaimByPath(proof, "coreClaim")
+	out.Claim, err = proof.GetCoreClaim()
 	if err != nil {
 		return out, err
 	}
@@ -654,7 +540,8 @@ func claimWithMtpProofFromObj(
 	if err != nil {
 		return out, err
 	}
-	out.IncProof, err = mtpProofFromObj(proof)
+	out.IncProof.Proof = proof.MTP
+	out.IncProof.TreeState, err = treeState(proof.IssuerData.State)
 	if err != nil {
 		return out, err
 	}
@@ -662,17 +549,37 @@ func claimWithMtpProofFromObj(
 	return out, nil
 }
 
-func mtpProofFromObj(proof jsonObj) (out circuits.MTProof, err error) {
-	out.Proof, err = proofByPath(proof, "mtp")
-	if err != nil {
-		return out, err
+func treeState(state verifiable.State) (ts circuits.TreeState, err error) {
+	if state.Value == nil {
+		return ts, errors.New("state value is nil")
 	}
-	out.TreeState, err = stateFromObjByPaths(proof,
-		"issuerData.state.value", "issuerData.state.claimsTreeRoot",
-		"issuerData.state.revocationTreeRoot", "issuerData.state.rootOfRoots")
+	ts.State, err = merkletree.NewHashFromHex(*state.Value)
 	if err != nil {
-		return out, err
+		return ts, err
 	}
-
-	return out, nil
+	if state.ClaimsTreeRoot == nil {
+		return ts, errors.New("state claims tree root is nil")
+	}
+	ts.ClaimsRoot, err = merkletree.NewHashFromHex(*state.ClaimsTreeRoot)
+	if err != nil {
+		return ts, err
+	}
+	if state.RevocationTreeRoot != nil {
+		ts.RevocationRoot, err =
+			merkletree.NewHashFromHex(*state.RevocationTreeRoot)
+		if err != nil {
+			return ts, err
+		}
+	} else {
+		ts.RevocationRoot = &merkletree.Hash{}
+	}
+	if state.RootOfRoots != nil {
+		ts.RootOfRoots, err = merkletree.NewHashFromHex(*state.RootOfRoots)
+		if err != nil {
+			return ts, err
+		}
+	} else {
+		ts.RootOfRoots = &merkletree.Hash{}
+	}
+	return
 }

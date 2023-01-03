@@ -21,6 +21,14 @@ func (j *JsonBigInt) UnmarshalJSON(bytes []byte) error {
 	return nil
 }
 
+func (j *JsonBigInt) MarshalJSON() ([]byte, error) {
+	if j == nil {
+		return []byte("null"), nil
+	}
+
+	return json.Marshal((*big.Int)(j).String())
+}
+
 func (j *JsonBigInt) BigInt() *big.Int {
 	return (*big.Int)(j)
 }

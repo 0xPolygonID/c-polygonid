@@ -94,7 +94,7 @@ func TestAtomicQuerySigV2InputsFromJson2(t *testing.T) {
 	}()
 	httpClient.Transport = mockedRouterTripper{}
 
-	jsonIn, err := os.ReadFile("testdata/atomic_query_sig_v2_inputs_2.json")
+	jsonIn, err := os.ReadFile("testdata/atomic_query_sig_v2_2_inputs.json")
 	require.NoError(t, err)
 
 	out, err := AtomicQuerySigV2InputsFromJson(jsonIn)
@@ -107,7 +107,14 @@ func TestAtomicQuerySigV2InputsFromJson2(t *testing.T) {
 	err = json.Unmarshal(inputsBytes, &inputsObj)
 	require.NoError(t, err)
 
-	t.Log(string(inputsBytes))
+	jsonWant, err := os.ReadFile("testdata/atomic_query_sig_v2_2_output.json")
+	require.NoError(t, err)
+	var wantObj jsonObj
+	err = json.Unmarshal(jsonWant, &wantObj)
+	require.NoError(t, err)
+	wantObj["timestamp"] = inputsObj["timestamp"]
+
+	//t.Log(string(inputsBytes))
 }
 
 func TestHexHash_UnmarshalJSON(t *testing.T) {
@@ -151,5 +158,12 @@ func TestAtomicQueryMtpV2InputsFromJson(t *testing.T) {
 	err = json.Unmarshal(inputsBytes, &inputsObj)
 	require.NoError(t, err)
 
-	t.Log(string(inputsBytes))
+	jsonWant, err := os.ReadFile("testdata/atomic_query_mtp_v2_output.json")
+	require.NoError(t, err)
+	var wantObj jsonObj
+	err = json.Unmarshal(jsonWant, &wantObj)
+	require.NoError(t, err)
+	wantObj["timestamp"] = inputsObj["timestamp"]
+
+	require.Equal(t, wantObj, inputsObj)
 }
