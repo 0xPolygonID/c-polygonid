@@ -2,7 +2,6 @@ package c_polygonid
 
 import (
 	"encoding/json"
-	"errors"
 	"math/big"
 
 	"github.com/iden3/go-merkletree-sql/v2"
@@ -35,39 +34,12 @@ func (s *SmartContractProof) UnmarshalJSON(bytes []byte) error {
 }
 
 type smartContractProofJson struct {
-	Root     jsonInt     `json:"root"`
-	Siblings [32]jsonInt `json:"siblings"`
-	OldKey   jsonInt     `json:"oldKey"`
-	OldValue jsonInt     `json:"oldValue"`
-	IsOld0   bool        `json:"isOld0"`
-	Fnc      jsonInt     `json:"fnc"`
-}
-
-type jsonInt big.Int
-
-func (j *jsonInt) UnmarshalJSON(bytes []byte) error {
-	var s string
-	if err := json.Unmarshal(bytes, &s); err != nil {
-		return err
-	}
-	var i = (*big.Int)(j)
-	_, ok := i.SetString(s, 10)
-	if !ok {
-		return errors.New("error parsing big.Int")
-	}
-	return nil
-}
-
-func (j *jsonInt) MarshalJSON() ([]byte, error) {
-	if j == nil {
-		return []byte("null"), nil
-	}
-
-	return json.Marshal((*big.Int)(j).String())
-}
-
-func (j *jsonInt) BigInt() *big.Int {
-	return (*big.Int)(j)
+	Root     JsonBigInt     `json:"root"`
+	Siblings [32]JsonBigInt `json:"siblings"`
+	OldKey   JsonBigInt     `json:"oldKey"`
+	OldValue JsonBigInt     `json:"oldValue"`
+	IsOld0   bool           `json:"isOld0"`
+	Fnc      JsonBigInt     `json:"fnc"`
 }
 
 func ProofFromSmartContract(

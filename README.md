@@ -24,6 +24,6 @@ make test
 ```shell
 make darwin-arm64
 cd examples
-# `-framework CoreFoundation` is only for macOS
-clang -L../build -lpolygonid-darwin-arm64 -framework CoreFoundation json_functions_tests.c && ./a.out
+# `-framework CoreFoundation -framework Security` is only for macOS
+clang -L../build -lpolygonid-darwin-arm64 -framework CoreFoundation -framework Security json_functions_tests.c && ./a.out
 ```

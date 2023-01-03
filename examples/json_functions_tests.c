@@ -51,6 +51,12 @@ TEST testCases[] = {
 	.out = "testdata/profile_id_out.json",
 	.fn = &PLGNProfileID
   }
+  // timestamp is different on each call, so we can't just compare output for equality
+  /* { */
+  /* 	.in = "testdata/sig_v2_inputs_in.json", */
+  /* 	.out = "testdata/sig_v2_inputs_out.json", */
+  /* 	.fn = &PLGNSigV2Inputs */
+  /* } */
 };
 
 // return 0 on success or non-0 on error

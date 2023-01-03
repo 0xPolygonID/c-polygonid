@@ -2,6 +2,7 @@ package main
 
 /*
 #include <stdlib.h>
+#include <string.h>
 
 typedef enum
 {
@@ -529,6 +530,62 @@ func PLGNProfileID(jsonResponse **C.char, in *C.char,
 	}
 
 	*jsonResponse = C.CString(string(circuitInputJSON))
+	return true
+}
+
+//export PLGNSigV2Inputs
+func PLGNSigV2Inputs(jsonResponse **C.char, in *C.char,
+	status **C.PLGNStatus) bool {
+
+	if jsonResponse == nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_NIL_POINTER,
+			"jsonResponse pointer is nil")
+		return false
+	}
+
+	inData := C.GoBytes(unsafe.Pointer(in), C.int(C.strlen(in)))
+	inputs, err := c_polygonid.AtomicQuerySigV2InputsFromJson(inData)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		return false
+	}
+
+	resp, err := inputs.InputsMarshal()
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR,
+			"signature inputs marshal error: %v", err)
+		return false
+	}
+
+	*jsonResponse = C.CString(string(resp))
+	return true
+}
+
+//export PLGNMtpV2Inputs
+func PLGNMtpV2Inputs(jsonResponse **C.char, in *C.char,
+	status **C.PLGNStatus) bool {
+
+	if jsonResponse == nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_NIL_POINTER,
+			"jsonResponse pointer is nil")
+		return false
+	}
+
+	inData := C.GoBytes(unsafe.Pointer(in), C.int(C.strlen(in)))
+	inputs, err := c_polygonid.AtomicQueryMtpV2InputsFromJson(inData)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		return false
+	}
+
+	resp, err := inputs.InputsMarshal()
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR,
+			"mtp inputs marshal error: %v", err)
+		return false
+	}
+
+	*jsonResponse = C.CString(string(resp))
 	return true
 }
 

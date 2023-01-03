@@ -1,4 +1,4 @@
-name: CTests
+name: Tests
 
 on:
   push:
@@ -20,8 +20,4 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-      - run: |
-          go build -buildmode=c-archive -o ios/libpolygonid-linux-amd64.a ./cmd/polygonid
-          cp ios/libpolygonid-linux-amd64.h ios/libpolygonid-darwin-arm64.h
-          cd examples/
-          gcc json_functions_tests.c -L../ios -lpolygonid-linux-amd64 -pthread && ./a.out
+      - run: go test -v -race -timeout=60s ./...
