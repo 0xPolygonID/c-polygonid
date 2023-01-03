@@ -405,7 +405,7 @@ func queryFromObj(w3cCred verifiable.W3CCredential,
 		return out, err
 	}
 
-	reqObj, err := objByBath(requestObj, "query.req")
+	reqObj, err := objByBath(requestObj, "query.credentialSubject")
 	if err != nil {
 		return out, err
 	}

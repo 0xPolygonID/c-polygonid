@@ -87,7 +87,7 @@
       "allowedIssuers": "unused",
       "context": "https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld",
       "type": "KYCAgeCredential",
-      "req": {
+      "credentialSubject": {
         "documentType": {
           "$eq": 2
         }
