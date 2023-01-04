@@ -7,63 +7,21 @@ import (
 	"github.com/iden3/go-merkletree-sql/v2"
 )
 
-type SmartContractProof struct {
-	Root     *big.Int
-	Siblings []*big.Int
-	OldKey   *big.Int
-	OldValue *big.Int
-	IsOld0   bool
-	Fnc      *big.Int
-}
-
-func (s *SmartContractProof) UnmarshalJSON(bytes []byte) error {
-	var j smartContractProofJson
-	if err := json.Unmarshal(bytes, &j); err != nil {
-		return err
-	}
-	s.Root = j.Root.BigInt()
-	s.Siblings = make([]*big.Int, len(j.Siblings))
-	for i := range j.Siblings {
-		s.Siblings[i] = j.Siblings[i].BigInt()
-	}
-	s.OldKey = j.OldKey.BigInt()
-	s.OldValue = j.OldValue.BigInt()
-	s.IsOld0 = j.IsOld0
-	s.Fnc = j.Fnc.BigInt()
-	return nil
-}
-
-type smartContractProofJson struct {
-	Root     JsonBigInt     `json:"root"`
-	Siblings [32]JsonBigInt `json:"siblings"`
-	OldKey   JsonBigInt     `json:"oldKey"`
-	OldValue JsonBigInt     `json:"oldValue"`
-	IsOld0   bool           `json:"isOld0"`
-	Fnc      JsonBigInt     `json:"fnc"`
-}
-
 func ProofFromSmartContract(
 	scProof SmartContractProof) (*merkletree.Proof, *merkletree.Hash, error) {
 
-	var existence bool
 	var nodeAux *merkletree.NodeAux
 	var err error
 
-	if scProof.Fnc.Cmp(big.NewInt(0)) == 0 {
-		existence = true
-	} else {
-		existence = false
-
-		if !scProof.IsOld0 {
-			nodeAux = &merkletree.NodeAux{}
-			nodeAux.Key, err = merkletree.NewHashFromBigInt(scProof.OldKey)
-			if err != nil {
-				return &merkletree.Proof{}, &merkletree.Hash{}, err
-			}
-			nodeAux.Value, err = merkletree.NewHashFromBigInt(scProof.OldValue)
-			if err != nil {
-				return &merkletree.Proof{}, &merkletree.Hash{}, err
-			}
+	if scProof.AuxExistence {
+		nodeAux = &merkletree.NodeAux{}
+		nodeAux.Key, err = merkletree.NewHashFromBigInt(scProof.AuxIndex)
+		if err != nil {
+			return &merkletree.Proof{}, &merkletree.Hash{}, err
+		}
+		nodeAux.Value, err = merkletree.NewHashFromBigInt(scProof.AuxValue)
+		if err != nil {
+			return &merkletree.Proof{}, &merkletree.Hash{}, err
 		}
 	}
 
@@ -75,7 +33,8 @@ func ProofFromSmartContract(
 		}
 	}
 
-	proof, err := merkletree.NewProofFromData(existence, allSiblings, nodeAux)
+	proof, err := merkletree.NewProofFromData(scProof.Existence, allSiblings,
+		nodeAux)
 	if err != nil {
 		return &merkletree.Proof{}, &merkletree.Hash{}, err
 	}
@@ -86,4 +45,38 @@ func ProofFromSmartContract(
 	}
 
 	return proof, root, nil
+}
+
+type SmartContractProof struct {
+	Root         *big.Int
+	Existence    bool
+	Siblings     []*big.Int
+	AuxExistence bool
+	AuxIndex     *big.Int
+	AuxValue     *big.Int
+}
+
+func (s *SmartContractProof) UnmarshalJSON(bytes []byte) error {
+	var j struct {
+		Root         JsonBigInt     `json:"root"`
+		Existence    bool           `json:"existence"`
+		Siblings     [32]JsonBigInt `json:"siblings"`
+		AuxExistence bool           `json:"auxExistence"`
+		AuxIndex     JsonBigInt     `json:"auxIndex"`
+		AuxValue     JsonBigInt     `json:"auxValue"`
+	}
+
+	if err := json.Unmarshal(bytes, &j); err != nil {
+		return err
+	}
+	s.Root = j.Root.BigInt()
+	s.Existence = j.Existence
+	s.Siblings = make([]*big.Int, len(j.Siblings))
+	for i := range j.Siblings {
+		s.Siblings[i] = j.Siblings[i].BigInt()
+	}
+	s.AuxExistence = j.AuxExistence
+	s.AuxIndex = j.AuxIndex.BigInt()
+	s.AuxValue = j.AuxValue.BigInt()
+	return nil
 }
