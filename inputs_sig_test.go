@@ -1,13 +1,13 @@
 package c_polygonid
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
 
-	"github.com/iden3/go-schema-processor/verifiable"
 	"github.com/stretchr/testify/require"
 )
 
@@ -66,10 +66,12 @@ func TestAtomicQuerySigV2InputsFromJson(t *testing.T) {
 	jsonIn, err := os.ReadFile("testdata/atomic_query_sig_v2_inputs.json")
 	require.NoError(t, err)
 
-	out, err := AtomicQuerySigV2InputsFromJson(jsonIn)
+	ctx := context.Background()
+
+	out, err := AtomicQuerySigV2InputsFromJson(ctx, jsonIn)
 	require.NoError(t, err)
 
-	inputsBytes, err := out.InputsMarshal()
+	inputsBytes, err := out.Inputs.InputsMarshal()
 	require.NoError(t, err)
 
 	var inputsObj jsonObj
@@ -84,7 +86,6 @@ func TestAtomicQuerySigV2InputsFromJson(t *testing.T) {
 	wantObj["timestamp"] = inputsObj["timestamp"]
 
 	require.Equal(t, wantObj, inputsObj)
-	//t.Log(string(inputsBytes))
 }
 
 func TestAtomicQuerySigV2InputsFromJson2(t *testing.T) {
@@ -97,10 +98,12 @@ func TestAtomicQuerySigV2InputsFromJson2(t *testing.T) {
 	jsonIn, err := os.ReadFile("testdata/atomic_query_sig_v2_2_inputs.json")
 	require.NoError(t, err)
 
-	out, err := AtomicQuerySigV2InputsFromJson(jsonIn)
+	ctx := context.Background()
+
+	out, err := AtomicQuerySigV2InputsFromJson(ctx, jsonIn)
 	require.NoError(t, err)
 
-	inputsBytes, err := out.InputsMarshal()
+	inputsBytes, err := out.Inputs.InputsMarshal()
 	require.NoError(t, err)
 
 	var inputsObj jsonObj
@@ -124,34 +127,16 @@ func TestHexHash_UnmarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestW3CCredentialUnmarshal(t *testing.T) {
-	var y struct {
-		VC json.RawMessage `json:"verifiableCredentials"`
-	}
-
-	jsonIn, err := os.ReadFile("testdata/atomic_query_sig_v2_inputs.json")
-	require.NoError(t, err)
-
-	err = json.Unmarshal(jsonIn, &y)
-	require.NoError(t, err)
-
-	var x verifiable.W3CCredential
-	err = json.Unmarshal(y.VC, &x)
-	require.NoError(t, err)
-
-	xBytes, err := json.Marshal(x)
-	require.NoError(t, err)
-	t.Log(string(xBytes))
-}
-
 func TestAtomicQueryMtpV2InputsFromJson(t *testing.T) {
 	jsonIn, err := os.ReadFile("testdata/atomic_query_mtp_v2_inputs.json")
 	require.NoError(t, err)
 
-	out, err := AtomicQueryMtpV2InputsFromJson(jsonIn)
+	ctx := context.Background()
+
+	out, err := AtomicQueryMtpV2InputsFromJson(ctx, jsonIn)
 	require.NoError(t, err)
 
-	inputsBytes, err := out.InputsMarshal()
+	inputsBytes, err := out.Inputs.InputsMarshal()
 	require.NoError(t, err)
 
 	var inputsObj jsonObj

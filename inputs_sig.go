@@ -271,10 +271,18 @@ type inputsRequest struct {
 	Request                  jsonObj         `json:"request"`
 }
 
-func AtomicQueryMtpV2InputsFromJson(
-	in []byte) (circuits.AtomicQueryMTPV2Inputs, error) {
+type AtomicQueryInputsResponse struct {
+	Inputs                circuits.InputsMarshaller
+	Mz                    *merklize.Merklizer
+	QueryPath             merklize.Path
+	IsSelectiveDisclosure bool
+}
 
-	var out circuits.AtomicQueryMTPV2Inputs
+func AtomicQueryMtpV2InputsFromJson(ctx context.Context,
+	in []byte) (AtomicQueryInputsResponse, error) {
+
+	var out AtomicQueryInputsResponse
+	var inpMarsh circuits.AtomicQueryMTPV2Inputs
 
 	var obj inputsRequest
 	err := json.Unmarshal(in, &obj)
@@ -282,13 +290,13 @@ func AtomicQueryMtpV2InputsFromJson(
 		return out, err
 	}
 
-	out.RequestID, err = bigIntByPath(obj.Request, "id", true)
+	inpMarsh.RequestID, err = bigIntByPath(obj.Request, "id", true)
 	if err != nil {
 		return out, err
 	}
-	out.ID = &obj.ID
-	out.ProfileNonce = obj.ProfileNonce.BigInt()
-	out.ClaimSubjectProfileNonce = obj.ClaimSubjectProfileNonce.BigInt()
+	inpMarsh.ID = &obj.ID
+	inpMarsh.ProfileNonce = obj.ProfileNonce.BigInt()
+	inpMarsh.ClaimSubjectProfileNonce = obj.ClaimSubjectProfileNonce.BigInt()
 
 	circuitID, err := stringByPath(obj.Request, "circuitId")
 	if err != nil {
@@ -303,25 +311,34 @@ func AtomicQueryMtpV2InputsFromJson(
 		return out, err
 	}
 
-	out.Claim, err = claimWithMtpProofFromObj(w3cCred)
+	inpMarsh.Claim, err = claimWithMtpProofFromObj(w3cCred)
 	if err != nil {
 		return out, err
 	}
 
-	out.Query, err = queryFromObj(w3cCred, obj.Request)
+	out.Mz, err = w3cCred.Merklize(ctx)
 	if err != nil {
 		return out, err
 	}
 
-	out.CurrentTimeStamp = time.Now().Unix()
+	inpMarsh.Query, out.QueryPath, out.IsSelectiveDisclosure, err =
+		queryFromObj(ctx, out.Mz, obj.Request)
+	if err != nil {
+		return out, err
+	}
+
+	inpMarsh.CurrentTimeStamp = time.Now().Unix()
+
+	out.Inputs = inpMarsh
 
 	return out, nil
 }
 
-func AtomicQuerySigV2InputsFromJson(
-	in []byte) (circuits.AtomicQuerySigV2Inputs, error) {
+func AtomicQuerySigV2InputsFromJson(ctx context.Context,
+	in []byte) (AtomicQueryInputsResponse, error) {
 
-	var out circuits.AtomicQuerySigV2Inputs
+	var out AtomicQueryInputsResponse
+	var inpMarsh circuits.AtomicQuerySigV2Inputs
 
 	var obj inputsRequest
 	err := json.Unmarshal(in, &obj)
@@ -329,13 +346,13 @@ func AtomicQuerySigV2InputsFromJson(
 		return out, err
 	}
 
-	out.RequestID, err = bigIntByPath(obj.Request, "id", true)
+	inpMarsh.RequestID, err = bigIntByPath(obj.Request, "id", true)
 	if err != nil {
 		return out, err
 	}
-	out.ID = &obj.ID
-	out.ProfileNonce = obj.ProfileNonce.BigInt()
-	out.ClaimSubjectProfileNonce = obj.ClaimSubjectProfileNonce.BigInt()
+	inpMarsh.ID = &obj.ID
+	inpMarsh.ProfileNonce = obj.ProfileNonce.BigInt()
+	inpMarsh.ClaimSubjectProfileNonce = obj.ClaimSubjectProfileNonce.BigInt()
 
 	circuitID, err := stringByPath(obj.Request, "circuitId")
 	if err != nil {
@@ -350,48 +367,41 @@ func AtomicQuerySigV2InputsFromJson(
 		return out, err
 	}
 
-	out.Claim, err = claimWithSigProofFromObj(w3cCred)
+	inpMarsh.Claim, err = claimWithSigProofFromObj(w3cCred)
 	if err != nil {
 		return out, err
 	}
 
-	out.Query, err = queryFromObj(w3cCred, obj.Request)
+	out.Mz, err = w3cCred.Merklize(ctx)
 	if err != nil {
 		return out, err
 	}
 
-	out.CurrentTimeStamp = time.Now().Unix()
+	inpMarsh.Query, out.QueryPath, out.IsSelectiveDisclosure, err =
+		queryFromObj(ctx, out.Mz, obj.Request)
+	if err != nil {
+		return out, err
+	}
+
+	inpMarsh.CurrentTimeStamp = time.Now().Unix()
+
+	out.Inputs = inpMarsh
 
 	return out, nil
 }
 
-func queryFromObj(w3cCred verifiable.W3CCredential,
-	requestObj jsonObj) (out circuits.Query, err error) {
+func buildQueryPath(ctx context.Context, contextURL string, contextType string,
+	field string) (path merklize.Path, err error) {
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	mz, err := w3cCred.Merklize(ctx)
-
-	var contextURL string
-	contextURL, err = stringByPath(requestObj, "query.context")
-	if err != nil {
-		return out, err
-	}
-	var contextType string
-	contextType, err = stringByPath(requestObj, "query.type")
-	if err != nil {
-		return out, err
-	}
 	var httpReq *http.Request
-	httpReq, err = http.NewRequestWithContext(ctx, "GET", contextURL,
+	httpReq, err = http.NewRequestWithContext(ctx, http.MethodGet, contextURL,
 		http.NoBody)
 	if err != nil {
-		return out, err
+		return merklize.Path{}, err
 	}
 	httpResp, err := httpClient.Do(httpReq)
 	if err != nil {
-		return out, err
+		return merklize.Path{}, err
 	}
 	defer func() {
 		err2 := httpResp.Body.Close()
@@ -399,81 +409,127 @@ func queryFromObj(w3cCred verifiable.W3CCredential,
 			err = err2
 		}
 	}()
+
 	var contextBytes []byte
 	contextBytes, err = io.ReadAll(io.LimitReader(httpResp.Body, 16*1024))
 	if err != nil {
-		return out, err
+		return
 	}
 
-	reqObj, err := objByBath(requestObj, "query.credentialSubject")
+	path, err = merklize.NewFieldPathFromContext(contextBytes, contextType,
+		field)
 	if err != nil {
-		return out, err
+		return
 	}
-	if len(reqObj) != 1 {
-		return out, errors.New("for now it is supported only one field query")
+	// took from identity-server prepareMerklizedQuery func
+	err = path.Prepend("https://www.w3.org/2018/credentials#credentialSubject")
+	if err != nil {
+		return
 	}
-	for field, op := range reqObj {
-		var path merklize.Path
-		path, err = merklize.NewFieldPathFromContext(contextBytes,
-			contextType, field)
-		if err != nil {
-			return out, err
-		}
-		// took from identity-server prepareMerklizedQuery func
-		err = path.Prepend("https://www.w3.org/2018/credentials#credentialSubject")
-		if err != nil {
-			return out, err
-		}
 
-		out.ValueProof = new(circuits.ValueProof)
-		out.ValueProof.Path, err = path.MtEntry()
-		if err != nil {
-			return out, err
-		}
-		var value merklize.Value
-		out.ValueProof.MTP, value, err = mz.Proof(ctx, path)
-		if err != nil {
-			return out, err
-		}
-		out.ValueProof.Value, err = value.MtEntry()
-		if err != nil {
-			return out, err
-		}
+	return
+}
 
-		var opObj jsonObj
-		var ok bool
-		opObj, ok = op.(jsonObj)
+func queryFromObj(ctx context.Context, mz *merklize.Merklizer,
+	requestObj jsonObj) (out circuits.Query, path merklize.Path,
+	isSelectiveDisclosure bool, err error) {
+
+	var contextURL string
+	contextURL, err = stringByPath(requestObj, "query.context")
+	if err != nil {
+		return out, path, isSelectiveDisclosure, err
+	}
+	var contextType string
+	contextType, err = stringByPath(requestObj, "query.type")
+	if err != nil {
+		return out, path, isSelectiveDisclosure, err
+	}
+	credSubjObj, err := objByBath(requestObj, "query.credentialSubject")
+	if err != nil {
+		return out, path, isSelectiveDisclosure, err
+	}
+	field, op, err := extractSingleEntry(credSubjObj)
+	if err != nil {
+		return out, path, isSelectiveDisclosure,
+			fmt.Errorf("unable to extract field from query: %w", err)
+	}
+	path, err = buildQueryPath(ctx, contextURL, contextType, field)
+	if err != nil {
+		return out, path, isSelectiveDisclosure, err
+	}
+
+	out.ValueProof = new(circuits.ValueProof)
+	out.ValueProof.Path, err = path.MtEntry()
+	if err != nil {
+		return out, path, isSelectiveDisclosure, err
+	}
+	var value merklize.Value
+	out.ValueProof.MTP, value, err = mz.Proof(ctx, path)
+	if err != nil {
+		return out, path, isSelectiveDisclosure, err
+	}
+	out.ValueProof.Value, err = value.MtEntry()
+	if err != nil {
+		return out, path, isSelectiveDisclosure, err
+	}
+
+	var opObj jsonObj
+	var ok bool
+	opObj, ok = op.(jsonObj)
+	if !ok {
+		return out, path, isSelectiveDisclosure,
+			errors.New("operation on field is not a json object")
+	}
+	opStr, val, err := extractSingleEntry(opObj)
+	switch err {
+	case errMultipleEntries:
+		return out, path, isSelectiveDisclosure,
+			errors.New("only one operation per field is supported")
+	case errNoEntry:
+		// handle selective disclosure
+		out.Operator = circuits.EQ
+		out.Values = []*big.Int{out.ValueProof.Value}
+		isSelectiveDisclosure = true
+	default:
+		out.Operator, ok = circuits.QueryOperators[opStr]
 		if !ok {
-			return out, errors.New("operation on field is not a json object")
+			return out, path, isSelectiveDisclosure,
+				errors.New("unknown operator")
 		}
-		if len(opObj) != 1 {
-			return out, errors.New(
-				"for now it is supported only one operation per field")
-		}
-		for opStr, val := range opObj {
-			out.Operator, ok = circuits.QueryOperators[opStr]
+		switch vt := val.(type) {
+		case string:
+			i, ok := new(big.Int).SetString(vt, 10)
 			if !ok {
-				return out, errors.New("unknown operator")
+				return out, path, isSelectiveDisclosure,
+					errors.New("invalid big int value")
 			}
-			switch vt := val.(type) {
-			case string:
-				i, ok := new(big.Int).SetString(vt, 10)
-				if !ok {
-					return out, errors.New("invalid big int value")
-				}
-				out.Values = []*big.Int{i}
-			case float64:
-				intVal := int64(vt)
-				if float64(intVal) != vt {
-					return out, errors.New("invalid int value")
-				}
-				out.Values = []*big.Int{big.NewInt(intVal)}
-			default:
-				return out, errors.New("value is not a number")
+			out.Values = []*big.Int{i}
+		case float64:
+			intVal := int64(vt)
+			if float64(intVal) != vt {
+				return out, path, isSelectiveDisclosure,
+					errors.New("invalid int value")
 			}
+			out.Values = []*big.Int{big.NewInt(intVal)}
+		default:
+			return out, path, isSelectiveDisclosure,
+				errors.New("value is not a number")
 		}
 	}
-	return out, nil
+	return out, path, isSelectiveDisclosure, nil
+}
+
+var errNoEntry = errors.New("no entry")
+var errMultipleEntries = errors.New("multiple entries")
+
+func extractSingleEntry(obj jsonObj) (key string, val any, err error) {
+	if len(obj) > 1 {
+		return key, val, errMultipleEntries
+	}
+	for key, val = range obj {
+		return key, val, nil
+	}
+	return key, val, errNoEntry
 }
 
 type hexHash merkletree.Hash

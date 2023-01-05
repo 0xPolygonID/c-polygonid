@@ -15,6 +15,7 @@ import (
 )
 
 func TestGenerateAuthClaimData(t *testing.T) {
+	t.Skip("generate auth claim data")
 	var schema core.SchemaHash
 	n, err := hex.NewDecoder(
 		strings.NewReader("ca938857241db9451ea329256b9c06e5")).
@@ -43,13 +44,8 @@ func TestGenerateAuthClaimData(t *testing.T) {
 	t.Log(string(cBytes))
 }
 
-func TestRndInt(t *testing.T) {
-	i, err := poseidon.Hash([]*big.Int{big.NewInt(100503)})
-	require.NoError(t, err)
-	t.Log(i.Text(10))
-}
-
 func TestRndID(t *testing.T) {
+	t.Skip("generate random id")
 	state, err := poseidon.Hash([]*big.Int{big.NewInt(rand.Int63())})
 	require.NoError(t, err)
 	id, err := core.IdGenesisFromIdenState(core.TypeDefault, state)
@@ -89,6 +85,7 @@ func schemaFromStr(sStr string) core.SchemaHash {
 
 // All fields, ID is in the Index, Merkle tree root is in the Index.
 func TestCreateClaimAllFields1(t *testing.T) {
+	t.Skip("generate claim with all fields for testing")
 	c, err := core.NewClaim(schemaFromStr("ca938857241db9451ea329256b9c06e5"),
 		core.WithFlagUpdatable(true),
 		core.WithVersion(2596996162),
@@ -109,6 +106,7 @@ func TestCreateClaimAllFields1(t *testing.T) {
 
 // All fields, ID is in the Value, Merkle tree root is in the Value.
 func TestCreateClaimAllFields2(t *testing.T) {
+	t.Skip("generate claim with all fields for testing")
 	c, err := core.NewClaim(schemaFromStr("ca938857241db9451ea329256b9c06e5"),
 		core.WithFlagUpdatable(true),
 		core.WithVersion(2596996162),

@@ -19,6 +19,7 @@ typedef struct _PLGNStatus
 import "C"
 
 import (
+	"context"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -543,27 +544,62 @@ func PLGNSigV2Inputs(jsonResponse **C.char, in *C.char,
 		return false
 	}
 
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
 	inData := C.GoBytes(unsafe.Pointer(in), C.int(C.strlen(in)))
-	inputs, err := c_polygonid.AtomicQuerySigV2InputsFromJson(inData)
+	aqInpResp, err := c_polygonid.AtomicQuerySigV2InputsFromJson(ctx, inData)
 	if err != nil {
 		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
 		return false
 	}
 
-	resp, err := inputs.InputsMarshal()
+	resp, err := marshalInputsResponse(aqInpResp)
 	if err != nil {
 		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR,
-			"signature inputs marshal error: %v", err)
+			"error marshalling atomic query inputs: %v", err)
 		return false
 	}
 
-	*jsonResponse = C.CString(string(resp))
+	*jsonResponse = C.CString(resp)
 	return true
+}
+
+func marshalInputsResponse(
+	inputsResponse c_polygonid.AtomicQueryInputsResponse) (string, error) {
+
+	var resp struct {
+		Inputs json.RawMessage `json:"inputs"`
+		Value  any             `json:"value,omitempty"`
+	}
+	var err error
+	resp.Inputs, err = inputsResponse.Inputs.InputsMarshal()
+	if err != nil {
+		return "", err
+	}
+
+	if inputsResponse.IsSelectiveDisclosure {
+		resp.Value, err = inputsResponse.Mz.RawValue(inputsResponse.QueryPath)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	respBytes, err := json.Marshal(resp)
+	if err != nil {
+		return "", err
+	}
+
+	return string(respBytes), nil
+
 }
 
 //export PLGNMtpV2Inputs
 func PLGNMtpV2Inputs(jsonResponse **C.char, in *C.char,
 	status **C.PLGNStatus) bool {
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
 	if jsonResponse == nil {
 		maybeCreateStatus(status, C.PLGNSTATUSCODE_NIL_POINTER,
@@ -572,20 +608,20 @@ func PLGNMtpV2Inputs(jsonResponse **C.char, in *C.char,
 	}
 
 	inData := C.GoBytes(unsafe.Pointer(in), C.int(C.strlen(in)))
-	inputs, err := c_polygonid.AtomicQueryMtpV2InputsFromJson(inData)
+	aqInpResp, err := c_polygonid.AtomicQueryMtpV2InputsFromJson(ctx, inData)
 	if err != nil {
 		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
 		return false
 	}
 
-	resp, err := inputs.InputsMarshal()
+	resp, err := marshalInputsResponse(aqInpResp)
 	if err != nil {
 		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR,
-			"mtp inputs marshal error: %v", err)
+			"error marshalling atomic query inputs: %v", err)
 		return false
 	}
 
-	*jsonResponse = C.CString(string(resp))
+	*jsonResponse = C.CString(resp)
 	return true
 }
 
