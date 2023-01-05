@@ -53,6 +53,7 @@ func TestRndID(t *testing.T) {
 	t.Log(id)
 }
 
+//nolint:unused // reason: used in skipped tests
 func intFromStr(iStr string) *big.Int {
 	i, ok := new(big.Int).SetString(iStr, 10)
 	if !ok {
@@ -61,6 +62,7 @@ func intFromStr(iStr string) *big.Int {
 	return i
 }
 
+//nolint:unused // reason: used in skipped tests
 func idFromStr(iStr string) core.ID {
 	id, err := core.IDFromString(iStr)
 	if err != nil {
@@ -69,6 +71,7 @@ func idFromStr(iStr string) core.ID {
 	return id
 }
 
+//nolint:unused // reason: used in skipped tests
 func schemaFromStr(sStr string) core.SchemaHash {
 	var schema core.SchemaHash
 	n, err := hex.NewDecoder(
