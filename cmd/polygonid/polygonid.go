@@ -229,7 +229,7 @@ func PLGNCalculateGenesisID(jsonResponse **C.char, in *C.char,
 		return false
 	}
 
-	typ, err := core.BuildDIDType(core.DIDMethodIden3, req.Blockchain,
+	typ, err := core.BuildDIDType(core.DIDMethodPolygonID, req.Blockchain,
 		req.Network)
 	if err != nil {
 		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
@@ -244,7 +244,7 @@ func PLGNCalculateGenesisID(jsonResponse **C.char, in *C.char,
 
 	did := core.DID{
 		ID:         *coreID,
-		Method:     core.DIDMethodIden3,
+		Method:     core.DIDMethodPolygonID,
 		Blockchain: req.Blockchain,
 		NetworkID:  req.Network,
 	}
