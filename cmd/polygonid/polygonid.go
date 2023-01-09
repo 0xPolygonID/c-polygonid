@@ -569,20 +569,14 @@ func marshalInputsResponse(
 	inputsResponse c_polygonid.AtomicQueryInputsResponse) (string, error) {
 
 	var resp struct {
-		Inputs json.RawMessage `json:"inputs"`
-		Value  any             `json:"value,omitempty"`
+		Inputs                 json.RawMessage `json:"inputs"`
+		VerifiablePresentation any             `json:"verifiablePresentation,omitempty"`
 	}
+	resp.VerifiablePresentation = inputsResponse.VerifiablePresentation
 	var err error
 	resp.Inputs, err = inputsResponse.Inputs.InputsMarshal()
 	if err != nil {
 		return "", err
-	}
-
-	if inputsResponse.IsSelectiveDisclosure {
-		resp.Value, err = inputsResponse.Mz.RawValue(inputsResponse.QueryPath)
-		if err != nil {
-			return "", err
-		}
 	}
 
 	respBytes, err := json.Marshal(resp)

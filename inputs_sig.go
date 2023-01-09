@@ -272,10 +272,8 @@ type inputsRequest struct {
 }
 
 type AtomicQueryInputsResponse struct {
-	Inputs                circuits.InputsMarshaller
-	Mz                    *merklize.Merklizer
-	QueryPath             merklize.Path
-	IsSelectiveDisclosure bool
+	Inputs                 circuits.InputsMarshaller
+	VerifiablePresentation map[string]any
 }
 
 func AtomicQueryMtpV2InputsFromJson(ctx context.Context,
@@ -316,13 +314,8 @@ func AtomicQueryMtpV2InputsFromJson(ctx context.Context,
 		return out, err
 	}
 
-	out.Mz, err = w3cCred.Merklize(ctx)
-	if err != nil {
-		return out, err
-	}
-
-	inpMarsh.Query, out.QueryPath, out.IsSelectiveDisclosure, err =
-		queryFromObj(ctx, out.Mz, obj.Request)
+	inpMarsh.Query, out.VerifiablePresentation, err =
+		queryFromObj(ctx, w3cCred, obj.Request)
 	if err != nil {
 		return out, err
 	}
@@ -332,6 +325,28 @@ func AtomicQueryMtpV2InputsFromJson(ctx context.Context,
 	out.Inputs = inpMarsh
 
 	return out, nil
+}
+
+func fmtVerifiablePresentation(context string, tp string, field string,
+	value any) map[string]any {
+
+	var ldContext any
+
+	const baseContext = "https://www.w3.org/2018/credentials/v1"
+	if context == baseContext {
+		ldContext = baseContext
+	} else {
+		ldContext = []string{baseContext, context}
+	}
+
+	return map[string]any{
+		"@context": ldContext,
+		"@type":    "VerifiablePresentation",
+		"verifiableCredential": map[string]any{
+			"@type": tp,
+			field:   value,
+		},
+	}
 }
 
 func AtomicQuerySigV2InputsFromJson(ctx context.Context,
@@ -372,13 +387,8 @@ func AtomicQuerySigV2InputsFromJson(ctx context.Context,
 		return out, err
 	}
 
-	out.Mz, err = w3cCred.Merklize(ctx)
-	if err != nil {
-		return out, err
-	}
-
-	inpMarsh.Query, out.QueryPath, out.IsSelectiveDisclosure, err =
-		queryFromObj(ctx, out.Mz, obj.Request)
+	inpMarsh.Query, out.VerifiablePresentation, err =
+		queryFromObj(ctx, w3cCred, obj.Request)
 	if err != nil {
 		return out, err
 	}
@@ -430,93 +440,97 @@ func buildQueryPath(ctx context.Context, contextURL string, contextType string,
 	return
 }
 
-func queryFromObj(ctx context.Context, mz *merklize.Merklizer,
-	requestObj jsonObj) (out circuits.Query, path merklize.Path,
-	isSelectiveDisclosure bool, err error) {
+func queryFromObj(ctx context.Context, w3cCred verifiable.W3CCredential,
+	requestObj jsonObj) (out circuits.Query, verifiablePresentation jsonObj,
+	err error) {
+
+	mz, err := w3cCred.Merklize(ctx)
+	if err != nil {
+		return out, nil, err
+	}
 
 	var contextURL string
 	contextURL, err = stringByPath(requestObj, "query.context")
 	if err != nil {
-		return out, path, isSelectiveDisclosure, err
+		return out, nil, err
 	}
 	var contextType string
 	contextType, err = stringByPath(requestObj, "query.type")
 	if err != nil {
-		return out, path, isSelectiveDisclosure, err
+		return out, nil, err
 	}
 	credSubjObj, err := objByBath(requestObj, "query.credentialSubject")
 	if err != nil {
-		return out, path, isSelectiveDisclosure, err
+		return out, nil, err
 	}
 	field, op, err := extractSingleEntry(credSubjObj)
 	if err != nil {
-		return out, path, isSelectiveDisclosure,
+		return out, nil,
 			fmt.Errorf("unable to extract field from query: %w", err)
 	}
-	path, err = buildQueryPath(ctx, contextURL, contextType, field)
+	path, err := buildQueryPath(ctx, contextURL, contextType, field)
 	if err != nil {
-		return out, path, isSelectiveDisclosure, err
+		return out, nil, err
 	}
 
 	out.ValueProof = new(circuits.ValueProof)
 	out.ValueProof.Path, err = path.MtEntry()
 	if err != nil {
-		return out, path, isSelectiveDisclosure, err
+		return out, nil, err
 	}
 	var value merklize.Value
 	out.ValueProof.MTP, value, err = mz.Proof(ctx, path)
 	if err != nil {
-		return out, path, isSelectiveDisclosure, err
+		return out, nil, err
 	}
 	out.ValueProof.Value, err = value.MtEntry()
 	if err != nil {
-		return out, path, isSelectiveDisclosure, err
+		return out, nil, err
 	}
 
 	var opObj jsonObj
 	var ok bool
 	opObj, ok = op.(jsonObj)
 	if !ok {
-		return out, path, isSelectiveDisclosure,
-			errors.New("operation on field is not a json object")
+		return out, nil, errors.New("operation on field is not a json object")
 	}
 	opStr, val, err := extractSingleEntry(opObj)
 	switch err {
 	case errMultipleEntries:
-		return out, path, isSelectiveDisclosure,
-			errors.New("only one operation per field is supported")
+		return out, nil, errors.New("only one operation per field is supported")
 	case errNoEntry:
 		// handle selective disclosure
 		out.Operator = circuits.EQ
 		out.Values = []*big.Int{out.ValueProof.Value}
-		isSelectiveDisclosure = true
+		rawValue, err := mz.RawValue(path)
+		if err != nil {
+			return out, nil, err
+		}
+		verifiablePresentation = fmtVerifiablePresentation(contextURL,
+			contextType, field, rawValue)
 	default:
 		out.Operator, ok = circuits.QueryOperators[opStr]
 		if !ok {
-			return out, path, isSelectiveDisclosure,
-				errors.New("unknown operator")
+			return out, nil, errors.New("unknown operator")
 		}
 		switch vt := val.(type) {
 		case string:
 			i, ok := new(big.Int).SetString(vt, 10)
 			if !ok {
-				return out, path, isSelectiveDisclosure,
-					errors.New("invalid big int value")
+				return out, nil, errors.New("invalid big int value")
 			}
 			out.Values = []*big.Int{i}
 		case float64:
 			intVal := int64(vt)
 			if float64(intVal) != vt {
-				return out, path, isSelectiveDisclosure,
-					errors.New("invalid int value")
+				return out, nil, errors.New("invalid int value")
 			}
 			out.Values = []*big.Int{big.NewInt(intVal)}
 		default:
-			return out, path, isSelectiveDisclosure,
-				errors.New("value is not a number")
+			return out, nil, errors.New("value is not a number")
 		}
 	}
-	return out, path, isSelectiveDisclosure, nil
+	return out, verifiablePresentation, nil
 }
 
 var errNoEntry = errors.New("no entry")

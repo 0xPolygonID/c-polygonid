@@ -7,15 +7,15 @@ require (
 	github.com/iden3/go-iden3-core v0.1.1-0.20221220095125-4b274af11521
 	github.com/iden3/go-iden3-crypto v0.0.13
 	github.com/iden3/go-merkletree-sql/v2 v2.0.0
-	github.com/iden3/go-schema-processor v0.2.1-0.20230104194952-82c2adefdcdb
-	github.com/stretchr/testify v1.7.4
+	github.com/iden3/go-schema-processor v0.2.1-0.20230105140356-33d3a76ec259
+	github.com/stretchr/testify v1.8.1
 )
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dchest/blake512 v1.0.0 // indirect
 	github.com/mr-tron/base58 v1.2.0 // indirect
-	github.com/piprate/json-gold v0.4.1 // indirect
+	github.com/piprate/json-gold v0.5.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/pquerna/cachecontrol v0.0.0-20180517163645-1555304b9b35 // indirect
