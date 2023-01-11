@@ -3,7 +3,7 @@
   "profileNonce": "123",
   "claimSubjectProfileNonce": "234",
   "verifiableCredentials": {
-    "id": "http://ec2-34-247-165-109.eu-west-1.compute.amazonaws.com:8888/api/v1/claim/52cec4e3-7d1d-11ed-ade2-0242ac180007",
+    "id": "http://ec2-34-243-185-133.eu-west-1.compute.amazonaws.com:8888/api/v1/claim/52cec4e3-7d1d-11ed-ade2-0242ac180007",
     "@context": [
       "https://www.w3.org/2018/credentials/v1",
       "https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld",
@@ -22,7 +22,7 @@
       "type": "KYCAgeCredential"
     },
     "credentialStatus": {
-      "id": "http://ec2-34-247-165-109.eu-west-1.compute.amazonaws.com:8888/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwvEkzpApgwGHrSTxEFG6V6HrTCa5R2rwQ3XWAkrnG/claims/revocation/status/1529060834",
+      "id": "http://ec2-34-243-185-133.eu-west-1.compute.amazonaws.com:8888/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwvEkzpApgwGHrSTxEFG6V6HrTCa5R2rwQ3XWAkrnG/claims/revocation/status/1529060834",
       "revocationNonce": 1529060834,
       "type": "SparseMerkleTreeProof"
     },
@@ -46,7 +46,7 @@
             "siblings": []
           },
           "credentialStatus": {
-            "id": "http://ec2-34-247-165-109.eu-west-1.compute.amazonaws.com:8888/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwvEkzpApgwGHrSTxEFG6V6HrTCa5R2rwQ3XWAkrnG/claims/revocation/status/0",
+            "id": "http://ec2-34-243-185-133.eu-west-1.compute.amazonaws.com:8888/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwvEkzpApgwGHrSTxEFG6V6HrTCa5R2rwQ3XWAkrnG/claims/revocation/status/0",
             "revocationNonce": 0,
             "type": "SparseMerkleTreeProof"
           }
