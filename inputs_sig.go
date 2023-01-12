@@ -153,7 +153,13 @@ func resolveRevocationStatus(url string) (out circuits.MTProof, err error) {
 	out.TreeState.State = (*merkletree.Hash)(obj.TreeState.State)
 	out.TreeState.ClaimsRoot = (*merkletree.Hash)(obj.TreeState.ClaimsRoot)
 	out.TreeState.RevocationRoot = (*merkletree.Hash)(obj.TreeState.RevocationRoot)
+	if out.TreeState.RevocationRoot == nil {
+		out.TreeState.RevocationRoot = &merkletree.Hash{}
+	}
 	out.TreeState.RootOfRoots = (*merkletree.Hash)(obj.TreeState.RootOfRoots)
+	if out.TreeState.RootOfRoots == nil {
+		out.TreeState.RootOfRoots = &merkletree.Hash{}
+	}
 	return out, nil
 }
 
