@@ -337,6 +337,53 @@ func AtomicQueryMtpV2InputsFromJson(ctx context.Context,
 	return out, nil
 }
 
+func verifiablePresentationFromCred(ctx context.Context,
+	w3cCred verifiable.W3CCredential, requestObj jsonObj, field string) (
+	verifiablePresentation map[string]any, valueEntry *big.Int, err error) {
+
+	mz, err := w3cCred.Merklize(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var contextType string
+	contextType, err = stringByPath(requestObj, "query.type")
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var contextURL string
+	contextURL, err = stringByPath(requestObj, "query.context")
+	if err != nil {
+		return nil, nil, err
+	}
+
+	path, err := buildQueryPath(ctx, contextURL, contextType, field)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	rawValue, err := mz.RawValue(path)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	_, value, err := mz.Proof(ctx, path)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	valueEntry, err = value.MtEntry()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	verifiablePresentation = fmtVerifiablePresentation(contextURL,
+		contextType, field, rawValue)
+
+	return
+}
+
 func fmtVerifiablePresentation(context string, tp string, field string,
 	value any) map[string]any {
 
@@ -530,12 +577,14 @@ func queryFromObjNonMerklized(ctx context.Context,
 		return out, nil, errors.New("only one operation per field is supported")
 	case errNoEntry:
 		// handle selective disclosure
+		var valueEntry *big.Int
+		verifiablePresentation, valueEntry, err =
+			verifiablePresentationFromCred(ctx, w3cCred, requestObj, field)
+		if err != nil {
+			return out, nil, err
+		}
 		out.Operator = circuits.EQ
-		out.Values = []*big.Int{out.ValueProof.Value}
-		//verifiablePresentation = fmtVerifiablePresentation(contextURL,
-		//	contextType, field, rawValue)
-		// TODO: implement selective disclosure
-		panic("not implemented")
+		out.Values = []*big.Int{valueEntry}
 	default:
 		out.Operator, ok = circuits.QueryOperators[opStr]
 		if !ok {

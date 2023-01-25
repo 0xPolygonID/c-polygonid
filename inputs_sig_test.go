@@ -153,7 +153,7 @@ func TestAtomicQuerySigV2InputsFromJson4(t *testing.T) {
 		"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json/KYCAgeCredential-v2.json":                                                       "testdata/httpresp_KYCAgeCredential-v2.json",
 	})()
 
-	jsonIn, err := os.ReadFile("testdata/atomic_query_sig_v2_4_inputs.json")
+	jsonIn, err := os.ReadFile("testdata/atomic_query_sig_v2_non_merklized_inputs.json")
 	require.NoError(t, err)
 
 	ctx := context.Background()
@@ -168,7 +168,7 @@ func TestAtomicQuerySigV2InputsFromJson4(t *testing.T) {
 	err = json.Unmarshal(inputsBytes, &inputsObj)
 	require.NoError(t, err)
 
-	jsonWant, err := os.ReadFile("testdata/atomic_query_sig_v2_4_output.json")
+	jsonWant, err := os.ReadFile("testdata/atomic_query_sig_v2_non_merklized_output.json")
 	require.NoError(t, err)
 	var wantObj jsonObj
 	err = json.Unmarshal(jsonWant, &wantObj)
