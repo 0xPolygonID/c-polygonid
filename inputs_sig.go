@@ -9,6 +9,7 @@ import (
 	"io"
 	"math/big"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -17,7 +18,10 @@ import (
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/iden3/go-iden3-crypto/utils"
 	"github.com/iden3/go-merkletree-sql/v2"
+	json2 "github.com/iden3/go-schema-processor/json"
+	"github.com/iden3/go-schema-processor/loaders"
 	"github.com/iden3/go-schema-processor/merklize"
+	"github.com/iden3/go-schema-processor/processor"
 	"github.com/iden3/go-schema-processor/verifiable"
 )
 
@@ -321,7 +325,7 @@ func AtomicQueryMtpV2InputsFromJson(ctx context.Context,
 	}
 
 	inpMarsh.Query, out.VerifiablePresentation, err =
-		queryFromObj(ctx, w3cCred, obj.Request)
+		queryFromObj(ctx, w3cCred, obj.Request, inpMarsh.Claim.Claim)
 	if err != nil {
 		return out, err
 	}
@@ -394,7 +398,7 @@ func AtomicQuerySigV2InputsFromJson(ctx context.Context,
 	}
 
 	inpMarsh.Query, out.VerifiablePresentation, err =
-		queryFromObj(ctx, w3cCred, obj.Request)
+		queryFromObj(ctx, w3cCred, obj.Request, inpMarsh.Claim.Claim)
 	if err != nil {
 		return out, err
 	}
@@ -447,8 +451,147 @@ func buildQueryPath(ctx context.Context, contextURL string, contextType string,
 }
 
 func queryFromObj(ctx context.Context, w3cCred verifiable.W3CCredential,
-	requestObj jsonObj) (out circuits.Query, verifiablePresentation jsonObj,
-	err error) {
+	requestObj jsonObj, claim *core.Claim) (out circuits.Query,
+	verifiablePresentation jsonObj, err error) {
+
+	merklizePosition, err := claim.GetMerklizedPosition()
+	if err != nil {
+		return out, nil, err
+	}
+
+	if merklizePosition == core.MerklizedRootPositionNone {
+		return queryFromObjNonMerklized(ctx, w3cCred, requestObj)
+	}
+
+	return queryFromObjMerklized(ctx, w3cCred, requestObj)
+}
+
+func getSchemaLoader(schemaURL string) (processor.SchemaLoader, error) {
+	u, err := url.Parse(schemaURL)
+	if err != nil {
+		return nil, err
+	}
+	switch u.Scheme {
+	case "http", "https":
+		return &loaders.HTTP{URL: schemaURL}, nil
+	case "ipfs":
+		return loaders.IPFS{
+			URL: "https://ipfs.io",
+			CID: u.Host,
+		}, nil
+	default:
+		return nil, fmt.Errorf("loader for %s is not supported", u.Scheme)
+	}
+}
+
+func queryFromObjNonMerklized(ctx context.Context,
+	w3cCred verifiable.W3CCredential, requestObj jsonObj) (out circuits.Query,
+	verifiablePresentation jsonObj, err error) {
+
+	loader, err := getSchemaLoader(w3cCred.CredentialSchema.ID)
+	if err != nil {
+		return out, nil, err
+	}
+
+	pr := processor.InitProcessorOptions(&processor.Processor{
+		SchemaLoader: loader,
+		Parser:       json2.Parser{},
+	})
+
+	schema, _, err := pr.Load(ctx)
+	if err != nil {
+		return out, nil, err
+	}
+
+	credSubjObj, err := objByBath(requestObj, "query.credentialSubject")
+	if err != nil {
+		return out, nil, err
+	}
+	field, op, err := extractSingleEntry(credSubjObj)
+	if err != nil {
+		return out, nil,
+			fmt.Errorf("unable to extract field from query: %w", err)
+	}
+
+	out.SlotIndex, err = pr.GetFieldSlotIndex(field, schema)
+	if err != nil {
+		return out, nil, err
+	}
+
+	var opObj jsonObj
+	var ok bool
+	opObj, ok = op.(jsonObj)
+	if !ok {
+		return out, nil, errors.New("operation on field is not a json object")
+	}
+	opStr, val, err := extractSingleEntry(opObj)
+	switch err {
+	case errMultipleEntries:
+		return out, nil, errors.New("only one operation per field is supported")
+	case errNoEntry:
+		// handle selective disclosure
+		out.Operator = circuits.EQ
+		out.Values = []*big.Int{out.ValueProof.Value}
+		//verifiablePresentation = fmtVerifiablePresentation(contextURL,
+		//	contextType, field, rawValue)
+		// TODO: implement selective disclosure
+		panic("not implemented")
+	default:
+		out.Operator, ok = circuits.QueryOperators[opStr]
+		if !ok {
+			return out, nil, errors.New("unknown operator")
+		}
+		switch vt := val.(type) {
+		case string:
+			i, ok := new(big.Int).SetString(vt, 10)
+			if !ok {
+				return out, nil, errors.New("invalid big int value")
+			}
+			out.Values = []*big.Int{i}
+		case float64:
+			intVal := int64(vt)
+			if float64(intVal) != vt {
+				return out, nil, errors.New("invalid int value")
+			}
+			out.Values = []*big.Int{big.NewInt(intVal)}
+		case []any:
+			out.Values, err = arrToBigInts(vt)
+			if err != nil {
+				return out, nil, err
+			}
+		default:
+			return out, nil, errors.New("value is not a number")
+		}
+	}
+	return out, verifiablePresentation, nil
+}
+
+func arrToBigInts(in []any) ([]*big.Int, error) {
+	out := make([]*big.Int, len(in))
+	for i, v := range in {
+		switch vt := v.(type) {
+		case string:
+			bi, ok := new(big.Int).SetString(vt, 10)
+			if !ok {
+				return nil, errors.New("invalid big int value")
+			}
+			out[i] = bi
+		case float64:
+			intVal := int64(vt)
+			if float64(intVal) != vt {
+				return nil, errors.New("invalid int value")
+			}
+			out[i] = big.NewInt(intVal)
+		default:
+			return nil, errors.New("value is not a number")
+		}
+	}
+	return out, nil
+}
+
+func queryFromObjMerklized(ctx context.Context,
+	w3cCred verifiable.W3CCredential, requestObj jsonObj) (out circuits.Query,
+	verifiablePresentation jsonObj, err error) {
 
 	mz, err := w3cCred.Merklize(ctx)
 	if err != nil {
