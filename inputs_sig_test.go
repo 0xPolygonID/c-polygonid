@@ -7,11 +7,42 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
+
+var usedHttpResponses = make(map[string]struct{})
+var usedHttpResponsesM sync.Mutex
+
+// That that all testdata/httpresp_* files were used. Return non-zero if
+// found redundant files.
+func checkForRedundantHttpresps() int {
+	files, err := os.ReadDir("testdata")
+	if err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "error reading testdata dir: %v\n", err)
+		return 1
+	}
+
+	usedHttpResponsesM.Lock()
+	for _, file := range files {
+		fName := file.Name()
+		if !strings.HasPrefix(fName, "httpresp_") {
+			continue
+		}
+
+		_, ok := usedHttpResponses["testdata/"+fName]
+		if !ok {
+			fmt.Printf("found file %v that were not used in tests\n", fName)
+			return 1
+		}
+	}
+	usedHttpResponsesM.Unlock()
+
+	return 0
+}
 
 type mockedRouterTripper struct {
 	routes    map[string]string
@@ -34,6 +65,10 @@ func (m *mockedRouterTripper) RoundTrip(
 	}
 	m.seenURLs[urlStr] = struct{}{}
 	m.seenURLsM.Unlock()
+
+	usedHttpResponsesM.Lock()
+	usedHttpResponses[respFile] = struct{}{}
+	usedHttpResponsesM.Unlock()
 
 	rr := httptest.NewRecorder()
 	http.ServeFile(rr, request, respFile)
