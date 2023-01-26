@@ -1,0 +1,95 @@
+{
+  "id": "2qHrsSHq8RG9YzDkFUU7R8x5z8HjfEWuAzWCAEK6g5",
+  "profileNonce": "123",
+  "claimSubjectProfileNonce": "234",
+  "verifiableCredentials": {
+    "id": "http://localhost:8001/api/v1/identities/did:polygonid:polygon:mumbai:2qFuKxq6iPem5w2U6T6druwGFjqTinE1kqNkSN7oo9/claims/e715a44e-9d47-11ed-a5ed-e24d9cbdb31b",
+    "@context": [
+      "https://www.w3.org/2018/credentials/v1",
+      "https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld",
+      "https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld"
+    ],
+    "type": [
+      "VerifiableCredential",
+      "KYCAgeCredential"
+    ],
+    "expirationDate": "2361-03-21T15:14:48-04:00",
+    "issuanceDate": "2023-01-26T02:06:06.354683-05:00",
+    "credentialSubject": {
+      "birthday": 19960424,
+      "documentType": 99,
+      "id": "did:polygonid:polygon:mumbai:2qHrsSHq8RG9YzDkFUU7R8x5z8HjfEWuAzWCAEK6g5",
+      "type": "KYCAgeCredential"
+    },
+    "credentialStatus": {
+      "id": "http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qFuKxq6iPem5w2U6T6druwGFjqTinE1kqNkSN7oo9/claims/revocation/status/118023115",
+      "revocationNonce": 118023115,
+      "type": "SparseMerkleTreeProof"
+    },
+    "issuer": "did:polygonid:polygon:mumbai:2qFuKxq6iPem5w2U6T6druwGFjqTinE1kqNkSN7oo9",
+    "credentialSchema": {
+      "id": "https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json/KYCAgeCredential-v2.json",
+      "type": "JsonSchemaValidator2018"
+    },
+    "proof": [
+      {
+        "type": "BJJSignature2021",
+        "issuerData": {
+          "id": "did:polygonid:polygon:mumbai:2qFuKxq6iPem5w2U6T6druwGFjqTinE1kqNkSN7oo9",
+          "state": {
+            "claimsTreeRoot": "4f38e0d3cbc144895e803071c3fd3768d44fab5586cbc8351632c95052fa9e0d",
+            "value": "852735bbb64bacf2c9031633fa8dbe3f29714733edf0d7bd85583154634c8511"
+          },
+          "authCoreClaim": "cca3371a6cb1b715004407e325bd993c0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008126405089154660a0f046387823df5e1cec988c3b137ac15dbbdf9b3198c3241b3e79904434f387419b256681dd2e555da42d825bf27a74bfe9f1ea833d690f0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+          "mtp": {
+            "existence": true,
+            "siblings": []
+          },
+          "credentialStatus": {
+            "id": "http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qFuKxq6iPem5w2U6T6druwGFjqTinE1kqNkSN7oo9/claims/revocation/status/0",
+            "revocationNonce": 0,
+            "type": "SparseMerkleTreeProof"
+          }
+        },
+        "coreClaim": "c9b2370371b7fa8b3dab2a5ba81b68380a000000000000000000000000000000021276cc4daf5359a968db57a15488f7da898b3cead769f5f03639171a8e0e0068923001000000000000000000000000000000000000000000000000000000006300000000000000000000000000000000000000000000000000000000000000cbe3080700000000281cdcdf0200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "signature": "0836ed976839cb8bbcb94e6696e541f17532c202b028576449e8b1edad914d2fbc7ca953cdad55f72c454ba71ab58c35bff430fa4d3e49163c2be4b49c626100"
+      },
+      {
+        "type": "Iden3SparseMerkleProof",
+        "issuerData": {
+          "id": "did:polygonid:polygon:mumbai:2qFuKxq6iPem5w2U6T6druwGFjqTinE1kqNkSN7oo9",
+          "state": {
+            "txId": "0xf83136c6958699695602d2d35adb9589c88ff725a7da429d2794670926197715",
+            "blockTimestamp": 1674724708,
+            "blockNumber": 147765,
+            "rootOfRoots": "57871605f8749bb515821f55554e381b163fcbd442b584630aea92d1b63fb403",
+            "claimsTreeRoot": "e78b4f4b2df4d3951eef5fef32f5a9c7abd9d272f3d46980aba28ae463bab412",
+            "revocationTreeRoot": "0000000000000000000000000000000000000000000000000000000000000000",
+            "value": "fc163f08ac998df0c2bae979f571d06f33bf77c812fe1bb25327026b86c3f61f"
+          }
+        },
+        "coreClaim": "c9b2370371b7fa8b3dab2a5ba81b68380a000000000000000000000000000000021276cc4daf5359a968db57a15488f7da898b3cead769f5f03639171a8e0e0068923001000000000000000000000000000000000000000000000000000000006300000000000000000000000000000000000000000000000000000000000000cbe3080700000000281cdcdf0200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "mtp": {
+          "existence": true,
+          "siblings": [
+            "6160956523627522544033902167285593831175720489571527239125599015361172224079"
+          ]
+        }
+      }
+    ]
+  },
+  "request": {
+    "id": 84239,
+    "circuitId": "credentialAtomicQueryMTPV2",
+    "query": {
+      "allowedIssuers": "2qFuKxq6iPem5w2U6T6druwGFjqTinE1kqNkSN7oo9",
+      "context": "https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld",
+      "type": "KYCAgeCredential",
+      "credentialSubject": {
+        "documentType": {
+          "$eq": 99
+        }
+      }
+    }
+  }
+}

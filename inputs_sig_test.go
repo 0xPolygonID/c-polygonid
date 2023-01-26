@@ -11,6 +11,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -45,6 +46,7 @@ func checkForRedundantHttpresps() int {
 }
 
 type mockedRouterTripper struct {
+	t         testing.TB
 	routes    map[string]string
 	seenURLsM sync.Mutex
 	seenURLs  map[string]struct{}
@@ -56,7 +58,12 @@ func (m *mockedRouterTripper) RoundTrip(
 	urlStr := request.URL.String()
 	respFile, ok := m.routes[urlStr]
 	if !ok {
-		panic(fmt.Sprintf("unexpected http request: %v", urlStr))
+		m.t.Errorf("unexpected http request: %v", urlStr)
+		rr := httptest.NewRecorder()
+		rr.WriteHeader(http.StatusNotFound)
+		rr2 := rr.Result()
+		rr2.Request = request
+		return rr2, nil
 	}
 
 	m.seenURLsM.Lock()
@@ -81,7 +88,7 @@ func (m *mockedRouterTripper) RoundTrip(
 func mockHttpClient(t testing.TB, routes map[string]string) func() {
 	oldRoundTripper := httpClient.Transport
 	oldRoundTripper2 := http.DefaultTransport
-	transport := &mockedRouterTripper{routes: routes}
+	transport := &mockedRouterTripper{t: t, routes: routes}
 	httpClient.Transport = transport
 	http.DefaultTransport = transport
 	return func() {
@@ -90,7 +97,7 @@ func mockHttpClient(t testing.TB, routes map[string]string) func() {
 
 		for u := range routes {
 			_, ok := transport.seenURLs[u]
-			require.True(t, ok,
+			assert.True(t, ok,
 				"found a URL in routes that we did not touch: %v", u)
 		}
 	}
@@ -160,6 +167,36 @@ func TestAtomicQueryMtpV2InputsFromJson(t *testing.T) {
 	require.NoError(t, err)
 
 	jsonWant, err := os.ReadFile("testdata/atomic_query_mtp_v2_output.json")
+	require.NoError(t, err)
+	var wantObj jsonObj
+	err = json.Unmarshal(jsonWant, &wantObj)
+	require.NoError(t, err)
+	wantObj["timestamp"] = inputsObj["timestamp"]
+
+	require.Equal(t, wantObj, inputsObj, "got: %s", inputsBytes)
+}
+
+func TestAtomicQueryMtpV2InputsFromJson_NonMerklized(t *testing.T) {
+	defer mockHttpClient(t, map[string]string{
+		"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json/KYCAgeCredential-v2.json":                                                      "testdata/httpresp_KYCAgeCredential-v2.json",
+		"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qFuKxq6iPem5w2U6T6druwGFjqTinE1kqNkSN7oo9/claims/revocation/status/118023115": "testdata/httpresp_rev_status_118023115.json",
+	})()
+	jsonIn, err := os.ReadFile("testdata/atomic_query_mtp_v2_non_merklized_inputs.json")
+	require.NoError(t, err)
+
+	ctx := context.Background()
+
+	out, err := AtomicQueryMtpV2InputsFromJson(ctx, jsonIn)
+	require.NoError(t, err)
+
+	inputsBytes, err := out.Inputs.InputsMarshal()
+	require.NoError(t, err)
+
+	var inputsObj jsonObj
+	err = json.Unmarshal(inputsBytes, &inputsObj)
+	require.NoError(t, err)
+
+	jsonWant, err := os.ReadFile("testdata/atomic_query_mtp_v2_non_merklized_output.json")
 	require.NoError(t, err)
 	var wantObj jsonObj
 	err = json.Unmarshal(jsonWant, &wantObj)
