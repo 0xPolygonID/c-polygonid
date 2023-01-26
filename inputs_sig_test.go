@@ -127,7 +127,7 @@ func TestAtomicQuerySigV2InputsFromJson(t *testing.T) {
 	require.NoError(t, err)
 	wantObj["timestamp"] = inputsObj["timestamp"]
 
-	require.Equal(t, wantObj, inputsObj)
+	require.Equal(t, wantObj, inputsObj, "got: %s", inputsBytes)
 }
 
 func TestHexHash_UnmarshalJSON(t *testing.T) {
@@ -138,7 +138,12 @@ func TestHexHash_UnmarshalJSON(t *testing.T) {
 }
 
 func TestAtomicQueryMtpV2InputsFromJson(t *testing.T) {
-	t.Skip("need to regenerate input/output jsons for this test as old dev server is down")
+	defer mockHttpClient(t, map[string]string{
+		"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qFuKxq6iPem5w2U6T6druwGFjqTinE1kqNkSN7oo9/claims/revocation/status/380518664": "testdata/httpresp_rev_status_380518664.json",
+		"https://www.w3.org/2018/credentials/v1": "testdata/httpresp_credentials_v1.json",
+		"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld": "testdata/httpresp_iden3credential_v2.json",
+		"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld":             "testdata/httpresp_kyc-v3.json-ld",
+	})()
 	jsonIn, err := os.ReadFile("testdata/atomic_query_mtp_v2_inputs.json")
 	require.NoError(t, err)
 
@@ -161,7 +166,7 @@ func TestAtomicQueryMtpV2InputsFromJson(t *testing.T) {
 	require.NoError(t, err)
 	wantObj["timestamp"] = inputsObj["timestamp"]
 
-	require.Equal(t, wantObj, inputsObj)
+	require.Equal(t, wantObj, inputsObj, "got: %s", inputsBytes)
 }
 
 func TestAtomicQuerySigV2InputsFromJson_SelectiveDisclosure(t *testing.T) {
@@ -191,7 +196,7 @@ func TestAtomicQuerySigV2InputsFromJson_SelectiveDisclosure(t *testing.T) {
 	require.NoError(t, err)
 	wantObj["timestamp"] = inputsObj["timestamp"]
 
-	require.Equal(t, wantObj, inputsObj)
+	require.Equal(t, wantObj, inputsObj, "got: %s", inputsBytes)
 }
 
 func TestAtomicQuerySigV2InputsFromJson_NonMerklized(t *testing.T) {
@@ -225,7 +230,7 @@ func TestAtomicQuerySigV2InputsFromJson_NonMerklized(t *testing.T) {
 
 	require.Equal(t, wantObj, inputsObj)
 
-	require.Nil(t, out.VerifiablePresentation)
+	require.Nil(t, out.VerifiablePresentation, "got: %s", inputsBytes)
 }
 
 func TestAtomicQuerySigV2InputsFromJson_NonMerklized_Disclosure(t *testing.T) {
@@ -261,7 +266,7 @@ func TestAtomicQuerySigV2InputsFromJson_NonMerklized_Disclosure(t *testing.T) {
 	require.NoError(t, err)
 	wantObj["timestamp"] = inputsObj["timestamp"]
 
-	require.Equal(t, wantObj, inputsObj)
+	require.Equal(t, wantObj, inputsObj, "got: %s", inputsBytes)
 
 	wantVerifiablePresentation := map[string]any{
 		"@context": []string{
