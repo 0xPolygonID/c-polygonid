@@ -16,6 +16,7 @@ import (
 	"github.com/iden3/go-circuits"
 	core "github.com/iden3/go-iden3-core"
 	"github.com/iden3/go-iden3-crypto/babyjub"
+	"github.com/iden3/go-iden3-crypto/poseidon"
 	"github.com/iden3/go-iden3-crypto/utils"
 	"github.com/iden3/go-merkletree-sql/v2"
 	json2 "github.com/iden3/go-schema-processor/json"
@@ -198,11 +199,7 @@ func claimWithSigProofFromObj(
 	if !ok {
 		return out, errors.New("not a json object")
 	}
-	revocationStatusURL, err := stringByPath(credStatus, "id")
-	if err != nil {
-		return out, err
-	}
-	out.NonRevProof, err = resolveRevocationStatus(revocationStatusURL)
+	out.NonRevProof, err = buildAndValidateCredentialStatus(credStatus)
 	if err != nil {
 		return out, err
 	}
@@ -212,6 +209,75 @@ func claimWithSigProofFromObj(
 	}
 
 	return out, nil
+}
+
+func buildAndValidateCredentialStatus(
+	credStatus jsonObj) (circuits.MTProof, error) {
+
+	revocationStatusURL, err := stringByPath(credStatus, "id")
+	if err != nil {
+		return circuits.MTProof{}, err
+	}
+	proof, err := resolveRevocationStatus(revocationStatusURL)
+	if err != nil {
+		return proof, err
+	}
+
+	treeStateOk, err := validateTreeState(proof.TreeState)
+	if err != nil {
+		return proof, err
+	}
+	if !treeStateOk {
+		return proof, errors.New("invalid tree state")
+	}
+
+	// revocationNonce is float64, but if we meet valid string representation
+	// of Int, we will use it.
+	// circuits.MTProof
+	revNonce, err := bigIntByPath(credStatus, "revocationNonce", true)
+	if err != nil {
+		return proof, err
+	}
+
+	proofValid := merkletree.VerifyProof(proof.TreeState.RevocationRoot,
+		proof.Proof, revNonce, big.NewInt(0))
+	if !proofValid {
+		return proof, errors.New("proof validation failed")
+	}
+
+	if proof.Proof.Existence {
+		return proof, errors.New("credential is revoked")
+	}
+
+	return proof, nil
+}
+
+// check TreeState consistency
+func validateTreeState(s circuits.TreeState) (bool, error) {
+	if s.State == nil {
+		return false, errors.New("state is nil")
+	}
+
+	ctrHash := &merkletree.HashZero
+	if s.ClaimsRoot != nil {
+		ctrHash = s.ClaimsRoot
+	}
+	rtrHash := &merkletree.HashZero
+	if s.RevocationRoot != nil {
+		rtrHash = s.RevocationRoot
+	}
+	rorHash := &merkletree.HashZero
+	if s.RootOfRoots != nil {
+		rorHash = s.RootOfRoots
+	}
+
+	wantState, err := poseidon.Hash([]*big.Int{ctrHash.BigInt(),
+		rtrHash.BigInt(), rorHash.BigInt()})
+	if err != nil {
+		return false, err
+	}
+
+	return wantState.Cmp(s.State.BigInt()) == 0, nil
 }
 
 func sigFromHex(sigHex string) (*babyjub.Signature, error) {
@@ -248,12 +314,8 @@ func signatureProof(proof verifiable.BJJSignatureProof2021,
 	if !ok {
 		return out, errors.New("credential status is not of object type")
 	}
-	revocationStatusURL, err := stringByPath(credStatus, "id")
-	if err != nil {
-		return out, err
-	}
 	out.IssuerAuthNonRevProof, err =
-		resolveRevocationStatus(revocationStatusURL)
+		buildAndValidateCredentialStatus(credStatus)
 	if err != nil {
 		return out, err
 	}
@@ -800,11 +862,7 @@ func claimWithMtpProofFromObj(
 	if !ok {
 		return out, errors.New("not a json object")
 	}
-	revocationStatusURL, err := stringByPath(credStatus, "id")
-	if err != nil {
-		return out, err
-	}
-	out.NonRevProof, err = resolveRevocationStatus(revocationStatusURL)
+	out.NonRevProof, err = buildAndValidateCredentialStatus(credStatus)
 	if err != nil {
 		return out, err
 	}
