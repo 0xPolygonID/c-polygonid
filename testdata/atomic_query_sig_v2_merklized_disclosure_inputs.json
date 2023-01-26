@@ -89,9 +89,7 @@
       "context": "https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld",
       "type": "KYCAgeCredential",
       "credentialSubject": {
-        "documentType": {
-          "$eq": 2
-        }
+        "documentType": {}
       }
     }
   }

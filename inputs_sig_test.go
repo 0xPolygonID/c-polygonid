@@ -112,7 +112,8 @@ func TestAtomicQuerySigV2InputsFromJson(t *testing.T) {
 		"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/0":          "testdata/httpresp_rev_status_wuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU_0.json",
 	})()
 
-	jsonIn, err := os.ReadFile("testdata/atomic_query_sig_v2_inputs.json")
+	jsonIn, err := os.ReadFile(
+		"testdata/atomic_query_sig_v2_merklized_inputs.json")
 	require.NoError(t, err)
 
 	ctx := context.Background()
@@ -127,7 +128,8 @@ func TestAtomicQuerySigV2InputsFromJson(t *testing.T) {
 	err = json.Unmarshal(inputsBytes, &inputsObj)
 	require.NoError(t, err)
 
-	jsonWant, err := os.ReadFile("testdata/atomic_query_sig_v2_output.json")
+	jsonWant, err := os.ReadFile(
+		"testdata/atomic_query_sig_v2_merklized_output.json")
 	require.NoError(t, err)
 	var wantObj jsonObj
 	err = json.Unmarshal(jsonWant, &wantObj)
@@ -206,12 +208,17 @@ func TestAtomicQueryMtpV2InputsFromJson_NonMerklized(t *testing.T) {
 	require.Equal(t, wantObj, inputsObj, "got: %s", inputsBytes)
 }
 
-func TestAtomicQuerySigV2InputsFromJson_SelectiveDisclosure(t *testing.T) {
-	t.Skip("regenerate input/output jsons for this test as old dev server is down")
-	defer mockHttpClient(t, map[string]string{})()
+func TestAtomicQuerySigV2InputsFromJson_Disclosure(t *testing.T) {
+	defer mockHttpClient(t, map[string]string{
+		"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld":             "testdata/httpresp_kyc-v3.json-ld",
+		"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld": "testdata/httpresp_iden3credential_v2.json",
+		"https://www.w3.org/2018/credentials/v1": "testdata/httpresp_credentials_v1.json",
+		"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/2376431481": "testdata/httpresp_rev_status_2376431481.json",
+		"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/0":          "testdata/httpresp_rev_status_wuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU_0.json",
+	})()
 
 	jsonIn, err := os.ReadFile(
-		"testdata/atomic_query_sig_v2_selective_disclosure_inputs.json")
+		"testdata/atomic_query_sig_v2_merklized_disclosure_inputs.json")
 	require.NoError(t, err)
 
 	ctx := context.Background()
@@ -226,7 +233,8 @@ func TestAtomicQuerySigV2InputsFromJson_SelectiveDisclosure(t *testing.T) {
 	err = json.Unmarshal(inputsBytes, &inputsObj)
 	require.NoError(t, err)
 
-	jsonWant, err := os.ReadFile("testdata/atomic_query_sig_v2_output.json")
+	jsonWant, err := os.ReadFile(
+		"testdata/atomic_query_sig_v2_merklized_output.json")
 	require.NoError(t, err)
 	var wantObj jsonObj
 	err = json.Unmarshal(jsonWant, &wantObj)
@@ -234,6 +242,19 @@ func TestAtomicQuerySigV2InputsFromJson_SelectiveDisclosure(t *testing.T) {
 	wantObj["timestamp"] = inputsObj["timestamp"]
 
 	require.Equal(t, wantObj, inputsObj, "got: %s", inputsBytes)
+
+	wantVerifiablePresentation := map[string]any{
+		"@context": []string{
+			"https://www.w3.org/2018/credentials/v1",
+			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld",
+		},
+		"@type": "VerifiablePresentation",
+		"verifiableCredential": map[string]any{
+			"@type":        "KYCAgeCredential",
+			"documentType": float64(2),
+		},
+	}
+	require.Equal(t, wantVerifiablePresentation, out.VerifiablePresentation)
 }
 
 func TestAtomicQuerySigV2InputsFromJson_NonMerklized(t *testing.T) {
