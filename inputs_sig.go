@@ -84,6 +84,14 @@ func objByBath(proof jsonObj, s string) (jsonObj, error) {
 	return obj, nil
 }
 
+type errPathNotFound struct {
+	path string
+}
+
+func (e errPathNotFound) Error() string {
+	return fmt.Sprintf("path not found: %v", e.path)
+}
+
 func getByPath(obj jsonObj, path string) (any, error) {
 	parts := strings.Split(path, ".")
 
@@ -95,8 +103,7 @@ func getByPath(obj jsonObj, path string) (any, error) {
 		if i == len(parts)-1 {
 			v, ok := curObj[part]
 			if !ok {
-				return nil,
-					fmt.Errorf("path not found in object: %v", path)
+				return nil, errPathNotFound{path}
 			}
 			return v, nil
 		}
@@ -168,8 +175,8 @@ func resolveRevocationStatus(url string) (out circuits.MTProof, err error) {
 	return out, nil
 }
 
-func claimWithSigProofFromObj(
-	w3cCred verifiable.W3CCredential) (circuits.ClaimWithSigProof, error) {
+func claimWithSigProofFromObj(w3cCred verifiable.W3CCredential,
+	skipClaimRevocationCheck bool) (circuits.ClaimWithSigProof, error) {
 
 	var out circuits.ClaimWithSigProof
 
@@ -199,7 +206,8 @@ func claimWithSigProofFromObj(
 	if !ok {
 		return out, errors.New("not a json object")
 	}
-	out.NonRevProof, err = buildAndValidateCredentialStatus(credStatus)
+	out.NonRevProof, err = buildAndValidateCredentialStatus(credStatus,
+		skipClaimRevocationCheck)
 	if err != nil {
 		return out, err
 	}
@@ -211,8 +219,8 @@ func claimWithSigProofFromObj(
 	return out, nil
 }
 
-func buildAndValidateCredentialStatus(
-	credStatus jsonObj) (circuits.MTProof, error) {
+func buildAndValidateCredentialStatus(credStatus jsonObj,
+	skipClaimRevocationCheck bool) (circuits.MTProof, error) {
 
 	revocationStatusURL, err := stringByPath(credStatus, "id")
 	if err != nil {
@@ -221,6 +229,10 @@ func buildAndValidateCredentialStatus(
 	proof, err := resolveRevocationStatus(revocationStatusURL)
 	if err != nil {
 		return proof, err
+	}
+
+	if skipClaimRevocationCheck {
+		return proof, nil
 	}
 
 	treeStateOk, err := validateTreeState(proof.TreeState)
@@ -315,7 +327,7 @@ func signatureProof(proof verifiable.BJJSignatureProof2021,
 		return out, errors.New("credential status is not of object type")
 	}
 	out.IssuerAuthNonRevProof, err =
-		buildAndValidateCredentialStatus(credStatus)
+		buildAndValidateCredentialStatus(credStatus, false)
 	if err != nil {
 		return out, err
 	}
@@ -381,13 +393,18 @@ func AtomicQueryMtpV2InputsFromJson(ctx context.Context,
 		return out, err
 	}
 
-	inpMarsh.Claim, err = claimWithMtpProofFromObj(w3cCred)
+	inpMarsh.SkipClaimRevocationCheck, err = querySkipRevocation(obj.Request)
+	if err != nil {
+		return out, err
+	}
+	inpMarsh.Claim, err = claimWithMtpProofFromObj(w3cCred,
+		inpMarsh.SkipClaimRevocationCheck)
 	if err != nil {
 		return out, err
 	}
 
-	inpMarsh.Query, out.VerifiablePresentation, err =
-		queryFromObj(ctx, w3cCred, obj.Request, inpMarsh.Claim.Claim)
+	inpMarsh.Query, out.VerifiablePresentation, err = queryFromObj(ctx, w3cCred,
+		obj.Request, inpMarsh.Claim.Claim)
 	if err != nil {
 		return out, err
 	}
@@ -501,7 +518,12 @@ func AtomicQuerySigV2InputsFromJson(ctx context.Context,
 		return out, err
 	}
 
-	inpMarsh.Claim, err = claimWithSigProofFromObj(w3cCred)
+	inpMarsh.SkipClaimRevocationCheck, err = querySkipRevocation(obj.Request)
+	if err != nil {
+		return out, err
+	}
+	inpMarsh.Claim, err = claimWithSigProofFromObj(w3cCred,
+		inpMarsh.SkipClaimRevocationCheck)
 	if err != nil {
 		return out, err
 	}
@@ -557,6 +579,22 @@ func buildQueryPath(ctx context.Context, contextURL string, contextType string,
 	}
 
 	return
+}
+
+func querySkipRevocation(requestObj jsonObj) (bool, error) {
+	result, err := getByPath(requestObj, "query.skipClaimRevocationCheck")
+	if errors.As(err, &errPathNotFound{}) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	resB, ok := result.(bool)
+	if !ok {
+		return false,
+			errors.New("value of skipClaimRevocationCheck is not bool")
+	}
+	return resB, nil
 }
 
 func queryFromObj(ctx context.Context, w3cCred verifiable.W3CCredential,
@@ -831,8 +869,8 @@ func (h *hexHash) UnmarshalJSON(i []byte) error {
 	return nil
 }
 
-func claimWithMtpProofFromObj(
-	w3cCred verifiable.W3CCredential) (circuits.ClaimWithMTPProof, error) {
+func claimWithMtpProofFromObj(w3cCred verifiable.W3CCredential,
+	skipClaimRevocationCheck bool) (circuits.ClaimWithMTPProof, error) {
 
 	var out circuits.ClaimWithMTPProof
 
@@ -862,7 +900,8 @@ func claimWithMtpProofFromObj(
 	if !ok {
 		return out, errors.New("not a json object")
 	}
-	out.NonRevProof, err = buildAndValidateCredentialStatus(credStatus)
+	out.NonRevProof, err = buildAndValidateCredentialStatus(credStatus,
+		skipClaimRevocationCheck)
 	if err != nil {
 		return out, err
 	}
