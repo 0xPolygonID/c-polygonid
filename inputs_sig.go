@@ -650,11 +650,7 @@ func queryFromObjNonMerklized(ctx context.Context,
 		return out, nil, err
 	}
 
-	credSubjObj, err := objByBath(requestObj, "query.credentialSubject")
-	if err != nil {
-		return out, nil, err
-	}
-	field, op, err := extractSingleEntry(credSubjObj)
+	field, op, err := getQueryFieldAndOperator(requestObj)
 	if err != nil {
 		return out, nil,
 			fmt.Errorf("unable to extract field from query: %w", err)
@@ -686,33 +682,34 @@ func queryFromObjNonMerklized(ctx context.Context,
 		out.Operator = circuits.EQ
 		out.Values = []*big.Int{valueEntry}
 	default:
-		out.Operator, ok = circuits.QueryOperators[opStr]
-		if !ok {
-			return out, nil, errors.New("unknown operator")
-		}
-		switch vt := val.(type) {
-		case string:
-			i, ok := new(big.Int).SetString(vt, 10)
-			if !ok {
-				return out, nil, errors.New("invalid big int value")
-			}
-			out.Values = []*big.Int{i}
-		case float64:
-			intVal := int64(vt)
-			if float64(intVal) != vt {
-				return out, nil, errors.New("invalid int value")
-			}
-			out.Values = []*big.Int{big.NewInt(intVal)}
-		case []any:
-			out.Values, err = arrToBigInts(vt)
-			if err != nil {
-				return out, nil, err
-			}
-		default:
-			return out, nil, errors.New("value is not a number")
+		out.Operator, out.Values, err = unpackOperatorWithArgs(opStr, val)
+		if err != nil {
+			return out, nil, err
 		}
 	}
 	return out, verifiablePresentation, nil
+}
+
+func unpackOperatorValue(val any) ([]*big.Int, error) {
+	switch vt := val.(type) {
+	case string:
+		i, ok := new(big.Int).SetString(vt, 10)
+		if !ok {
+			return nil, errors.New("invalid big int value")
+		}
+		return []*big.Int{i}, nil
+	case float64:
+		intVal := int64(vt)
+		if float64(intVal) != vt {
+			return nil, errors.New("invalid int value")
+		}
+		return []*big.Int{big.NewInt(intVal)}, nil
+	case []any:
+		return arrToBigInts(vt)
+	default:
+		return nil, errors.New("value is not a number")
+	}
+
 }
 
 func arrToBigInts(in []any) ([]*big.Int, error) {
@@ -757,11 +754,7 @@ func queryFromObjMerklized(ctx context.Context,
 	if err != nil {
 		return out, nil, err
 	}
-	credSubjObj, err := objByBath(requestObj, "query.credentialSubject")
-	if err != nil {
-		return out, nil, err
-	}
-	field, op, err := extractSingleEntry(credSubjObj)
+	field, op, err := getQueryFieldAndOperator(requestObj)
 	if err != nil {
 		return out, nil,
 			fmt.Errorf("unable to extract field from query: %w", err)
@@ -807,28 +800,33 @@ func queryFromObjMerklized(ctx context.Context,
 		verifiablePresentation = fmtVerifiablePresentation(contextURL,
 			contextType, field, rawValue)
 	default:
-		out.Operator, ok = circuits.QueryOperators[opStr]
-		if !ok {
-			return out, nil, errors.New("unknown operator")
-		}
-		switch vt := val.(type) {
-		case string:
-			i, ok := new(big.Int).SetString(vt, 10)
-			if !ok {
-				return out, nil, errors.New("invalid big int value")
-			}
-			out.Values = []*big.Int{i}
-		case float64:
-			intVal := int64(vt)
-			if float64(intVal) != vt {
-				return out, nil, errors.New("invalid int value")
-			}
-			out.Values = []*big.Int{big.NewInt(intVal)}
-		default:
-			return out, nil, errors.New("value is not a number")
+		out.Operator, out.Values, err = unpackOperatorWithArgs(opStr, val)
+		if err != nil {
+			return out, nil, err
 		}
 	}
 	return out, verifiablePresentation, nil
+}
+
+// return int operator value by its name and arguments as big.Ints array
+func unpackOperatorWithArgs(opStr string, val any) (int, []*big.Int, error) {
+	op, ok := circuits.QueryOperators[opStr]
+	if !ok {
+		return 0, nil, errors.New("unknown operator")
+	}
+	vals, err := unpackOperatorValue(val)
+	if err != nil {
+		return 0, nil, err
+	}
+	return op, vals, nil
+}
+
+func getQueryFieldAndOperator(requestObj jsonObj) (string, any, error) {
+	credSubjObj, err := objByBath(requestObj, "query.credentialSubject")
+	if err != nil {
+		return "", nil, err
+	}
+	return extractSingleEntry(credSubjObj)
 }
 
 var errNoEntry = errors.New("no entry")
