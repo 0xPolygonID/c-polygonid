@@ -13,6 +13,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/iden3/go-circuits"
 	core "github.com/iden3/go-iden3-core"
 	"github.com/iden3/go-iden3-crypto/babyjub"
@@ -24,6 +27,7 @@ import (
 	"github.com/iden3/go-schema-processor/merklize"
 	"github.com/iden3/go-schema-processor/processor"
 	"github.com/iden3/go-schema-processor/verifiable"
+	mp "github.com/iden3/merkletree-proof"
 )
 
 type jsonObj = map[string]any
@@ -121,9 +125,9 @@ func getByPath(obj jsonObj, path string) (any, error) {
 	return nil, errors.New("should not happen")
 }
 
-func resolveRevocationStatus(url string) (out circuits.MTProof, err error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+func resolveRevocationStatusFromIssuerService(ctx context.Context,
+	url string) (out circuits.MTProof, err error) {
+
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, url,
 		http.NoBody)
 	if err != nil {
@@ -175,7 +179,8 @@ func resolveRevocationStatus(url string) (out circuits.MTProof, err error) {
 	return out, nil
 }
 
-func claimWithSigProofFromObj(w3cCred verifiable.W3CCredential,
+func claimWithSigProofFromObj(ctx context.Context, cfg EnvConfig,
+	w3cCred verifiable.W3CCredential,
 	skipClaimRevocationCheck bool) (circuits.ClaimWithSigProof, error) {
 
 	var out circuits.ClaimWithSigProof
@@ -206,12 +211,12 @@ func claimWithSigProofFromObj(w3cCred verifiable.W3CCredential,
 	if !ok {
 		return out, errors.New("not a json object")
 	}
-	out.NonRevProof, err = buildAndValidateCredentialStatus(credStatus,
-		skipClaimRevocationCheck)
+	out.NonRevProof, err = buildAndValidateCredentialStatus(ctx, cfg,
+		credStatus, out.IssuerID, skipClaimRevocationCheck)
 	if err != nil {
 		return out, err
 	}
-	out.SignatureProof, err = signatureProof(*proof)
+	out.SignatureProof, err = signatureProof(ctx, cfg, *proof, out.IssuerID)
 	if err != nil {
 		return out, err
 	}
@@ -219,14 +224,11 @@ func claimWithSigProofFromObj(w3cCred verifiable.W3CCredential,
 	return out, nil
 }
 
-func buildAndValidateCredentialStatus(credStatus jsonObj,
+func buildAndValidateCredentialStatus(ctx context.Context, cfg EnvConfig,
+	credStatus jsonObj, issuerID *core.ID,
 	skipClaimRevocationCheck bool) (circuits.MTProof, error) {
 
-	revocationStatusURL, err := stringByPath(credStatus, "id")
-	if err != nil {
-		return circuits.MTProof{}, err
-	}
-	proof, err := resolveRevocationStatus(revocationStatusURL)
+	proof, err := resolveRevStatus(ctx, cfg, credStatus, issuerID)
 	if err != nil {
 		return proof, err
 	}
@@ -305,8 +307,9 @@ func sigFromHex(sigHex string) (*babyjub.Signature, error) {
 	return compSig.Decompress()
 }
 
-func signatureProof(proof verifiable.BJJSignatureProof2021,
-) (out circuits.BJJSignatureProof, err error) {
+func signatureProof(ctx context.Context, cfg EnvConfig,
+	proof verifiable.BJJSignatureProof2021,
+	issuerID *core.ID) (out circuits.BJJSignatureProof, err error) {
 
 	out.Signature, err = sigFromHex(proof.Signature)
 	if err != nil {
@@ -317,7 +320,7 @@ func signatureProof(proof verifiable.BJJSignatureProof2021,
 	if err != nil {
 		return
 	}
-	out.IssuerAuthIncProof.TreeState, err = treeState(proof.IssuerData.State)
+	out.IssuerAuthIncProof.TreeState, err = circuitsTreeStateFromSchemaState(proof.IssuerData.State)
 	if err != nil {
 		return out, err
 	}
@@ -327,7 +330,7 @@ func signatureProof(proof verifiable.BJJSignatureProof2021,
 		return out, errors.New("credential status is not of object type")
 	}
 	out.IssuerAuthNonRevProof, err =
-		buildAndValidateCredentialStatus(credStatus, false)
+		buildAndValidateCredentialStatus(ctx, cfg, credStatus, issuerID, false)
 	if err != nil {
 		return out, err
 	}
@@ -360,7 +363,7 @@ type AtomicQueryInputsResponse struct {
 	VerifiablePresentation map[string]any
 }
 
-func AtomicQueryMtpV2InputsFromJson(ctx context.Context,
+func AtomicQueryMtpV2InputsFromJson(ctx context.Context, cfg EnvConfig,
 	in []byte) (AtomicQueryInputsResponse, error) {
 
 	var out AtomicQueryInputsResponse
@@ -397,7 +400,7 @@ func AtomicQueryMtpV2InputsFromJson(ctx context.Context,
 	if err != nil {
 		return out, err
 	}
-	inpMarsh.Claim, err = claimWithMtpProofFromObj(w3cCred,
+	inpMarsh.Claim, err = claimWithMtpProofFromObj(ctx, cfg, w3cCred,
 		inpMarsh.SkipClaimRevocationCheck)
 	if err != nil {
 		return out, err
@@ -485,7 +488,7 @@ func fmtVerifiablePresentation(context string, tp string, field string,
 	}
 }
 
-func AtomicQuerySigV2InputsFromJson(ctx context.Context,
+func AtomicQuerySigV2InputsFromJson(ctx context.Context, cfg EnvConfig,
 	in []byte) (AtomicQueryInputsResponse, error) {
 
 	var out AtomicQueryInputsResponse
@@ -522,7 +525,7 @@ func AtomicQuerySigV2InputsFromJson(ctx context.Context,
 	if err != nil {
 		return out, err
 	}
-	inpMarsh.Claim, err = claimWithSigProofFromObj(w3cCred,
+	inpMarsh.Claim, err = claimWithSigProofFromObj(ctx, cfg, w3cCred,
 		inpMarsh.SkipClaimRevocationCheck)
 	if err != nil {
 		return out, err
@@ -867,7 +870,8 @@ func (h *hexHash) UnmarshalJSON(i []byte) error {
 	return nil
 }
 
-func claimWithMtpProofFromObj(w3cCred verifiable.W3CCredential,
+func claimWithMtpProofFromObj(ctx context.Context, cfg EnvConfig,
+	w3cCred verifiable.W3CCredential,
 	skipClaimRevocationCheck bool) (circuits.ClaimWithMTPProof, error) {
 
 	var out circuits.ClaimWithMTPProof
@@ -898,13 +902,13 @@ func claimWithMtpProofFromObj(w3cCred verifiable.W3CCredential,
 	if !ok {
 		return out, errors.New("not a json object")
 	}
-	out.NonRevProof, err = buildAndValidateCredentialStatus(credStatus,
-		skipClaimRevocationCheck)
+	out.NonRevProof, err = buildAndValidateCredentialStatus(ctx, cfg,
+		credStatus, out.IssuerID, skipClaimRevocationCheck)
 	if err != nil {
 		return out, err
 	}
 	out.IncProof.Proof = proof.MTP
-	out.IncProof.TreeState, err = treeState(proof.IssuerData.State)
+	out.IncProof.TreeState, err = circuitsTreeStateFromSchemaState(proof.IssuerData.State)
 	if err != nil {
 		return out, err
 	}
@@ -912,7 +916,9 @@ func claimWithMtpProofFromObj(w3cCred verifiable.W3CCredential,
 	return out, nil
 }
 
-func treeState(state verifiable.State) (ts circuits.TreeState, err error) {
+func circuitsTreeStateFromSchemaState(
+	state verifiable.State) (ts circuits.TreeState, err error) {
+
 	if state.Value == nil {
 		return ts, errors.New("state value is nil")
 	}
@@ -945,4 +951,167 @@ func treeState(state verifiable.State) (ts circuits.TreeState, err error) {
 		ts.RootOfRoots = &merkletree.Hash{}
 	}
 	return
+}
+
+func resolveRevStatus(ctx context.Context,
+	cfg EnvConfig, credStatus interface{},
+	issuerID *core.ID) (circuits.MTProof, error) {
+
+	switch status := credStatus.(type) {
+	case *verifiable.RHSCredentialStatus:
+		revNonce := new(big.Int).SetUint64(status.RevocationNonce)
+		return resolveRevStatusFromRHS(ctx, cfg, issuerID, revNonce)
+	case *verifiable.CredentialStatus:
+		return resolveRevocationStatusFromIssuerService(ctx, status.ID)
+	case verifiable.RHSCredentialStatus:
+		return resolveRevStatus(ctx, cfg, &status, issuerID)
+	case verifiable.CredentialStatus:
+		return resolveRevStatus(ctx, cfg, &status, issuerID)
+	case map[string]interface{}:
+		credStatusType, ok := status["type"].(string)
+		if !ok {
+			return circuits.MTProof{},
+				errors.New("credential status doesn't contain type")
+		}
+		marshaledStatus, err := json.Marshal(status)
+		if err != nil {
+			return circuits.MTProof{}, err
+		}
+		var s interface{}
+		switch verifiable.CredentialStatusType(credStatusType) {
+		case verifiable.Iden3ReverseSparseMerkleTreeProof:
+			s = &verifiable.RHSCredentialStatus{}
+		case verifiable.SparseMerkleTreeProof:
+			s = &verifiable.CredentialStatus{}
+		default:
+			return circuits.MTProof{}, fmt.Errorf(
+				"credential status type %s id not supported",
+				credStatusType)
+		}
+
+		err = json.Unmarshal(marshaledStatus, s)
+		if err != nil {
+			return circuits.MTProof{}, err
+		}
+		return resolveRevStatus(ctx, cfg, s, issuerID)
+
+	default:
+		return circuits.MTProof{},
+			errors.New("unknown credential status format")
+	}
+}
+
+type EnvConfig struct {
+	EthereumURL           string
+	StateContractAddr     common.Address
+	ReverseHashServiceUrl string
+}
+
+func lastStateFromContract(ctx context.Context, ethURL string,
+	contractAddr common.Address, id *core.ID) (*merkletree.Hash, error) {
+	if ethURL == "" {
+		return nil, errors.New("ethereum url is empty")
+	}
+
+	if contractAddr == (common.Address{}) {
+		return nil, errors.New("contract address is empty")
+	}
+
+	var zeroID core.ID
+	if id == nil || *id == zeroID {
+		return nil, errors.New("ID is empty")
+	}
+
+	client, err := ethclient.Dial(ethURL)
+	if err != nil {
+		return nil, err
+	}
+	defer client.Close()
+
+	contractCaller, err := NewCPolygonidCaller(contractAddr, client)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := contractCaller.GetStateInfoById(
+		&bind.CallOpts{Context: ctx},
+		id.BigInt())
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.State == nil {
+		return nil, errors.New("got nil state from contract")
+	}
+
+	return merkletree.NewHashFromBigInt(resp.State)
+}
+
+func newRhsCli(rhsURL string) (*mp.HTTPReverseHashCli, error) {
+	if rhsURL == "" {
+		return nil, errors.New("reverse hash service url is empty")
+	}
+
+	return &mp.HTTPReverseHashCli{
+		URL:         rhsURL,
+		HTTPTimeout: 10 * time.Second,
+	}, nil
+}
+
+func treeStateFromRHS(ctx context.Context, rhsCli *mp.HTTPReverseHashCli,
+	state *merkletree.Hash) (circuits.TreeState, error) {
+
+	var treeState circuits.TreeState
+
+	stateNode, err := rhsCli.GetNode(ctx, state)
+	if err != nil {
+		return treeState, err
+	}
+
+	if len(stateNode.Children) != 3 {
+		return treeState, errors.New(
+			"invalid state node, should have 3 children")
+	}
+
+	treeState.State = state
+	treeState.ClaimsRoot = stateNode.Children[0]
+	treeState.RevocationRoot = stateNode.Children[1]
+	treeState.RootOfRoots = stateNode.Children[2]
+
+	return treeState, err
+}
+
+func resolveRevStatusFromRHS(ctx context.Context, cfg EnvConfig,
+	issuerID *core.ID, revNonce *big.Int) (circuits.MTProof, error) {
+
+	var p circuits.MTProof
+
+	state, err := lastStateFromContract(ctx, cfg.EthereumURL,
+		cfg.StateContractAddr, issuerID)
+	if err != nil {
+		return p, err
+	}
+
+	rhsCli, err := newRhsCli(cfg.ReverseHashServiceUrl)
+	if err != nil {
+		return p, err
+	}
+
+	p.TreeState, err = treeStateFromRHS(ctx, rhsCli, state)
+	if err != nil {
+		return p, err
+	}
+
+	revNonceHash, err := merkletree.NewHashFromBigInt(revNonce)
+	if err != nil {
+		return p, err
+	}
+
+	p.Proof, err = rhsCli.GenerateProof(ctx, p.TreeState.RevocationRoot,
+		revNonceHash)
+	if err != nil {
+		return p, err
+	}
+
+	return p, nil
 }

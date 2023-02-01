@@ -11,6 +11,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -117,8 +118,8 @@ func TestAtomicQuerySigV2InputsFromJson(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx := context.Background()
-
-	out, err := AtomicQuerySigV2InputsFromJson(ctx, jsonIn)
+	var emptyCfg EnvConfig
+	out, err := AtomicQuerySigV2InputsFromJson(ctx, emptyCfg, jsonIn)
 	require.NoError(t, err)
 
 	inputsBytes, err := out.Inputs.InputsMarshal()
@@ -157,8 +158,8 @@ func TestAtomicQueryMtpV2InputsFromJson(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx := context.Background()
-
-	out, err := AtomicQueryMtpV2InputsFromJson(ctx, jsonIn)
+	var emptyCfg EnvConfig
+	out, err := AtomicQueryMtpV2InputsFromJson(ctx, emptyCfg, jsonIn)
 	require.NoError(t, err)
 
 	inputsBytes, err := out.Inputs.InputsMarshal()
@@ -187,8 +188,8 @@ func TestAtomicQueryMtpV2InputsFromJson_NonMerklized(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx := context.Background()
-
-	out, err := AtomicQueryMtpV2InputsFromJson(ctx, jsonIn)
+	var emptyCfg EnvConfig
+	out, err := AtomicQueryMtpV2InputsFromJson(ctx, emptyCfg, jsonIn)
 	require.NoError(t, err)
 
 	inputsBytes, err := out.Inputs.InputsMarshal()
@@ -222,8 +223,8 @@ func TestAtomicQuerySigV2InputsFromJson_Disclosure(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx := context.Background()
-
-	out, err := AtomicQuerySigV2InputsFromJson(ctx, jsonIn)
+	var emptyCfg EnvConfig
+	out, err := AtomicQuerySigV2InputsFromJson(ctx, emptyCfg, jsonIn)
 	require.NoError(t, err)
 
 	inputsBytes, err := out.Inputs.InputsMarshal()
@@ -268,8 +269,8 @@ func TestAtomicQuerySigV2InputsFromJson_NonMerklized(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx := context.Background()
-
-	out, err := AtomicQuerySigV2InputsFromJson(ctx, jsonIn)
+	var emptyCfg EnvConfig
+	out, err := AtomicQuerySigV2InputsFromJson(ctx, emptyCfg, jsonIn)
 	require.NoError(t, err)
 
 	inputsBytes, err := out.Inputs.InputsMarshal()
@@ -306,8 +307,8 @@ func TestAtomicQuerySigV2InputsFromJson_NonMerklized_Disclosure(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx := context.Background()
-
-	out, err := AtomicQuerySigV2InputsFromJson(ctx, jsonIn)
+	var emptyCfg EnvConfig
+	out, err := AtomicQuerySigV2InputsFromJson(ctx, emptyCfg, jsonIn)
 	require.NoError(t, err)
 
 	inputsBytes, err := out.Inputs.InputsMarshal()
@@ -338,4 +339,20 @@ func TestAtomicQuerySigV2InputsFromJson_NonMerklized_Disclosure(t *testing.T) {
 		},
 	}
 	require.Equal(t, wantVerifiablePresentation, out.VerifiablePresentation)
+}
+
+func TestEnvConfig__UnmarshalJSON(t *testing.T) {
+	in := `{
+  "ethereumUrl": "http://localhost:8545",
+  "stateContractAddr": "0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655",
+  "reverseHashServiceUrl": "http://localhost:8003"
+}`
+	var out EnvConfig
+	err := json.Unmarshal([]byte(in), &out)
+	require.NoError(t, err)
+	stateContractAddr := common.HexToAddress(
+		"0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655")
+	require.Equal(t, "http://localhost:8545", out.EthereumURL)
+	require.Equal(t, stateContractAddr, out.StateContractAddr)
+	require.Equal(t, "http://localhost:8003", out.ReverseHashServiceUrl)
 }
