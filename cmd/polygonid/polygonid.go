@@ -741,6 +741,68 @@ func PLGNMtpV2Inputs(jsonResponse **C.char, in *C.char,
 	return true
 }
 
+//export PLGNAtomicQuerySigV2OnChainInputs
+func PLGNAtomicQuerySigV2OnChainInputs(jsonResponse **C.char, in *C.char,
+	status **C.PLGNStatus) bool {
+
+	if jsonResponse == nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_NIL_POINTER,
+			"jsonResponse pointer is nil")
+		return false
+	}
+
+	inData := C.GoBytes(unsafe.Pointer(in), C.int(C.strlen(in)))
+	var inputs circuits.AtomicQuerySigV2OnChainInputs
+	err := json.Unmarshal(inData, &inputs)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR,
+			"PLGNAtomicQuerySigV2OnChainInputs: inputs unmarshal error: %v",
+			err.Error())
+		return false
+	}
+
+	circuitInputJSON, err := inputs.InputsMarshal()
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR,
+			"PLGNAtomicQuerySigV2OnChainInputs: inputs marshal error: %v", err)
+		return false
+	}
+
+	*jsonResponse = C.CString(string(circuitInputJSON))
+	return true
+}
+
+//export PLGNAtomicQueryMTPV2OnChainInputs
+func PLGNAtomicQueryMTPV2OnChainInputs(jsonResponse **C.char, in *C.char,
+	status **C.PLGNStatus) bool {
+
+	if jsonResponse == nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_NIL_POINTER,
+			"jsonResponse pointer is nil")
+		return false
+	}
+
+	inData := C.GoBytes(unsafe.Pointer(in), C.int(C.strlen(in)))
+	var inputs circuits.AtomicQueryMTPV2OnChainInputs
+	err := json.Unmarshal(inData, &inputs)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR,
+			"PLGNAtomicQueryMTPV2OnChainInputs: inputs unmarshal error: %v",
+			err.Error())
+		return false
+	}
+
+	circuitInputJSON, err := inputs.InputsMarshal()
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR,
+			"PLGNAtomicQueryMTPV2OnChainInputs: inputs marshal error: %v", err)
+		return false
+	}
+
+	*jsonResponse = C.CString(string(circuitInputJSON))
+	return true
+}
+
 //export PLGNFreeStatus
 func PLGNFreeStatus(status *C.PLGNStatus) {
 	if status == nil {
