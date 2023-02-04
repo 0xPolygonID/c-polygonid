@@ -701,7 +701,7 @@ func PLGNAtomicQuerySigV2OnChainInputs(jsonResponse **C.char, in *C.char,
 		jsonResponse, in, cfg, status)
 }
 
-// PLGNAtomicQueryMTPV2OnChainInputs returns the inputs for the
+// PLGNAtomicQueryMtpV2OnChainInputs returns the inputs for the
 // credentialAtomicQueryMTPV2OnChain circuit with optional selective disclosure.
 //
 // Additional configuration may be required for Reverse Hash Service
@@ -715,8 +715,8 @@ func PLGNAtomicQuerySigV2OnChainInputs(jsonResponse **C.char, in *C.char,
 //	  "reverseHashServiceUrl": "http://localhost:8003"
 //	}
 //
-//export PLGNAtomicQueryMTPV2OnChainInputs
-func PLGNAtomicQueryMTPV2OnChainInputs(jsonResponse **C.char, in *C.char,
+//export PLGNAtomicQueryMtpV2OnChainInputs
+func PLGNAtomicQueryMtpV2OnChainInputs(jsonResponse **C.char, in *C.char,
 	cfg *C.char, status **C.PLGNStatus) bool {
 
 	return prepareInputs(c_polygonid.AtomicQueryMtpV2OnChainInputsFromJson,
