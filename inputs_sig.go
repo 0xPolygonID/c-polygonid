@@ -358,6 +358,21 @@ type inputsRequest struct {
 	Request                  jsonObj         `json:"request"`
 }
 
+type onChainInputsRequest struct {
+	GenesisDID               *core.DID           `json:"genesisDID"`
+	ProfileNonce             *JsonBigInt         `json:"profileNonce"`
+	ClaimSubjectProfileNonce *JsonBigInt         `json:"claimSubjectProfileNonce"`
+	AuthClaim                *core.Claim         `json:"authClaim"`
+	AuthClaimIncMtp          *merkletree.Proof   `json:"authClaimIncMtp"`
+	AuthClaimNonRevMtp       *merkletree.Proof   `json:"authClaimNonRevMtp"`
+	TreeState                *circuits.TreeState `json:"treeState"`
+	GistProof                *circuits.GISTProof `json:"gistProof"`
+	Signature                *hexSigJson         `json:"signature"`
+	Challenge                *JsonBigInt         `json:"challenge"`
+	VerifiableCredentials    json.RawMessage     `json:"verifiableCredentials"`
+	Request                  jsonObj             `json:"request"`
+}
+
 type AtomicQueryInputsResponse struct {
 	Inputs                 circuits.InputsMarshaller
 	VerifiablePresentation map[string]any
@@ -406,8 +421,8 @@ func AtomicQueryMtpV2InputsFromJson(ctx context.Context, cfg EnvConfig,
 		return out, err
 	}
 
-	inpMarsh.Query, out.VerifiablePresentation, err = queryFromObj(ctx, w3cCred,
-		obj.Request, inpMarsh.Claim.Claim)
+	inpMarsh.Query, out.VerifiablePresentation, err =
+		queryFromObj(ctx, w3cCred, obj.Request, inpMarsh.Claim.Claim)
 	if err != nil {
 		return out, err
 	}
@@ -513,6 +528,162 @@ func AtomicQuerySigV2InputsFromJson(ctx context.Context, cfg EnvConfig,
 		return out, err
 	}
 	if circuitID != string(circuits.AtomicQuerySigV2CircuitID) {
+		return out, errors.New("wrong circuit")
+	}
+	var w3cCred verifiable.W3CCredential
+	err = json.Unmarshal(obj.VerifiableCredentials, &w3cCred)
+	if err != nil {
+		return out, err
+	}
+
+	inpMarsh.SkipClaimRevocationCheck, err = querySkipRevocation(obj.Request)
+	if err != nil {
+		return out, err
+	}
+	inpMarsh.Claim, err = claimWithSigProofFromObj(ctx, cfg, w3cCred,
+		inpMarsh.SkipClaimRevocationCheck)
+	if err != nil {
+		return out, err
+	}
+
+	inpMarsh.Query, out.VerifiablePresentation, err =
+		queryFromObj(ctx, w3cCred, obj.Request, inpMarsh.Claim.Claim)
+	if err != nil {
+		return out, err
+	}
+
+	inpMarsh.CurrentTimeStamp = time.Now().Unix()
+
+	out.Inputs = inpMarsh
+
+	return out, nil
+}
+
+func AtomicQueryMtpV2OnChainInputsFromJson(ctx context.Context, cfg EnvConfig,
+	in []byte) (AtomicQueryInputsResponse, error) {
+
+	var out AtomicQueryInputsResponse
+	var inpMarsh circuits.AtomicQueryMTPV2OnChainInputs
+
+	var obj onChainInputsRequest
+	err := json.Unmarshal(in, &obj)
+	if err != nil {
+		return out, err
+	}
+
+	inpMarsh.RequestID, err = bigIntByPath(obj.Request, "id", true)
+	if err != nil {
+		return out, err
+	}
+
+	if obj.GenesisDID == nil {
+		return out, errors.New("genesisDID is required")
+	}
+
+	inpMarsh.ID = &obj.GenesisDID.ID
+	inpMarsh.ProfileNonce = obj.ProfileNonce.BigInt()
+	inpMarsh.ClaimSubjectProfileNonce = obj.ClaimSubjectProfileNonce.BigInt()
+
+	inpMarsh.AuthClaim = obj.AuthClaim
+	inpMarsh.AuthClaimIncMtp = obj.AuthClaimIncMtp
+	inpMarsh.AuthClaimNonRevMtp = obj.AuthClaimNonRevMtp
+
+	if obj.TreeState == nil {
+		return out, errors.New("treeState is required")
+	}
+	inpMarsh.TreeState = *obj.TreeState
+
+	if obj.GistProof == nil {
+		return out, errors.New("gistProof is required")
+	}
+	inpMarsh.GISTProof = *obj.GistProof
+
+	inpMarsh.Signature = (*babyjub.Signature)(obj.Signature)
+	inpMarsh.Challenge = obj.Challenge.BigInt()
+
+	circuitID, err := stringByPath(obj.Request, "circuitId")
+	if err != nil {
+		return out, err
+	}
+	if circuitID != string(circuits.AtomicQueryMTPV2OnChainCircuitID) {
+		return out, errors.New("wrong circuit")
+	}
+	var w3cCred verifiable.W3CCredential
+	err = json.Unmarshal(obj.VerifiableCredentials, &w3cCred)
+	if err != nil {
+		return out, err
+	}
+
+	inpMarsh.SkipClaimRevocationCheck, err = querySkipRevocation(obj.Request)
+	if err != nil {
+		return out, err
+	}
+	inpMarsh.Claim, err = claimWithMtpProofFromObj(ctx, cfg, w3cCred,
+		inpMarsh.SkipClaimRevocationCheck)
+	if err != nil {
+		return out, err
+	}
+
+	inpMarsh.Query, out.VerifiablePresentation, err =
+		queryFromObj(ctx, w3cCred, obj.Request, inpMarsh.Claim.Claim)
+	if err != nil {
+		return out, err
+	}
+
+	inpMarsh.CurrentTimeStamp = time.Now().Unix()
+
+	out.Inputs = inpMarsh
+
+	return out, nil
+}
+
+func AtomicQuerySigV2OnChainInputsFromJson(ctx context.Context, cfg EnvConfig,
+	in []byte) (AtomicQueryInputsResponse, error) {
+
+	var out AtomicQueryInputsResponse
+	var inpMarsh circuits.AtomicQuerySigV2OnChainInputs
+
+	var obj onChainInputsRequest
+	err := json.Unmarshal(in, &obj)
+	if err != nil {
+		return out, err
+	}
+
+	inpMarsh.RequestID, err = bigIntByPath(obj.Request, "id", true)
+	if err != nil {
+		return out, err
+	}
+
+	if obj.GenesisDID == nil {
+		return out, errors.New("genesisDID is required")
+	}
+
+	inpMarsh.ID = &obj.GenesisDID.ID
+	inpMarsh.ProfileNonce = obj.ProfileNonce.BigInt()
+	inpMarsh.ClaimSubjectProfileNonce = obj.ClaimSubjectProfileNonce.BigInt()
+
+	inpMarsh.AuthClaim = obj.AuthClaim
+	inpMarsh.AuthClaimIncMtp = obj.AuthClaimIncMtp
+	inpMarsh.AuthClaimNonRevMtp = obj.AuthClaimNonRevMtp
+
+	if obj.TreeState == nil {
+		return out, errors.New("treeState is required")
+	}
+	inpMarsh.TreeState = *obj.TreeState
+
+	if obj.GistProof == nil {
+		return out, errors.New("gistProof is required")
+	}
+	inpMarsh.GISTProof = *obj.GistProof
+
+	inpMarsh.Signature = (*babyjub.Signature)(obj.Signature)
+	inpMarsh.Challenge = obj.Challenge.BigInt()
+
+	circuitID, err := stringByPath(obj.Request, "circuitId")
+	if err != nil {
+		return out, err
+	}
+	if circuitID != string(circuits.AtomicQuerySigV2OnChainCircuitID) {
 		return out, errors.New("wrong circuit")
 	}
 	var w3cCred verifiable.W3CCredential

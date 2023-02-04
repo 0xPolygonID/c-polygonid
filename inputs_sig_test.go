@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -12,6 +13,8 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/iden3/go-circuits"
+	"github.com/iden3/go-merkletree-sql/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -355,4 +358,55 @@ func TestEnvConfig__UnmarshalJSON(t *testing.T) {
 	require.Equal(t, "http://localhost:8545", out.EthereumURL)
 	require.Equal(t, stateContractAddr, out.StateContractAddr)
 	require.Equal(t, "http://localhost:8003", out.ReverseHashServiceUrl)
+}
+
+func hexFromIntStr(intStr string) *merkletree.Hash {
+	i, ok := new(big.Int).SetString(intStr, 10)
+	if !ok {
+		panic(intStr)
+	}
+	h, err := merkletree.NewHashFromBigInt(i)
+	if err != nil {
+		panic(err)
+	}
+	return h
+}
+
+func must[T any](fn func() (T, error)) T {
+	v, err := fn()
+	if err != nil {
+		panic(err)
+	}
+	return v
+}
+
+func TestOnChainInputsRequest_UnmarshalJSON(t *testing.T) {
+	inBytes, err := os.ReadFile(
+		"testdata/atomic_query_sig_v2_on_chain_input.json")
+	require.NoError(t, err)
+	var obj onChainInputsRequest
+	err = json.Unmarshal(inBytes, &obj)
+	require.NoError(t, err)
+
+	wantTreeState := circuits.TreeState{
+		State: hexFromIntStr(
+			"18656147546666944484453899241916469544090258810192803949522794490493271005313"),
+		ClaimsRoot: hexFromIntStr(
+			"9763429684850732628215303952870004997159843236039795272605841029866455670219"),
+		RevocationRoot: hexFromIntStr("0"),
+		RootOfRoots:    hexFromIntStr("0"),
+	}
+	require.Equal(t, &wantTreeState, obj.TreeState)
+
+	wantGistProof := circuits.GISTProof{
+		Root: hexFromIntStr("4924303677736085224554833340748086265406229626627819375177261957522622163007"),
+		Proof: must(func() (*merkletree.Proof, error) {
+			return merkletree.NewProofFromData(false, nil,
+				&merkletree.NodeAux{
+					Key:   hexFromIntStr("24846663430375341177084327381366271031641225773947711007341346118923321345"),
+					Value: hexFromIntStr("6317996369756476782464660619835940615734517981889733696047139451453239145426"),
+				})
+		}),
+	}
+	require.Equal(t, &wantGistProof, obj.GistProof)
 }

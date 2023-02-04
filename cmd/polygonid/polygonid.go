@@ -534,8 +534,8 @@ func PLGNProfileID(jsonResponse **C.char, in *C.char,
 	return true
 }
 
-// PLGNSigV2Inputs2 returns the inputs for the Sig circuit v2 with
-// optional selective disclosure.
+// PLGNAtomicQuerySigV2Inputs returns the inputs for the
+// credentialAtomicQuerySigV2 with optional selective disclosure.
 //
 // Additional configuration may be required for Reverse Hash Service
 // revocation validation. In other case cfg may be nil.
@@ -548,50 +548,19 @@ func PLGNProfileID(jsonResponse **C.char, in *C.char,
 //	 "reverseHashServiceUrl": "http://localhost:8003"
 //	}
 //
-//export PLGNSigV2Inputs2
-func PLGNSigV2Inputs2(jsonResponse **C.char, in *C.char, cfg *C.char,
+//export PLGNAtomicQuerySigV2Inputs
+func PLGNAtomicQuerySigV2Inputs(jsonResponse **C.char, in *C.char, cfg *C.char,
 	status **C.PLGNStatus) bool {
 
-	if jsonResponse == nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_NIL_POINTER,
-			"jsonResponse pointer is nil")
-		return false
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	inData := C.GoBytes(unsafe.Pointer(in), C.int(C.strlen(in)))
-
-	envCfg, err := createEnvConfig(cfg)
-	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
-		return false
-	}
-
-	aqInpResp, err := c_polygonid.AtomicQuerySigV2InputsFromJson(ctx,
-		envCfg, inData)
-	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
-		return false
-	}
-
-	resp, err := marshalInputsResponse(aqInpResp)
-	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR,
-			"error marshalling atomic query inputs: %v", err)
-		return false
-	}
-
-	*jsonResponse = C.CString(resp)
-	return true
+	return prepareInputs(c_polygonid.AtomicQuerySigV2InputsFromJson,
+		jsonResponse, in, cfg, status)
 }
 
 // PLGNSigV2Inputs returns the inputs for the Sig circuit v2 with
 // optional selective disclosure.
 //
 // Deprecated: Does not support Reverse Hash Service credential status
-// validation! Use PLGNSigV2Inputs2 method with configuration instead.
+// validation! Use PLGNAtomicQuerySigV2Inputs method with configuration instead.
 //
 //export PLGNSigV2Inputs
 func PLGNSigV2Inputs(jsonResponse **C.char, in *C.char,
@@ -649,8 +618,8 @@ func marshalInputsResponse(
 
 }
 
-// PLGNMtpV2Inputs2 returns the inputs for the MTP circuit v2 with
-// optional selective disclosure.
+// PLGNAtomicQueryMtpV2Inputs returns the inputs for the
+// credentialAtomicQueryMTPV2 with optional selective disclosure.
 //
 // Additional configuration may be required for Reverse Hash Service
 // revocation validation. In other case cfg may be nil.
@@ -663,50 +632,19 @@ func marshalInputsResponse(
 //	  "reverseHashServiceUrl": "http://localhost:8003"
 //	}
 //
-//export PLGNMtpV2Inputs2
-func PLGNMtpV2Inputs2(jsonResponse **C.char, in *C.char, cfg *C.char,
+//export PLGNAtomicQueryMtpV2Inputs
+func PLGNAtomicQueryMtpV2Inputs(jsonResponse **C.char, in *C.char, cfg *C.char,
 	status **C.PLGNStatus) bool {
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	if jsonResponse == nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_NIL_POINTER,
-			"jsonResponse pointer is nil")
-		return false
-	}
-
-	inData := C.GoBytes(unsafe.Pointer(in), C.int(C.strlen(in)))
-
-	envCfg, err := createEnvConfig(cfg)
-	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
-		return false
-	}
-
-	aqInpResp, err := c_polygonid.AtomicQueryMtpV2InputsFromJson(ctx,
-		envCfg, inData)
-	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
-		return false
-	}
-
-	resp, err := marshalInputsResponse(aqInpResp)
-	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR,
-			"error marshalling atomic query inputs: %v", err)
-		return false
-	}
-
-	*jsonResponse = C.CString(resp)
-	return true
+	return prepareInputs(c_polygonid.AtomicQueryMtpV2InputsFromJson,
+		jsonResponse, in, cfg, status)
 }
 
 // PLGNMtpV2Inputs returns the inputs for the MTP circuit v2 with
 // optional selective disclosure.
 //
 // Deprecated: Does not support Reverse Hash Service credential status
-// validation! Use PLGNMtpV2Inputs2 method with configuration instead.
+// validation! Use PLGNAtomicQueryMtpV2Inputs method with configuration instead.
 //
 //export PLGNMtpV2Inputs
 func PLGNMtpV2Inputs(jsonResponse **C.char, in *C.char,
@@ -741,66 +679,48 @@ func PLGNMtpV2Inputs(jsonResponse **C.char, in *C.char,
 	return true
 }
 
+// PLGNAtomicQuerySigV2OnChainInputs returns the inputs for the
+// credentialAtomicQuerySigV2OnChain circuit with optional selective disclosure.
+//
+// Additional configuration may be required for Reverse Hash Service
+// revocation validation. In other case cfg may be nil.
+//
+// Sample configuration:
+//
+//	{
+//	  "ethereumUrl": "http://localhost:8545",
+//	  "stateContractAddr": "0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655",
+//	  "reverseHashServiceUrl": "http://localhost:8003"
+//	}
+//
 //export PLGNAtomicQuerySigV2OnChainInputs
 func PLGNAtomicQuerySigV2OnChainInputs(jsonResponse **C.char, in *C.char,
-	status **C.PLGNStatus) bool {
+	cfg *C.char, status **C.PLGNStatus) bool {
 
-	if jsonResponse == nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_NIL_POINTER,
-			"jsonResponse pointer is nil")
-		return false
-	}
-
-	inData := C.GoBytes(unsafe.Pointer(in), C.int(C.strlen(in)))
-	var inputs circuits.AtomicQuerySigV2OnChainInputs
-	err := json.Unmarshal(inData, &inputs)
-	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR,
-			"PLGNAtomicQuerySigV2OnChainInputs: inputs unmarshal error: %v",
-			err.Error())
-		return false
-	}
-
-	circuitInputJSON, err := inputs.InputsMarshal()
-	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR,
-			"PLGNAtomicQuerySigV2OnChainInputs: inputs marshal error: %v", err)
-		return false
-	}
-
-	*jsonResponse = C.CString(string(circuitInputJSON))
-	return true
+	return prepareInputs(c_polygonid.AtomicQuerySigV2OnChainInputsFromJson,
+		jsonResponse, in, cfg, status)
 }
 
+// PLGNAtomicQueryMTPV2OnChainInputs returns the inputs for the
+// credentialAtomicQueryMTPV2OnChain circuit with optional selective disclosure.
+//
+// Additional configuration may be required for Reverse Hash Service
+// revocation validation. In other case cfg may be nil.
+//
+// Sample configuration:
+//
+//	{
+//	  "ethereumUrl": "http://localhost:8545",
+//	  "stateContractAddr": "0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655",
+//	  "reverseHashServiceUrl": "http://localhost:8003"
+//	}
+//
 //export PLGNAtomicQueryMTPV2OnChainInputs
 func PLGNAtomicQueryMTPV2OnChainInputs(jsonResponse **C.char, in *C.char,
-	status **C.PLGNStatus) bool {
+	cfg *C.char, status **C.PLGNStatus) bool {
 
-	if jsonResponse == nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_NIL_POINTER,
-			"jsonResponse pointer is nil")
-		return false
-	}
-
-	inData := C.GoBytes(unsafe.Pointer(in), C.int(C.strlen(in)))
-	var inputs circuits.AtomicQueryMTPV2OnChainInputs
-	err := json.Unmarshal(inData, &inputs)
-	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR,
-			"PLGNAtomicQueryMTPV2OnChainInputs: inputs unmarshal error: %v",
-			err.Error())
-		return false
-	}
-
-	circuitInputJSON, err := inputs.InputsMarshal()
-	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR,
-			"PLGNAtomicQueryMTPV2OnChainInputs: inputs marshal error: %v", err)
-		return false
-	}
-
-	*jsonResponse = C.CString(string(circuitInputJSON))
-	return true
+	return prepareInputs(c_polygonid.AtomicQueryMtpV2OnChainInputsFromJson,
+		jsonResponse, in, cfg, status)
 }
 
 //export PLGNFreeStatus
@@ -825,6 +745,46 @@ func createEnvConfig(cfgJson *C.char) (c_polygonid.EnvConfig, error) {
 		err = json.Unmarshal(cfgData, &cfg)
 	}
 	return cfg, err
+}
+
+type atomicQueryInputsFn func(ctx context.Context, cfg c_polygonid.EnvConfig,
+	in []byte) (c_polygonid.AtomicQueryInputsResponse, error)
+
+func prepareInputs(fn atomicQueryInputsFn,
+	jsonResponse **C.char, in *C.char, cfg *C.char,
+	status **C.PLGNStatus) bool {
+	if jsonResponse == nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_NIL_POINTER,
+			"jsonResponse pointer is nil")
+		return false
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	inData := C.GoBytes(unsafe.Pointer(in), C.int(C.strlen(in)))
+
+	envCfg, err := createEnvConfig(cfg)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		return false
+	}
+
+	aqInpResp, err := fn(ctx, envCfg, inData)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		return false
+	}
+
+	resp, err := marshalInputsResponse(aqInpResp)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR,
+			"error marshalling atomic query inputs: %v", err)
+		return false
+	}
+
+	*jsonResponse = C.CString(resp)
+	return true
 }
 
 func main() {}
