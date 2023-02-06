@@ -359,7 +359,7 @@ type inputsRequest struct {
 }
 
 type onChainInputsRequest struct {
-	GenesisDID               *core.DID           `json:"genesisDID"`
+	ID                       *core.ID            `json:"id"`
 	ProfileNonce             *JsonBigInt         `json:"profileNonce"`
 	ClaimSubjectProfileNonce *JsonBigInt         `json:"claimSubjectProfileNonce"`
 	AuthClaim                *core.Claim         `json:"authClaim"`
@@ -576,11 +576,11 @@ func AtomicQueryMtpV2OnChainInputsFromJson(ctx context.Context, cfg EnvConfig,
 		return out, err
 	}
 
-	if obj.GenesisDID == nil {
-		return out, errors.New("genesisDID is required")
+	if obj.ID == nil {
+		return out, errors.New(`"id" field is required`)
 	}
 
-	inpMarsh.ID = &obj.GenesisDID.ID
+	inpMarsh.ID = obj.ID
 	inpMarsh.ProfileNonce = obj.ProfileNonce.BigInt()
 	inpMarsh.ClaimSubjectProfileNonce = obj.ClaimSubjectProfileNonce.BigInt()
 
@@ -654,11 +654,11 @@ func AtomicQuerySigV2OnChainInputsFromJson(ctx context.Context, cfg EnvConfig,
 		return out, err
 	}
 
-	if obj.GenesisDID == nil {
-		return out, errors.New("genesisDID is required")
+	if obj.ID == nil {
+		return out, errors.New(`"id" field is required`)
 	}
 
-	inpMarsh.ID = &obj.GenesisDID.ID
+	inpMarsh.ID = obj.ID
 	inpMarsh.ProfileNonce = obj.ProfileNonce.BigInt()
 	inpMarsh.ClaimSubjectProfileNonce = obj.ClaimSubjectProfileNonce.BigInt()
 
