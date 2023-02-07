@@ -21,6 +21,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
       - run: |
+          apt-get install -y cmake
           go build -buildmode=c-archive -o ios/libpolygonid-linux-amd64.a ./cmd/polygonid
           cp ios/libpolygonid-linux-amd64.h ios/libpolygonid-darwin-arm64.h
           cd examples/
