@@ -10,13 +10,15 @@ make darwin-arm64
 
 ## Run tests
 
+The library build be built with previous command.
+
 ```shell
 cd examples
 mkdir build
 cd build
 cmake ..
 cmake --build .
-make test
+make test ARGS="--rerun-failed --output-on-failure"
 ```
 
 ## Run example on Darwin M1
