@@ -53,3 +53,10 @@ jobs:
       - run: |
           go version
           go build -buildmode=c-archive -o ios/libpolygonid.a ./cmd/polygonid
+          cp ios/libpolygonid.h ios/libpolygonid-darwin-arm64.h
+          brew install cjson
+          mkdir examples/build
+          cd examples/build
+          cmake ..
+          make
+          make test ARGS="--rerun-failed --output-on-failure"
