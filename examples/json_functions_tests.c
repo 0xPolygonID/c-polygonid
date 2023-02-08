@@ -1,7 +1,7 @@
 #include "common.h"
 #include <stdbool.h>
 
-#include <cJSON.h>
+#include <cjson/cJSON.h>
 
 // GoUint8 is a C bool type
 typedef GoUint8(*FN)(char**, char*, PLGNStatus**);

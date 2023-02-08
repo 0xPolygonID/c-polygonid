@@ -22,7 +22,7 @@ jobs:
             ${{ runner.os }}-go-
       - run: |
           apt-get update
-          apt-get install -y cmake
+          apt-get install -y cmake libcjson-dev
           go build -buildmode=c-archive -o ios/libpolygonid.a ./cmd/polygonid
           cp ios/libpolygonid.h ios/libpolygonid-darwin-arm64.h
           mkdir examples/build
