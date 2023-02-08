@@ -23,11 +23,10 @@ jobs:
       - run: |
           apt-get update
           apt-get install -y cmake
-          go build -buildmode=c-archive -o ios/libpolygonid-linux-amd64.a ./cmd/polygonid
-          cp ios/libpolygonid-linux-amd64.h ios/libpolygonid-darwin-arm64.h
-          cd examples/
-          mkdir build
-          cd build
+          go build -buildmode=c-archive -o ios/libpolygonid.a ./cmd/polygonid
+          cp ios/libpolygonid.h ios/libpolygonid-darwin-arm64.h
+          mkdir examples/build
+          cd examples/build
           cmake ..
           make
           make test ARGS="--rerun-failed --output-on-failure"
