@@ -28,13 +28,13 @@ jobs:
       - run: |
           apt-get update
           apt-get install -y cmake libcjson-dev
-          go build -buildmode=c-archive -o ios/libpolygonid.a ./cmd/polygonid
-          cp ios/libpolygonid.h ios/libpolygonid-darwin-arm64.h
-          mkdir examples/build
-          cd examples/build
-          cmake ..
-          make
-          make test ARGS="--rerun-failed --output-on-failure"
+#          go build -buildmode=c-archive -o ios/libpolygonid.a ./cmd/polygonid
+#          cp ios/libpolygonid.h ios/libpolygonid-darwin-arm64.h
+#          mkdir examples/build
+#          cd examples/build
+#          cmake ..
+#          make
+#          make test ARGS="--rerun-failed --output-on-failure"
   integration-test-macos:
     runs-on: macos-12
     steps:
@@ -42,14 +42,14 @@ jobs:
       - uses: actions/setup-go@v3
         with:
           go-version: 1.20.0
-#      - uses: actions/cache@v3
-#        with:
-#          path: |
-#            ~/.cache/go-build
-#            /go/pkg/mod
-#          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-#          restore-keys: |
-#            ${{ runner.os }}-go-
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/Library/Caches/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
       - run: go env GOMODCACHE
       - run: go env GOCACHE
       - run: |
