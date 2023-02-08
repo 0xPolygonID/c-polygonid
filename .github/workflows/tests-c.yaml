@@ -12,7 +12,7 @@ jobs:
       matrix:
         containers:
           - 1.19.5-bullseye
-#          - 1.20.0-bullseye
+          - 1.20.0-bullseye
     runs-on: ubuntu-22.04
     container: golang:${{matrix.containers}}
     steps:
@@ -28,17 +28,16 @@ jobs:
       - run: |
           apt-get update
           apt-get install -y cmake libcjson-dev
-          git version
+          # without this line `git status` does not work on containers
+          # 1.19.5 and upper
           git config --global --add safe.directory `pwd`
-          git status
-          go version
           go build -buildmode=c-archive -o ios/libpolygonid.a ./cmd/polygonid
-#          cp ios/libpolygonid.h ios/libpolygonid-darwin-arm64.h
-#          mkdir examples/build
-#          cd examples/build
-#          cmake ..
-#          make
-#          make test ARGS="--rerun-failed --output-on-failure"
+          cp ios/libpolygonid.h ios/libpolygonid-darwin-arm64.h
+          mkdir examples/build
+          cd examples/build
+          cmake ..
+          make
+          make test ARGS="--rerun-failed --output-on-failure"
   integration-test-macos:
     runs-on: macos-12
     steps:
