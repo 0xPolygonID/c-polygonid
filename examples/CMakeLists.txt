@@ -26,7 +26,6 @@ endif()
 find_package(cJSON REQUIRED)
 include_directories(${CJSON_INCLUDE_DIRS})
 add_executable(json_functions_tests json_functions_tests.c)
-message(STATUS "CJSON_INCLUDE_DIRS: " ${CJSON_INCLUDE_DIRS})
 target_link_libraries(json_functions_tests PUBLIC ${CJSON_LIBRARIES})
 
 ## End cJSON

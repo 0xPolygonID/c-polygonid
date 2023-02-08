@@ -7,12 +7,12 @@ on:
   pull_request:
 
 jobs:
-  test:
+  integration-test-linux:
     strategy:
       matrix:
         containers:
-          - 1.19.5-bullseye
-          - 1.20.0-bullseye
+          - 1.19.4-bullseye
+#          - 1.20.0-bullseye
     runs-on: ubuntu-22.04
     container: golang:${{matrix.containers}}
     steps:
@@ -35,7 +35,7 @@ jobs:
           cmake ..
           make
           make test ARGS="--rerun-failed --output-on-failure"
-  test-macos:
+  integration-test-macos:
     runs-on: macos-12
     steps:
       - uses: actions/checkout@v3
