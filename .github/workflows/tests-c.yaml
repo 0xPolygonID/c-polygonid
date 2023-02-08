@@ -28,6 +28,8 @@ jobs:
       - run: |
           apt-get update
           apt-get install -y cmake libcjson-dev
+          git version
+          git status
           go version
           go build -buildmode=c-archive -o ios/libpolygonid.a ./cmd/polygonid
 #          cp ios/libpolygonid.h ios/libpolygonid-darwin-arm64.h
@@ -51,10 +53,7 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-      - run: go env GOMODCACHE
-      - run: go env GOCACHE
       - run: |
-          go version
           go build -buildmode=c-archive -o ios/libpolygonid.a ./cmd/polygonid
           cp ios/libpolygonid.h ios/libpolygonid-darwin-arm64.h
           brew install cjson
