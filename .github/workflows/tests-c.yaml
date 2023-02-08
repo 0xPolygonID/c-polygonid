@@ -11,7 +11,7 @@ jobs:
     strategy:
       matrix:
         containers:
-          - 1.19.4-bullseye
+          - 1.19.5-bullseye
 #          - 1.20.0-bullseye
     runs-on: ubuntu-22.04
     container: golang:${{matrix.containers}}
@@ -50,6 +50,8 @@ jobs:
 #          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
 #          restore-keys: |
 #            ${{ runner.os }}-go-
+      - run: go env GOMODCACHE
+      - run: go env GOCACHE
       - run: |
           go version
           go build -buildmode=c-archive -o ios/libpolygonid.a ./cmd/polygonid
