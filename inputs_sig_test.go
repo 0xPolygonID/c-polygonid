@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math/big"
 	"net/http"
 	"net/http/httptest"
@@ -62,7 +63,19 @@ func (m *mockedRouterTripper) RoundTrip(
 	urlStr := request.URL.String()
 	respFile, ok := m.routes[urlStr]
 	if !ok {
-		m.t.Errorf("unexpected http request: %v", urlStr)
+		var requestBodyStr string
+		requestBody, err := io.ReadAll(request.Body)
+		if err != nil {
+			requestBodyStr = fmt.Sprintf("error reading request body: %v", err)
+		} else {
+			requestBodyStr = string(requestBody)
+		}
+		if requestBodyStr == "" {
+			m.t.Errorf("unexpected http request: %v", urlStr)
+		} else {
+			m.t.Errorf("unexpected http request: %v\nBody: %v",
+				urlStr, requestBodyStr)
+		}
 		rr := httptest.NewRecorder()
 		rr.WriteHeader(http.StatusNotFound)
 		rr2 := rr.Result()

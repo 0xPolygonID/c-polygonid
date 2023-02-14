@@ -602,7 +602,9 @@ func marshalInputsResponse(
 		Inputs                 json.RawMessage `json:"inputs"`
 		VerifiablePresentation any             `json:"verifiablePresentation,omitempty"`
 	}
-	resp.VerifiablePresentation = inputsResponse.VerifiablePresentation
+	if inputsResponse.VerifiablePresentation != nil {
+		resp.VerifiablePresentation = inputsResponse.VerifiablePresentation
+	}
 	var err error
 	resp.Inputs, err = inputsResponse.Inputs.InputsMarshal()
 	if err != nil {
