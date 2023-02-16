@@ -393,33 +393,75 @@ func must[T any](fn func() (T, error)) T {
 	return v
 }
 
+func assertEqualWithoutTimestamp(t testing.TB, wantFName string,
+	im circuits.InputsMarshaller) {
+
+	jsonWant, err := os.ReadFile("testdata/" + wantFName)
+	require.NoError(t, err)
+
+	var wantObj jsonObj
+	err = json.Unmarshal(jsonWant, &wantObj)
+	require.NoError(t, err)
+
+	inputsBytes, err := im.InputsMarshal()
+	require.NoError(t, err)
+
+	var inputsObj jsonObj
+	err = json.Unmarshal(inputsBytes, &inputsObj)
+	require.NoError(t, err)
+
+	wantObj["timestamp"] = inputsObj["timestamp"]
+
+	require.Equal(t, wantObj, inputsObj, "want: %v\ngot: %s", inputsBytes)
+}
+
 func TestOnChainInputsRequest_UnmarshalJSON(t *testing.T) {
+	defer mockHttpClient(t, map[string]string{
+		"http://52.213.238.159/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qHpzFHsiJoX8dncLsnmQEbVUB4611PtBYCWs7g7pN/claims/revocation/status/1340705980": "testdata/httpresp_rev_status_1340705980.json",
+		"http://52.213.238.159/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qHpzFHsiJoX8dncLsnmQEbVUB4611PtBYCWs7g7pN/claims/revocation/status/0":          "testdata/httpresp_rev_status_2qHpzFHsiJoX8dncLsnmQEbVUB4611PtBYCWs7g7pN_0.json",
+		"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json/KYCAgeCredential-v2.json":                                                       "testdata/httpresp_KYCAgeCredential-v2.json",
+	})()
+
 	inBytes, err := os.ReadFile(
 		"testdata/atomic_query_sig_v2_on_chain_input.json")
 	require.NoError(t, err)
-	var obj onChainInputsRequest
-	err = json.Unmarshal(inBytes, &obj)
-	require.NoError(t, err)
 
-	wantTreeState := circuits.TreeState{
-		State: hexFromIntStr(
-			"18656147546666944484453899241916469544090258810192803949522794490493271005313"),
-		ClaimsRoot: hexFromIntStr(
-			"9763429684850732628215303952870004997159843236039795272605841029866455670219"),
-		RevocationRoot: hexFromIntStr("0"),
-		RootOfRoots:    hexFromIntStr("0"),
-	}
-	require.Equal(t, &wantTreeState, obj.TreeState)
+	t.Run("test inputs", func(t *testing.T) {
+		ctx := context.Background()
+		var emptyCfg EnvConfig
+		out, err := AtomicQuerySigV2OnChainInputsFromJson(ctx, emptyCfg,
+			inBytes)
+		require.NoError(t, err)
 
-	wantGistProof := circuits.GISTProof{
-		Root: hexFromIntStr("4924303677736085224554833340748086265406229626627819375177261957522622163007"),
-		Proof: must(func() (*merkletree.Proof, error) {
-			return merkletree.NewProofFromData(false, nil,
-				&merkletree.NodeAux{
-					Key:   hexFromIntStr("24846663430375341177084327381366271031641225773947711007341346118923321345"),
-					Value: hexFromIntStr("6317996369756476782464660619835940615734517981889733696047139451453239145426"),
-				})
-		}),
-	}
-	require.Equal(t, &wantGistProof, obj.GistProof)
+		assertEqualWithoutTimestamp(t,
+			"atomic_query_sig_v2_on_chain_output.json", out.Inputs)
+	})
+
+	t.Run("test unmarshaling some request fields", func(t *testing.T) {
+		var obj onChainInputsRequest
+		err = json.Unmarshal(inBytes, &obj)
+		require.NoError(t, err)
+
+		wantTreeState := circuits.TreeState{
+			State: hexFromIntStr(
+				"18656147546666944484453899241916469544090258810192803949522794490493271005313"),
+			ClaimsRoot: hexFromIntStr(
+				"9763429684850732628215303952870004997159843236039795272605841029866455670219"),
+			RevocationRoot: hexFromIntStr("0"),
+			RootOfRoots:    hexFromIntStr("0"),
+		}
+		require.Equal(t, &wantTreeState, obj.TreeState)
+
+		wantGistProof := circuits.GISTProof{
+			Root: hexFromIntStr("4924303677736085224554833340748086265406229626627819375177261957522622163007"),
+			Proof: must(func() (*merkletree.Proof, error) {
+				return merkletree.NewProofFromData(false, nil,
+					&merkletree.NodeAux{
+						Key:   hexFromIntStr("24846663430375341177084327381366271031641225773947711007341346118923321345"),
+						Value: hexFromIntStr("6317996369756476782464660619835940615734517981889733696047139451453239145426"),
+					})
+			}),
+		}
+		require.Equal(t, &wantGistProof, obj.GistProof)
+	})
 }
