@@ -138,22 +138,8 @@ func TestAtomicQuerySigV2InputsFromJson(t *testing.T) {
 	out, err := AtomicQuerySigV2InputsFromJson(ctx, emptyCfg, jsonIn)
 	require.NoError(t, err)
 
-	inputsBytes, err := out.Inputs.InputsMarshal()
-	require.NoError(t, err)
-
-	var inputsObj jsonObj
-	err = json.Unmarshal(inputsBytes, &inputsObj)
-	require.NoError(t, err)
-
-	jsonWant, err := os.ReadFile(
-		"testdata/atomic_query_sig_v2_merklized_output.json")
-	require.NoError(t, err)
-	var wantObj jsonObj
-	err = json.Unmarshal(jsonWant, &wantObj)
-	require.NoError(t, err)
-	wantObj["timestamp"] = inputsObj["timestamp"]
-
-	require.Equal(t, wantObj, inputsObj, "got: %s", inputsBytes)
+	assertEqualWithoutTimestamp(t,
+		"atomic_query_sig_v2_merklized_output.json", out.Inputs)
 }
 
 func TestHexHash_UnmarshalJSON(t *testing.T) {
@@ -163,198 +149,151 @@ func TestHexHash_UnmarshalJSON(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestAtomicQueryMtpV2InputsFromJson(t *testing.T) {
-	defer mockHttpClient(t, map[string]string{
-		"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qFuKxq6iPem5w2U6T6druwGFjqTinE1kqNkSN7oo9/claims/revocation/status/380518664": "testdata/httpresp_rev_status_380518664.json",
-		"https://www.w3.org/2018/credentials/v1": "testdata/httpresp_credentials_v1.json",
-		"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld": "testdata/httpresp_iden3credential_v2.json",
-		"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld":             "testdata/httpresp_kyc-v3.json-ld",
-	})()
-	jsonIn, err := os.ReadFile("testdata/atomic_query_mtp_v2_inputs.json")
-	require.NoError(t, err)
+func TestPrepareInputs(t *testing.T) {
 
-	ctx := context.Background()
-	var emptyCfg EnvConfig
-	out, err := AtomicQueryMtpV2InputsFromJson(ctx, emptyCfg, jsonIn)
-	require.NoError(t, err)
+	type PrepareInputsFn func(
+		ctx context.Context, cfg EnvConfig, in []byte) (
+		AtomicQueryInputsResponse, error)
 
-	inputsBytes, err := out.Inputs.InputsMarshal()
-	require.NoError(t, err)
+	doTest := func(t testing.TB, inFile, wantOutFile string,
+		fn PrepareInputsFn, wantVR map[string]any) {
 
-	var inputsObj jsonObj
-	err = json.Unmarshal(inputsBytes, &inputsObj)
-	require.NoError(t, err)
+		jsonIn, err := os.ReadFile("testdata/" + inFile)
+		require.NoError(t, err)
 
-	jsonWant, err := os.ReadFile("testdata/atomic_query_mtp_v2_output.json")
-	require.NoError(t, err)
-	var wantObj jsonObj
-	err = json.Unmarshal(jsonWant, &wantObj)
-	require.NoError(t, err)
-	wantObj["timestamp"] = inputsObj["timestamp"]
+		ctx := context.Background()
+		var emptyCfg EnvConfig
+		out, err := fn(ctx, emptyCfg, jsonIn)
+		require.NoError(t, err)
 
-	require.Equal(t, wantObj, inputsObj, "got: %s", inputsBytes)
-}
+		assertEqualWithoutTimestamp(t, wantOutFile, out.Inputs)
 
-func TestAtomicQueryMtpV2InputsFromJson_NonMerklized(t *testing.T) {
-	defer mockHttpClient(t, map[string]string{
-		"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json/KYCAgeCredential-v2.json":                                                      "testdata/httpresp_KYCAgeCredential-v2.json",
-		"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qFuKxq6iPem5w2U6T6druwGFjqTinE1kqNkSN7oo9/claims/revocation/status/118023115": "testdata/httpresp_rev_status_118023115.json",
-	})()
-	jsonIn, err := os.ReadFile("testdata/atomic_query_mtp_v2_non_merklized_inputs.json")
-	require.NoError(t, err)
-
-	ctx := context.Background()
-	var emptyCfg EnvConfig
-	out, err := AtomicQueryMtpV2InputsFromJson(ctx, emptyCfg, jsonIn)
-	require.NoError(t, err)
-
-	inputsBytes, err := out.Inputs.InputsMarshal()
-	require.NoError(t, err)
-
-	var inputsObj jsonObj
-	err = json.Unmarshal(inputsBytes, &inputsObj)
-	require.NoError(t, err)
-
-	jsonWant, err := os.ReadFile("testdata/atomic_query_mtp_v2_non_merklized_output.json")
-	require.NoError(t, err)
-	var wantObj jsonObj
-	err = json.Unmarshal(jsonWant, &wantObj)
-	require.NoError(t, err)
-	wantObj["timestamp"] = inputsObj["timestamp"]
-
-	require.Equal(t, wantObj, inputsObj, "got: %s", inputsBytes)
-}
-
-func TestAtomicQuerySigV2InputsFromJson_Disclosure(t *testing.T) {
-	defer mockHttpClient(t, map[string]string{
-		"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld":             "testdata/httpresp_kyc-v3.json-ld",
-		"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld": "testdata/httpresp_iden3credential_v2.json",
-		"https://www.w3.org/2018/credentials/v1": "testdata/httpresp_credentials_v1.json",
-		"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/2376431481": "testdata/httpresp_rev_status_2376431481.json",
-		"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/0":          "testdata/httpresp_rev_status_wuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU_0.json",
-	})()
-
-	jsonIn, err := os.ReadFile(
-		"testdata/atomic_query_sig_v2_merklized_disclosure_inputs.json")
-	require.NoError(t, err)
-
-	ctx := context.Background()
-	var emptyCfg EnvConfig
-	out, err := AtomicQuerySigV2InputsFromJson(ctx, emptyCfg, jsonIn)
-	require.NoError(t, err)
-
-	inputsBytes, err := out.Inputs.InputsMarshal()
-	require.NoError(t, err)
-
-	var inputsObj jsonObj
-	err = json.Unmarshal(inputsBytes, &inputsObj)
-	require.NoError(t, err)
-
-	jsonWant, err := os.ReadFile(
-		"testdata/atomic_query_sig_v2_merklized_output.json")
-	require.NoError(t, err)
-	var wantObj jsonObj
-	err = json.Unmarshal(jsonWant, &wantObj)
-	require.NoError(t, err)
-	wantObj["timestamp"] = inputsObj["timestamp"]
-
-	require.Equal(t, wantObj, inputsObj, "got: %s", inputsBytes)
-
-	wantVerifiablePresentation := map[string]any{
-		"@context": []string{
-			"https://www.w3.org/2018/credentials/v1",
-			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld",
-		},
-		"@type": "VerifiablePresentation",
-		"verifiableCredential": map[string]any{
-			"@type":        "KYCAgeCredential",
-			"documentType": float64(2),
-		},
+		if wantVR == nil {
+			require.Nil(t, out.VerifiablePresentation)
+		} else {
+			require.Equal(t, wantVR, out.VerifiablePresentation)
+		}
 	}
-	require.Equal(t, wantVerifiablePresentation, out.VerifiablePresentation)
-}
 
-func TestAtomicQuerySigV2InputsFromJson_NonMerklized(t *testing.T) {
-	defer mockHttpClient(t, map[string]string{
-		"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qDNRmjPHUrtnPWfXQ4kKwZfarfsSYoiFBxB9tDkui/claims/revocation/status/3878863870": "testdata/httpresp_rev_status_3878863870.json",
-		"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qDNRmjPHUrtnPWfXQ4kKwZfarfsSYoiFBxB9tDkui/claims/revocation/status/0":          "testdata/httpresp_rev_status_2qDNRmjPHUrtnPWfXQ4kKwZfarfsSYoiFBxB9tDkui_0.json",
-		"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json/KYCAgeCredential-v2.json":                                                       "testdata/httpresp_KYCAgeCredential-v2.json",
-	})()
+	t.Run("AtomicQueryMtpV2InputsFromJson", func(t *testing.T) {
+		defer mockHttpClient(t, map[string]string{
+			"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qFuKxq6iPem5w2U6T6druwGFjqTinE1kqNkSN7oo9/claims/revocation/status/380518664": "testdata/httpresp_rev_status_380518664.json",
+			"https://www.w3.org/2018/credentials/v1": "testdata/httpresp_credentials_v1.json",
+			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld": "testdata/httpresp_iden3credential_v2.json",
+			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld":             "testdata/httpresp_kyc-v3.json-ld",
+		})()
 
-	jsonIn, err := os.ReadFile("testdata/atomic_query_sig_v2_non_merklized_inputs.json")
-	require.NoError(t, err)
+		doTest(t, "atomic_query_mtp_v2_inputs.json",
+			"atomic_query_mtp_v2_output.json", AtomicQueryMtpV2InputsFromJson,
+			nil)
+	})
 
-	ctx := context.Background()
-	var emptyCfg EnvConfig
-	out, err := AtomicQuerySigV2InputsFromJson(ctx, emptyCfg, jsonIn)
-	require.NoError(t, err)
+	t.Run("AtomicQueryMtpV2InputsFromJson NonMerklized", func(t *testing.T) {
+		defer mockHttpClient(t, map[string]string{
+			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json/KYCAgeCredential-v2.json":                                                      "testdata/httpresp_KYCAgeCredential-v2.json",
+			"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qFuKxq6iPem5w2U6T6druwGFjqTinE1kqNkSN7oo9/claims/revocation/status/118023115": "testdata/httpresp_rev_status_118023115.json",
+		})()
 
-	inputsBytes, err := out.Inputs.InputsMarshal()
-	require.NoError(t, err)
+		doTest(t, "atomic_query_mtp_v2_non_merklized_inputs.json",
+			"atomic_query_mtp_v2_non_merklized_output.json",
+			AtomicQueryMtpV2InputsFromJson, nil)
+	})
 
-	var inputsObj jsonObj
-	err = json.Unmarshal(inputsBytes, &inputsObj)
-	require.NoError(t, err)
+	t.Run("AtomicQuerySigV2InputsFromJson Disclosure", func(t *testing.T) {
+		defer mockHttpClient(t, map[string]string{
+			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld":             "testdata/httpresp_kyc-v3.json-ld",
+			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld": "testdata/httpresp_iden3credential_v2.json",
+			"https://www.w3.org/2018/credentials/v1": "testdata/httpresp_credentials_v1.json",
+			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/2376431481": "testdata/httpresp_rev_status_2376431481.json",
+			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/0":          "testdata/httpresp_rev_status_wuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU_0.json",
+		})()
 
-	jsonWant, err := os.ReadFile("testdata/atomic_query_sig_v2_non_merklized_output.json")
-	require.NoError(t, err)
-	var wantObj jsonObj
-	err = json.Unmarshal(jsonWant, &wantObj)
-	require.NoError(t, err)
-	wantObj["timestamp"] = inputsObj["timestamp"]
+		wantVerifiablePresentation := map[string]any{
+			"@context": []string{
+				"https://www.w3.org/2018/credentials/v1",
+				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld",
+			},
+			"@type": "VerifiablePresentation",
+			"verifiableCredential": map[string]any{
+				"@type":        "KYCAgeCredential",
+				"documentType": float64(2),
+			},
+		}
 
-	require.Equal(t, wantObj, inputsObj)
+		doTest(t, "atomic_query_sig_v2_merklized_disclosure_inputs.json",
+			"atomic_query_sig_v2_merklized_output.json",
+			AtomicQuerySigV2InputsFromJson, wantVerifiablePresentation)
+	})
 
-	require.Nil(t, out.VerifiablePresentation, "got: %s", inputsBytes)
-}
+	t.Run("AtomicQuerySigV2InputsFromJson", func(t *testing.T) {
+		defer mockHttpClient(t, map[string]string{
+			"https://www.w3.org/2018/credentials/v1":                                                                                                                 "testdata/httpresp_credentials_v1.json",
+			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld":                                                         "testdata/httpresp_kyc_v3.json",
+			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld":                                             "testdata/httpresp_iden3credential_v2.json",
+			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/2376431481": "testdata/httpresp_rev_status_2376431481.json",
+			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/0":          "testdata/httpresp_rev_status_wuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU_0.json",
+		})()
 
-func TestAtomicQuerySigV2InputsFromJson_NonMerklized_Disclosure(t *testing.T) {
-	defer mockHttpClient(t, map[string]string{
-		"https://www.w3.org/2018/credentials/v1": "testdata/httpresp_credentials_v1.json",
-		"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld":                                                  "testdata/httpresp_iden3credential_v2.json",
-		"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qDNRmjPHUrtnPWfXQ4kKwZfarfsSYoiFBxB9tDkui/claims/revocation/status/3878863870": "testdata/httpresp_rev_status_3878863870.json",
-		"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qDNRmjPHUrtnPWfXQ4kKwZfarfsSYoiFBxB9tDkui/claims/revocation/status/0":          "testdata/httpresp_rev_status_2qDNRmjPHUrtnPWfXQ4kKwZfarfsSYoiFBxB9tDkui_0.json",
-		"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json/KYCAgeCredential-v2.json":                                                       "testdata/httpresp_KYCAgeCredential-v2.json",
-		"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld":                                                              "testdata/httpresp_kyc-v3.json-ld",
-	})()
+		doTest(t, "atomic_query_sig_v2_merklized_inputs.json",
+			"atomic_query_sig_v2_merklized_output.json",
+			AtomicQuerySigV2InputsFromJson, nil)
+	})
 
-	jsonIn, err := os.ReadFile(
-		"testdata/atomic_query_sig_v2_non_merklized_disclosure_inputs.json")
-	require.NoError(t, err)
+	t.Run("AtomicQuerySigV2InputsFromJson NonMerklized", func(t *testing.T) {
+		defer mockHttpClient(t, map[string]string{
+			"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qDNRmjPHUrtnPWfXQ4kKwZfarfsSYoiFBxB9tDkui/claims/revocation/status/3878863870": "testdata/httpresp_rev_status_3878863870.json",
+			"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qDNRmjPHUrtnPWfXQ4kKwZfarfsSYoiFBxB9tDkui/claims/revocation/status/0":          "testdata/httpresp_rev_status_2qDNRmjPHUrtnPWfXQ4kKwZfarfsSYoiFBxB9tDkui_0.json",
+			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json/KYCAgeCredential-v2.json":                                                       "testdata/httpresp_KYCAgeCredential-v2.json",
+		})()
 
-	ctx := context.Background()
-	var emptyCfg EnvConfig
-	out, err := AtomicQuerySigV2InputsFromJson(ctx, emptyCfg, jsonIn)
-	require.NoError(t, err)
+		doTest(t, "atomic_query_sig_v2_non_merklized_inputs.json",
+			"atomic_query_sig_v2_non_merklized_output.json",
+			AtomicQuerySigV2InputsFromJson, nil)
+	})
 
-	inputsBytes, err := out.Inputs.InputsMarshal()
-	require.NoError(t, err)
+	t.Run("AtomicQuerySigV2InputsFromJson NonMerklized Disclosure",
+		func(t *testing.T) {
+			defer mockHttpClient(t, map[string]string{
+				"https://www.w3.org/2018/credentials/v1": "testdata/httpresp_credentials_v1.json",
+				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld":                                                  "testdata/httpresp_iden3credential_v2.json",
+				"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qDNRmjPHUrtnPWfXQ4kKwZfarfsSYoiFBxB9tDkui/claims/revocation/status/3878863870": "testdata/httpresp_rev_status_3878863870.json",
+				"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qDNRmjPHUrtnPWfXQ4kKwZfarfsSYoiFBxB9tDkui/claims/revocation/status/0":          "testdata/httpresp_rev_status_2qDNRmjPHUrtnPWfXQ4kKwZfarfsSYoiFBxB9tDkui_0.json",
+				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json/KYCAgeCredential-v2.json":                                                       "testdata/httpresp_KYCAgeCredential-v2.json",
+				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld":                                                              "testdata/httpresp_kyc-v3.json-ld",
+			})()
 
-	var inputsObj jsonObj
-	err = json.Unmarshal(inputsBytes, &inputsObj)
-	require.NoError(t, err)
+			wantVerifiablePresentation := map[string]any{
+				"@context": []string{
+					"https://www.w3.org/2018/credentials/v1",
+					"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld",
+				},
+				"@type": "VerifiablePresentation",
+				"verifiableCredential": map[string]any{
+					"@type":        "KYCAgeCredential",
+					"documentType": float64(99),
+				},
+			}
 
-	jsonWant, err := os.ReadFile("testdata/atomic_query_sig_v2_non_merklized_output.json")
-	require.NoError(t, err)
-	var wantObj jsonObj
-	err = json.Unmarshal(jsonWant, &wantObj)
-	require.NoError(t, err)
-	wantObj["timestamp"] = inputsObj["timestamp"]
+			doTest(t,
+				"atomic_query_sig_v2_non_merklized_disclosure_inputs.json",
+				"atomic_query_sig_v2_non_merklized_output.json",
+				AtomicQuerySigV2InputsFromJson, wantVerifiablePresentation)
+		})
 
-	require.Equal(t, wantObj, inputsObj, "got: %s", inputsBytes)
+	t.Run("AtomicQuerySigV2OnChainInputsFromJson",
+		func(t *testing.T) {
+			defer mockHttpClient(t, map[string]string{
+				"http://52.213.238.159/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qHpzFHsiJoX8dncLsnmQEbVUB4611PtBYCWs7g7pN/claims/revocation/status/1340705980": "testdata/httpresp_rev_status_1340705980.json",
+				"http://52.213.238.159/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qHpzFHsiJoX8dncLsnmQEbVUB4611PtBYCWs7g7pN/claims/revocation/status/0":          "testdata/httpresp_rev_status_2qHpzFHsiJoX8dncLsnmQEbVUB4611PtBYCWs7g7pN_0.json",
+				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json/KYCAgeCredential-v2.json":                                                       "testdata/httpresp_KYCAgeCredential-v2.json",
+			})()
 
-	wantVerifiablePresentation := map[string]any{
-		"@context": []string{
-			"https://www.w3.org/2018/credentials/v1",
-			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld",
-		},
-		"@type": "VerifiablePresentation",
-		"verifiableCredential": map[string]any{
-			"@type":        "KYCAgeCredential",
-			"documentType": float64(99),
-		},
-	}
-	require.Equal(t, wantVerifiablePresentation, out.VerifiablePresentation)
+			doTest(t,
+				"atomic_query_sig_v2_on_chain_input.json",
+				"atomic_query_sig_v2_on_chain_output.json",
+				AtomicQuerySigV2OnChainInputsFromJson, nil)
+		})
+
 }
 
 func TestEnvConfig_UnmarshalJSON(t *testing.T) {
@@ -415,53 +354,34 @@ func assertEqualWithoutTimestamp(t testing.TB, wantFName string,
 	require.Equal(t, wantObj, inputsObj, "want: %v\ngot: %s", inputsBytes)
 }
 
-func TestOnChainInputsRequest_UnmarshalJSON(t *testing.T) {
-	defer mockHttpClient(t, map[string]string{
-		"http://52.213.238.159/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qHpzFHsiJoX8dncLsnmQEbVUB4611PtBYCWs7g7pN/claims/revocation/status/1340705980": "testdata/httpresp_rev_status_1340705980.json",
-		"http://52.213.238.159/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qHpzFHsiJoX8dncLsnmQEbVUB4611PtBYCWs7g7pN/claims/revocation/status/0":          "testdata/httpresp_rev_status_2qHpzFHsiJoX8dncLsnmQEbVUB4611PtBYCWs7g7pN_0.json",
-		"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json/KYCAgeCredential-v2.json":                                                       "testdata/httpresp_KYCAgeCredential-v2.json",
-	})()
-
+func TestAtomicQuerySigV2OnChainInputsFromJson(t *testing.T) {
 	inBytes, err := os.ReadFile(
 		"testdata/atomic_query_sig_v2_on_chain_input.json")
 	require.NoError(t, err)
 
-	t.Run("test inputs", func(t *testing.T) {
-		ctx := context.Background()
-		var emptyCfg EnvConfig
-		out, err := AtomicQuerySigV2OnChainInputsFromJson(ctx, emptyCfg,
-			inBytes)
-		require.NoError(t, err)
+	var obj onChainInputsRequest
+	err = json.Unmarshal(inBytes, &obj)
+	require.NoError(t, err)
 
-		assertEqualWithoutTimestamp(t,
-			"atomic_query_sig_v2_on_chain_output.json", out.Inputs)
-	})
+	wantTreeState := circuits.TreeState{
+		State: hexFromIntStr(
+			"18656147546666944484453899241916469544090258810192803949522794490493271005313"),
+		ClaimsRoot: hexFromIntStr(
+			"9763429684850732628215303952870004997159843236039795272605841029866455670219"),
+		RevocationRoot: hexFromIntStr("0"),
+		RootOfRoots:    hexFromIntStr("0"),
+	}
+	require.Equal(t, &wantTreeState, obj.TreeState)
 
-	t.Run("test unmarshaling some request fields", func(t *testing.T) {
-		var obj onChainInputsRequest
-		err = json.Unmarshal(inBytes, &obj)
-		require.NoError(t, err)
-
-		wantTreeState := circuits.TreeState{
-			State: hexFromIntStr(
-				"18656147546666944484453899241916469544090258810192803949522794490493271005313"),
-			ClaimsRoot: hexFromIntStr(
-				"9763429684850732628215303952870004997159843236039795272605841029866455670219"),
-			RevocationRoot: hexFromIntStr("0"),
-			RootOfRoots:    hexFromIntStr("0"),
-		}
-		require.Equal(t, &wantTreeState, obj.TreeState)
-
-		wantGistProof := circuits.GISTProof{
-			Root: hexFromIntStr("4924303677736085224554833340748086265406229626627819375177261957522622163007"),
-			Proof: must(func() (*merkletree.Proof, error) {
-				return merkletree.NewProofFromData(false, nil,
-					&merkletree.NodeAux{
-						Key:   hexFromIntStr("24846663430375341177084327381366271031641225773947711007341346118923321345"),
-						Value: hexFromIntStr("6317996369756476782464660619835940615734517981889733696047139451453239145426"),
-					})
-			}),
-		}
-		require.Equal(t, &wantGistProof, obj.GistProof)
-	})
+	wantGistProof := circuits.GISTProof{
+		Root: hexFromIntStr("4924303677736085224554833340748086265406229626627819375177261957522622163007"),
+		Proof: must(func() (*merkletree.Proof, error) {
+			return merkletree.NewProofFromData(false, nil,
+				&merkletree.NodeAux{
+					Key:   hexFromIntStr("24846663430375341177084327381366271031641225773947711007341346118923321345"),
+					Value: hexFromIntStr("6317996369756476782464660619835940615734517981889733696047139451453239145426"),
+				})
+		}),
+	}
+	require.Equal(t, &wantGistProof, obj.GistProof)
 }
