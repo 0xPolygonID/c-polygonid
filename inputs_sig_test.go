@@ -357,7 +357,7 @@ func TestAtomicQuerySigV2InputsFromJson_NonMerklized_Disclosure(t *testing.T) {
 	require.Equal(t, wantVerifiablePresentation, out.VerifiablePresentation)
 }
 
-func TestEnvConfig__UnmarshalJSON(t *testing.T) {
+func TestEnvConfig_UnmarshalJSON(t *testing.T) {
 	in := `{
   "ethereumUrl": "http://localhost:8545",
   "stateContractAddr": "0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655",
