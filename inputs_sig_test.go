@@ -81,8 +81,7 @@ func (m *mockedRouterTripper) RoundTrip(
 
 	respFile, ok := m.routes[routerKey]
 	if !ok {
-		var requestBodyStr string
-		requestBodyStr = string(postData)
+		var requestBodyStr = string(postData)
 		if requestBodyStr == "" {
 			m.t.Errorf("unexpected http request: %v", urlStr)
 		} else {
