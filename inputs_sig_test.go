@@ -146,13 +146,18 @@ func TestPrepareInputs(t *testing.T) {
 		AtomicQueryInputsResponse, error)
 
 	doTest := func(t testing.TB, inFile, wantOutFile string,
-		fn PrepareInputsFn, wantVR map[string]any, cfg EnvConfig) {
+		fn PrepareInputsFn, wantVR map[string]any, cfg EnvConfig,
+		wantErr string) {
 
 		jsonIn, err := os.ReadFile("testdata/" + inFile)
 		require.NoError(t, err)
 
 		ctx := context.Background()
 		out, err := fn(ctx, cfg, jsonIn)
+		if wantErr != "" {
+			require.EqualError(t, err, wantErr)
+			return
+		}
 		require.NoError(t, err)
 
 		assertEqualWithoutTimestamp(t, wantOutFile, out.Inputs)
@@ -174,7 +179,7 @@ func TestPrepareInputs(t *testing.T) {
 
 		doTest(t, "atomic_query_mtp_v2_inputs.json",
 			"atomic_query_mtp_v2_output.json", AtomicQueryMtpV2InputsFromJson,
-			nil, EnvConfig{})
+			nil, EnvConfig{}, "")
 	})
 
 	t.Run("AtomicQueryMtpV2InputsFromJson NonMerklized", func(t *testing.T) {
@@ -185,7 +190,7 @@ func TestPrepareInputs(t *testing.T) {
 
 		doTest(t, "atomic_query_mtp_v2_non_merklized_inputs.json",
 			"atomic_query_mtp_v2_non_merklized_output.json",
-			AtomicQueryMtpV2InputsFromJson, nil, EnvConfig{})
+			AtomicQueryMtpV2InputsFromJson, nil, EnvConfig{}, "")
 	})
 
 	t.Run("AtomicQuerySigV2InputsFromJson Disclosure", func(t *testing.T) {
@@ -212,7 +217,7 @@ func TestPrepareInputs(t *testing.T) {
 		doTest(t, "atomic_query_sig_v2_merklized_disclosure_inputs.json",
 			"atomic_query_sig_v2_merklized_output.json",
 			AtomicQuerySigV2InputsFromJson, wantVerifiablePresentation,
-			EnvConfig{})
+			EnvConfig{}, "")
 	})
 
 	t.Run("AtomicQuerySigV2InputsFromJson", func(t *testing.T) {
@@ -226,7 +231,7 @@ func TestPrepareInputs(t *testing.T) {
 
 		doTest(t, "atomic_query_sig_v2_merklized_inputs.json",
 			"atomic_query_sig_v2_merklized_output.json",
-			AtomicQuerySigV2InputsFromJson, nil, EnvConfig{})
+			AtomicQuerySigV2InputsFromJson, nil, EnvConfig{}, "")
 	})
 
 	t.Run("AtomicQuerySigV2InputsFromJson NonMerklized", func(t *testing.T) {
@@ -238,7 +243,7 @@ func TestPrepareInputs(t *testing.T) {
 
 		doTest(t, "atomic_query_sig_v2_non_merklized_inputs.json",
 			"atomic_query_sig_v2_non_merklized_output.json",
-			AtomicQuerySigV2InputsFromJson, nil, EnvConfig{})
+			AtomicQuerySigV2InputsFromJson, nil, EnvConfig{}, "")
 	})
 
 	t.Run("AtomicQuerySigV2InputsFromJson NonMerklized Disclosure",
@@ -268,7 +273,7 @@ func TestPrepareInputs(t *testing.T) {
 				"atomic_query_sig_v2_non_merklized_disclosure_inputs.json",
 				"atomic_query_sig_v2_non_merklized_output.json",
 				AtomicQuerySigV2InputsFromJson, wantVerifiablePresentation,
-				EnvConfig{})
+				EnvConfig{}, "")
 		})
 
 	t.Run("AtomicQuerySigV2OnChainInputsFromJson",
@@ -282,7 +287,7 @@ func TestPrepareInputs(t *testing.T) {
 			doTest(t,
 				"atomic_query_sig_v2_on_chain_input.json",
 				"atomic_query_sig_v2_on_chain_output.json",
-				AtomicQuerySigV2OnChainInputsFromJson, nil, EnvConfig{})
+				AtomicQuerySigV2OnChainInputsFromJson, nil, EnvConfig{}, "")
 		})
 
 	t.Run("AtomicQuerySigV2InputsFromJson - RHS - empty revocation tree",
@@ -303,7 +308,7 @@ func TestPrepareInputs(t *testing.T) {
 			}
 			doTest(t, "atomic_query_sig_v2_merklized_rhs_inputs.json",
 				"atomic_query_sig_v2_merklized_rhs_output.json",
-				AtomicQuerySigV2InputsFromJson, nil, cfg)
+				AtomicQuerySigV2InputsFromJson, nil, cfg, "")
 		})
 
 	t.Run("AtomicQuerySigV2InputsFromJson - RHS - non-empty revocation tree",
@@ -330,9 +335,31 @@ func TestPrepareInputs(t *testing.T) {
 			}
 			doTest(t, "atomic_query_sig_v2_merklized_rhs_inputs.json",
 				"atomic_query_sig_v2_merklized_rhs_nonempty_output.json",
-				AtomicQuerySigV2InputsFromJson, nil, cfg)
+				AtomicQuerySigV2InputsFromJson, nil, cfg, "")
 		})
 
+	t.Run("AtomicQuerySigV2InputsFromJson - RHS - revoked",
+		func(t *testing.T) {
+			defer mockHttpClient(t, map[string]string{
+				`http://localhost:8545%%%{"jsonrpc":"2.0","id":1,"method":"eth_call","params":[{"data":"0xb4bdea55000d5228592025eac998034e2c03f242819d84806687a3b0c95eefa295ca1202","from":"0x0000000000000000000000000000000000000000","to":"0x6f0a444df4d231d85f66e4836f836034f0fefe24"},"latest"]}`: "testdata/httpresp_eth_resp2.json",
+				"http://localhost:8003/node/5ce9b64f8472b094191230e881ed8d85ce215de414b496eb029161c30d654b20": "testdata/httpresp_rhs_5ce9b64f8472b094191230e881ed8d85ce215de414b496eb029161c30d654b20.json",
+				"http://localhost:8003/node/d55bad23c75687c86105589f50612a97ac1904cb0bbc13927a3d6a68321f9f29": "testdata/httpresp_rhs_d55bad23c75687c86105589f50612a97ac1904cb0bbc13927a3d6a68321f9f29.json",
+				"http://localhost:8003/node/a75cc7f84f279f758427e8f1ec26d2d7dcac0fd545098ef668dde0d2f90ca809": "testdata/httpresp_rhs_a75cc7f84f279f758427e8f1ec26d2d7dcac0fd545098ef668dde0d2f90ca809.json",
+				"http://localhost:8003/node/ce051a956948154312d91a406b52120fd689376c1b675699053cc1d7cafa4f04": "testdata/httpresp_rhs_ce051a956948154312d91a406b52120fd689376c1b675699053cc1d7cafa4f04.json",
+				"http://localhost:8003/node/3ecaca31559a389adb870fa1347b8487dee24406a7c9959334d3f36b65c3ba1d": "testdata/httpresp_rhs_3ecaca31559a389adb870fa1347b8487dee24406a7c9959334d3f36b65c3ba1d.json",
+			})()
+
+			cfg := EnvConfig{
+				EthereumURL: "http://localhost:8545",
+				StateContractAddr: common.HexToAddress(
+					"0x6F0a444Df4d231D85F66e4836f836034F0feFE24"),
+				ReverseHashServiceUrl: "http://localhost:8003",
+			}
+			doTest(t, "atomic_query_sig_v2_merklized_rhs_revoked_inputs.json",
+				"atomic_query_sig_v2_merklized_rhs_nonempty_output.json",
+				AtomicQuerySigV2InputsFromJson, nil, cfg,
+				"credential is revoked")
+		})
 }
 
 func TestEnvConfig_UnmarshalJSON(t *testing.T) {
