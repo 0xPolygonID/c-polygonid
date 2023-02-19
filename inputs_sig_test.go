@@ -61,15 +61,28 @@ func (m *mockedRouterTripper) RoundTrip(
 	request *http.Request) (*http.Response, error) {
 
 	urlStr := request.URL.String()
-	respFile, ok := m.routes[urlStr]
+	routerKey := urlStr
+	rr := httptest.NewRecorder()
+	var postData []byte
+	if request.Method == http.MethodPost {
+		var err error
+		postData, err = io.ReadAll(request.Body)
+		if err != nil {
+			http.Error(rr, err.Error(), http.StatusInternalServerError)
+
+			rr2 := rr.Result()
+			rr2.Request = request
+			return rr2, nil
+		}
+		if len(postData) > 0 {
+			routerKey += "%%%" + string(postData)
+		}
+	}
+
+	respFile, ok := m.routes[routerKey]
 	if !ok {
 		var requestBodyStr string
-		requestBody, err := io.ReadAll(request.Body)
-		if err != nil {
-			requestBodyStr = fmt.Sprintf("error reading request body: %v", err)
-		} else {
-			requestBodyStr = string(requestBody)
-		}
+		requestBodyStr = string(postData)
 		if requestBodyStr == "" {
 			m.t.Errorf("unexpected http request: %v", urlStr)
 		} else {
@@ -87,14 +100,13 @@ func (m *mockedRouterTripper) RoundTrip(
 	if m.seenURLs == nil {
 		m.seenURLs = make(map[string]struct{})
 	}
-	m.seenURLs[urlStr] = struct{}{}
+	m.seenURLs[routerKey] = struct{}{}
 	m.seenURLsM.Unlock()
 
 	usedHttpResponsesM.Lock()
 	usedHttpResponses[respFile] = struct{}{}
 	usedHttpResponsesM.Unlock()
 
-	rr := httptest.NewRecorder()
 	http.ServeFile(rr, request, respFile)
 
 	rr2 := rr.Result()
@@ -120,28 +132,6 @@ func mockHttpClient(t testing.TB, routes map[string]string) func() {
 	}
 }
 
-func TestAtomicQuerySigV2InputsFromJson(t *testing.T) {
-	defer mockHttpClient(t, map[string]string{
-		"https://www.w3.org/2018/credentials/v1":                                                                                                                 "testdata/httpresp_credentials_v1.json",
-		"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld":                                                         "testdata/httpresp_kyc_v3.json",
-		"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld":                                             "testdata/httpresp_iden3credential_v2.json",
-		"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/2376431481": "testdata/httpresp_rev_status_2376431481.json",
-		"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/0":          "testdata/httpresp_rev_status_wuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU_0.json",
-	})()
-
-	jsonIn, err := os.ReadFile(
-		"testdata/atomic_query_sig_v2_merklized_inputs.json")
-	require.NoError(t, err)
-
-	ctx := context.Background()
-	var emptyCfg EnvConfig
-	out, err := AtomicQuerySigV2InputsFromJson(ctx, emptyCfg, jsonIn)
-	require.NoError(t, err)
-
-	assertEqualWithoutTimestamp(t,
-		"atomic_query_sig_v2_merklized_output.json", out.Inputs)
-}
-
 func TestHexHash_UnmarshalJSON(t *testing.T) {
 	s := `"2b9d4abe9012cc337d3d347b66659cc45091f822dccb004d88d9f1459e2de306"`
 	var h hexHash
@@ -156,14 +146,13 @@ func TestPrepareInputs(t *testing.T) {
 		AtomicQueryInputsResponse, error)
 
 	doTest := func(t testing.TB, inFile, wantOutFile string,
-		fn PrepareInputsFn, wantVR map[string]any) {
+		fn PrepareInputsFn, wantVR map[string]any, cfg EnvConfig) {
 
 		jsonIn, err := os.ReadFile("testdata/" + inFile)
 		require.NoError(t, err)
 
 		ctx := context.Background()
-		var emptyCfg EnvConfig
-		out, err := fn(ctx, emptyCfg, jsonIn)
+		out, err := fn(ctx, cfg, jsonIn)
 		require.NoError(t, err)
 
 		assertEqualWithoutTimestamp(t, wantOutFile, out.Inputs)
@@ -185,7 +174,7 @@ func TestPrepareInputs(t *testing.T) {
 
 		doTest(t, "atomic_query_mtp_v2_inputs.json",
 			"atomic_query_mtp_v2_output.json", AtomicQueryMtpV2InputsFromJson,
-			nil)
+			nil, EnvConfig{})
 	})
 
 	t.Run("AtomicQueryMtpV2InputsFromJson NonMerklized", func(t *testing.T) {
@@ -196,7 +185,7 @@ func TestPrepareInputs(t *testing.T) {
 
 		doTest(t, "atomic_query_mtp_v2_non_merklized_inputs.json",
 			"atomic_query_mtp_v2_non_merklized_output.json",
-			AtomicQueryMtpV2InputsFromJson, nil)
+			AtomicQueryMtpV2InputsFromJson, nil, EnvConfig{})
 	})
 
 	t.Run("AtomicQuerySigV2InputsFromJson Disclosure", func(t *testing.T) {
@@ -222,7 +211,8 @@ func TestPrepareInputs(t *testing.T) {
 
 		doTest(t, "atomic_query_sig_v2_merklized_disclosure_inputs.json",
 			"atomic_query_sig_v2_merklized_output.json",
-			AtomicQuerySigV2InputsFromJson, wantVerifiablePresentation)
+			AtomicQuerySigV2InputsFromJson, wantVerifiablePresentation,
+			EnvConfig{})
 	})
 
 	t.Run("AtomicQuerySigV2InputsFromJson", func(t *testing.T) {
@@ -236,7 +226,7 @@ func TestPrepareInputs(t *testing.T) {
 
 		doTest(t, "atomic_query_sig_v2_merklized_inputs.json",
 			"atomic_query_sig_v2_merklized_output.json",
-			AtomicQuerySigV2InputsFromJson, nil)
+			AtomicQuerySigV2InputsFromJson, nil, EnvConfig{})
 	})
 
 	t.Run("AtomicQuerySigV2InputsFromJson NonMerklized", func(t *testing.T) {
@@ -248,7 +238,7 @@ func TestPrepareInputs(t *testing.T) {
 
 		doTest(t, "atomic_query_sig_v2_non_merklized_inputs.json",
 			"atomic_query_sig_v2_non_merklized_output.json",
-			AtomicQuerySigV2InputsFromJson, nil)
+			AtomicQuerySigV2InputsFromJson, nil, EnvConfig{})
 	})
 
 	t.Run("AtomicQuerySigV2InputsFromJson NonMerklized Disclosure",
@@ -277,7 +267,8 @@ func TestPrepareInputs(t *testing.T) {
 			doTest(t,
 				"atomic_query_sig_v2_non_merklized_disclosure_inputs.json",
 				"atomic_query_sig_v2_non_merklized_output.json",
-				AtomicQuerySigV2InputsFromJson, wantVerifiablePresentation)
+				AtomicQuerySigV2InputsFromJson, wantVerifiablePresentation,
+				EnvConfig{})
 		})
 
 	t.Run("AtomicQuerySigV2OnChainInputsFromJson",
@@ -291,7 +282,55 @@ func TestPrepareInputs(t *testing.T) {
 			doTest(t,
 				"atomic_query_sig_v2_on_chain_input.json",
 				"atomic_query_sig_v2_on_chain_output.json",
-				AtomicQuerySigV2OnChainInputsFromJson, nil)
+				AtomicQuerySigV2OnChainInputsFromJson, nil, EnvConfig{})
+		})
+
+	t.Run("AtomicQuerySigV2InputsFromJson - RHS - empty revocation tree",
+		func(t *testing.T) {
+			defer mockHttpClient(t, map[string]string{
+				`http://localhost:8545%%%{"jsonrpc":"2.0","id":1,"method":"eth_call","params":[{"data":"0xb4bdea55000d5228592025eac998034e2c03f242819d84806687a3b0c95eefa295ca1202","from":"0x0000000000000000000000000000000000000000","to":"0x6f0a444df4d231d85f66e4836f836034f0fefe24"},"latest"]}`: "testdata/httpresp_eth_resp1.json",
+				"http://localhost:8003/node/8ef2ce21e01d86ec2376fe28bf6b47a84d08f8628d970474a2698cebf94bca1c":                "testdata/httpresp_rhs_8ef2ce21e01d86ec2376fe28bf6b47a84d08f8628d970474a2698cebf94bca1c.json",
+				"https://www.w3.org/2018/credentials/v1":                                                                     "testdata/httpresp_credentials_v1.json",
+				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld":             "testdata/httpresp_kyc_v3.json",
+				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld": "testdata/httpresp_iden3credential_v2.json",
+			})()
+
+			cfg := EnvConfig{
+				EthereumURL: "http://localhost:8545",
+				StateContractAddr: common.HexToAddress(
+					"0x6F0a444Df4d231D85F66e4836f836034F0feFE24"),
+				ReverseHashServiceUrl: "http://localhost:8003",
+			}
+			doTest(t, "atomic_query_sig_v2_merklized_rhs_inputs.json",
+				"atomic_query_sig_v2_merklized_rhs_output.json",
+				AtomicQuerySigV2InputsFromJson, nil, cfg)
+		})
+
+	t.Run("AtomicQuerySigV2InputsFromJson - RHS - non-empty revocation tree",
+		func(t *testing.T) {
+			defer mockHttpClient(t, map[string]string{
+				`http://localhost:8545%%%{"jsonrpc":"2.0","id":1,"method":"eth_call","params":[{"data":"0xb4bdea55000d5228592025eac998034e2c03f242819d84806687a3b0c95eefa295ca1202","from":"0x0000000000000000000000000000000000000000","to":"0x6f0a444df4d231d85f66e4836f836034f0fefe24"},"latest"]}`: "testdata/httpresp_eth_resp2.json",
+				"http://localhost:8003/node/5ce9b64f8472b094191230e881ed8d85ce215de414b496eb029161c30d654b20":                "testdata/httpresp_rhs_5ce9b64f8472b094191230e881ed8d85ce215de414b496eb029161c30d654b20.json",
+				"http://localhost:8003/node/d55bad23c75687c86105589f50612a97ac1904cb0bbc13927a3d6a68321f9f29":                "testdata/httpresp_rhs_d55bad23c75687c86105589f50612a97ac1904cb0bbc13927a3d6a68321f9f29.json",
+				"http://localhost:8003/node/95fff1dd8f67374e1eebf9b462a6189517d438883be332bb9f1eb4f41c066014":                "testdata/httpresp_rhs_95fff1dd8f67374e1eebf9b462a6189517d438883be332bb9f1eb4f41c066014.json",
+				"http://localhost:8003/node/243781162f6392357e51ea0cc6b1086edcb725e27e747be0839fff8beafd4e2a":                "testdata/httpresp_rhs_243781162f6392357e51ea0cc6b1086edcb725e27e747be0839fff8beafd4e2a.json",
+				"http://localhost:8003/node/012cf3eb22da52668f730fee0671b6c1cec67af7ab43c77e3a9d2d4d4a34e323":                "testdata/httpresp_rhs_012cf3eb22da52668f730fee0671b6c1cec67af7ab43c77e3a9d2d4d4a34e323.json",
+				"http://localhost:8003/node/7e1415c74c9dacbd81786ab93f3bf50425f10566f96d1bf1a47d7d6218020c2d":                "testdata/httpresp_rhs_7e1415c74c9dacbd81786ab93f3bf50425f10566f96d1bf1a47d7d6218020c2d.json",
+				"http://localhost:8003/node/d543edb99a153f54e1338f3c9515bc49ccc4c468433de880c7299b1b0fc16017":                "testdata/httpresp_rhs_d543edb99a153f54e1338f3c9515bc49ccc4c468433de880c7299b1b0fc16017.json",
+				"https://www.w3.org/2018/credentials/v1":                                                                     "testdata/httpresp_credentials_v1.json",
+				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld":             "testdata/httpresp_kyc_v3.json",
+				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld": "testdata/httpresp_iden3credential_v2.json",
+			})()
+
+			cfg := EnvConfig{
+				EthereumURL: "http://localhost:8545",
+				StateContractAddr: common.HexToAddress(
+					"0x6F0a444Df4d231D85F66e4836f836034F0feFE24"),
+				ReverseHashServiceUrl: "http://localhost:8003",
+			}
+			doTest(t, "atomic_query_sig_v2_merklized_rhs_inputs.json",
+				"atomic_query_sig_v2_merklized_rhs_nonempty_output.json",
+				AtomicQuerySigV2InputsFromJson, nil, cfg)
 		})
 
 }
@@ -351,7 +390,8 @@ func assertEqualWithoutTimestamp(t testing.TB, wantFName string,
 
 	wantObj["timestamp"] = inputsObj["timestamp"]
 
-	require.Equal(t, wantObj, inputsObj, "want: %v\ngot: %s", inputsBytes)
+	require.Equal(t, wantObj, inputsObj, "want: %s\ngot: %s",
+		jsonWant, inputsBytes)
 }
 
 func TestAtomicQuerySigV2OnChainInputsFromJson(t *testing.T) {

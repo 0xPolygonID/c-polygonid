@@ -114,7 +114,7 @@ func getByPath(obj jsonObj, path string) (any, error) {
 
 		nextObj, ok := curObj[part]
 		if !ok {
-			return nil, fmt.Errorf("path not found: %v", path)
+			return nil, errPathNotFound{path}
 		}
 		curObj, ok = nextObj.(jsonObj)
 		if !ok {
