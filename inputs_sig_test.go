@@ -233,6 +233,16 @@ func TestPrepareInputs(t *testing.T) {
 			AtomicQuerySigV2InputsFromJson, nil, EnvConfig{}, "")
 	})
 
+	t.Run("AtomicQuerySigV2InputsFromJson - revoked", func(t *testing.T) {
+		defer mockHttpClient(t, map[string]string{
+			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/105": "testdata/httpresp_rev_status_105.json",
+		})()
+
+		doTest(t, "atomic_query_sig_v2_merklized_revoked_inputs.json", "",
+			AtomicQuerySigV2InputsFromJson, nil, EnvConfig{},
+			"credential is revoked")
+	})
+
 	t.Run("AtomicQuerySigV2InputsFromJson NonMerklized", func(t *testing.T) {
 		defer mockHttpClient(t, map[string]string{
 			"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qDNRmjPHUrtnPWfXQ4kKwZfarfsSYoiFBxB9tDkui/claims/revocation/status/3878863870": "testdata/httpresp_rev_status_3878863870.json",
@@ -355,8 +365,7 @@ func TestPrepareInputs(t *testing.T) {
 				ReverseHashServiceUrl: "http://localhost:8003",
 			}
 			doTest(t, "atomic_query_sig_v2_merklized_rhs_revoked_inputs.json",
-				"atomic_query_sig_v2_merklized_rhs_nonempty_output.json",
-				AtomicQuerySigV2InputsFromJson, nil, cfg,
+				"", AtomicQuerySigV2InputsFromJson, nil, cfg,
 				"credential is revoked")
 		})
 }
