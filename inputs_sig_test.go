@@ -243,6 +243,23 @@ func TestPrepareInputs(t *testing.T) {
 			"credential is revoked")
 	})
 
+	t.Run("AtomicQuerySigV2InputsFromJson - skip revocation check",
+		func(t *testing.T) {
+			defer mockHttpClient(t, map[string]string{
+				"https://www.w3.org/2018/credentials/v1":                                                                                                          "testdata/httpresp_credentials_v1.json",
+				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld":                                                  "testdata/httpresp_kyc_v3.json",
+				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld":                                      "testdata/httpresp_iden3credential_v2.json",
+				"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/0":   "testdata/httpresp_rev_status_wuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU_0.json",
+				"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/105": "testdata/httpresp_rev_status_105.json",
+			})()
+
+			doTest(t,
+				"atomic_query_sig_v2_merklized_skip_revocation_check_inputs.json",
+				"atomic_query_sig_v2_merklized_skip_revocation_check_output.json",
+				AtomicQuerySigV2InputsFromJson, nil, EnvConfig{},
+				"")
+		})
+
 	t.Run("AtomicQuerySigV2InputsFromJson NonMerklized", func(t *testing.T) {
 		defer mockHttpClient(t, map[string]string{
 			"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qDNRmjPHUrtnPWfXQ4kKwZfarfsSYoiFBxB9tDkui/claims/revocation/status/3878863870": "testdata/httpresp_rev_status_3878863870.json",
