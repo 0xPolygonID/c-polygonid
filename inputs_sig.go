@@ -1178,6 +1178,12 @@ type EnvConfig struct {
 	ReverseHashServiceUrl string
 }
 
+// Currently, our library does not have a Close function. As a result, we
+// create and destroy an Ethereum client for each usage of this function.
+// Although this approach may be inefficient, it is acceptable if the function
+// is rarely called. If this becomes an issue in the future, or if a Close
+// function is implemented, we will need to refactor this function to use a
+// global Ethereum client.
 func lastStateFromContract(ctx context.Context, ethURL string,
 	contractAddr common.Address, id *core.ID) (*merkletree.Hash, error) {
 	if ethURL == "" {
