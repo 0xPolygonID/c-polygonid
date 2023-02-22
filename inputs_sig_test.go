@@ -334,15 +334,32 @@ func TestPrepareInputs(t *testing.T) {
 	t.Run("AtomicQuerySigV2OnChainInputsFromJson",
 		func(t *testing.T) {
 			defer mockHttpClient(t, map[string]string{
-				"http://52.213.238.159/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qHpzFHsiJoX8dncLsnmQEbVUB4611PtBYCWs7g7pN/claims/revocation/status/1340705980": "testdata/httpresp_rev_status_1340705980.json",
-				"http://52.213.238.159/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qHpzFHsiJoX8dncLsnmQEbVUB4611PtBYCWs7g7pN/claims/revocation/status/0":          "testdata/httpresp_rev_status_2qHpzFHsiJoX8dncLsnmQEbVUB4611PtBYCWs7g7pN_0.json",
-				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json/KYCAgeCredential-v2.json":                                                       "testdata/httpresp_KYCAgeCredential-v2.json",
+				"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qDnyCaxj4zdYmj6LbegYMjWSnkbKAyqtq31YeuyZV/claims/revocation/status/3972757": "testdata/httpresp_rev_status_3972757.json",
+				"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qDnyCaxj4zdYmj6LbegYMjWSnkbKAyqtq31YeuyZV/claims/revocation/status/0":       "testdata/httpresp_rev_status_qDnyCaxj4zdYmj6LbegYMjWSnkbKAyqtq31YeuyZV_0.json",
+				"https://www.w3.org/2018/credentials/v1": "testdata/httpresp_credentials_v1.json",
+				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld": "testdata/httpresp_iden3credential_v2.json",
+				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld":             "testdata/httpresp_kyc_v3.json",
 			})()
 
 			doTest(t,
 				"atomic_query_sig_v2_on_chain_input.json",
 				"atomic_query_sig_v2_on_chain_output.json",
 				AtomicQuerySigV2OnChainInputsFromJson, nil, EnvConfig{}, "")
+		})
+
+	t.Run("AtomicQueryMtpV2OnChainInputsFromJson",
+		func(t *testing.T) {
+			defer mockHttpClient(t, map[string]string{
+				"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qDnyCaxj4zdYmj6LbegYMjWSnkbKAyqtq31YeuyZV/claims/revocation/status/3972757": "testdata/httpresp_rev_status_3972757.json",
+				"https://www.w3.org/2018/credentials/v1": "testdata/httpresp_credentials_v1.json",
+				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld": "testdata/httpresp_iden3credential_v2.json",
+				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld":             "testdata/httpresp_kyc_v3.json",
+			})()
+
+			doTest(t,
+				"atomic_query_mtp_v2_on_chain_input.json",
+				"atomic_query_mtp_v2_on_chain_output.json",
+				AtomicQueryMtpV2OnChainInputsFromJson, nil, EnvConfig{}, "")
 		})
 
 	t.Run("AtomicQuerySigV2InputsFromJson - RHS - empty revocation tree",
@@ -486,22 +503,54 @@ func TestAtomicQuerySigV2OnChainInputsFromJson(t *testing.T) {
 
 	wantTreeState := circuits.TreeState{
 		State: hexFromIntStr(
-			"18656147546666944484453899241916469544090258810192803949522794490493271005313"),
+			"3455793648389793511224972913807237799755511487265044435383221641855224272477"),
 		ClaimsRoot: hexFromIntStr(
-			"9763429684850732628215303952870004997159843236039795272605841029866455670219"),
+			"12863526460000963806360638100765589244767101189459134829137262186265339590400"),
 		RevocationRoot: hexFromIntStr("0"),
 		RootOfRoots:    hexFromIntStr("0"),
 	}
 	require.Equal(t, &wantTreeState, obj.TreeState)
 
 	wantGistProof := circuits.GISTProof{
-		Root: hexFromIntStr("4924303677736085224554833340748086265406229626627819375177261957522622163007"),
+		Root: hexFromIntStr("5005919421435686441886912154983595081356506147906956636160716123399604497694"),
 		Proof: must(func() (*merkletree.Proof, error) {
-			return merkletree.NewProofFromData(false, nil,
-				&merkletree.NodeAux{
-					Key:   hexFromIntStr("24846663430375341177084327381366271031641225773947711007341346118923321345"),
-					Value: hexFromIntStr("6317996369756476782464660619835940615734517981889733696047139451453239145426"),
-				})
+			return merkletree.NewProofFromData(false,
+				[]*merkletree.Hash{
+					hexFromIntStr("9572034982910400342435969278331518000622332242067560582395787734704675688171"),
+					&merkletree.HashZero, &merkletree.HashZero,
+					&merkletree.HashZero, &merkletree.HashZero,
+					&merkletree.HashZero, &merkletree.HashZero,
+					&merkletree.HashZero, &merkletree.HashZero,
+					&merkletree.HashZero, &merkletree.HashZero,
+					&merkletree.HashZero, &merkletree.HashZero,
+					&merkletree.HashZero, &merkletree.HashZero,
+					&merkletree.HashZero, &merkletree.HashZero,
+					&merkletree.HashZero, &merkletree.HashZero,
+					&merkletree.HashZero, &merkletree.HashZero,
+					&merkletree.HashZero, &merkletree.HashZero,
+					&merkletree.HashZero, &merkletree.HashZero,
+					&merkletree.HashZero, &merkletree.HashZero,
+					&merkletree.HashZero, &merkletree.HashZero,
+					&merkletree.HashZero, &merkletree.HashZero,
+					&merkletree.HashZero, &merkletree.HashZero,
+					&merkletree.HashZero, &merkletree.HashZero,
+					&merkletree.HashZero, &merkletree.HashZero,
+					&merkletree.HashZero, &merkletree.HashZero,
+					&merkletree.HashZero, &merkletree.HashZero,
+					&merkletree.HashZero, &merkletree.HashZero,
+					&merkletree.HashZero, &merkletree.HashZero,
+					&merkletree.HashZero, &merkletree.HashZero,
+					&merkletree.HashZero, &merkletree.HashZero,
+					&merkletree.HashZero, &merkletree.HashZero,
+					&merkletree.HashZero, &merkletree.HashZero,
+					&merkletree.HashZero, &merkletree.HashZero,
+					&merkletree.HashZero, &merkletree.HashZero,
+					&merkletree.HashZero, &merkletree.HashZero,
+					&merkletree.HashZero, &merkletree.HashZero,
+					&merkletree.HashZero, &merkletree.HashZero,
+					&merkletree.HashZero,
+				},
+				nil)
 		}),
 	}
 	require.Equal(t, &wantGistProof, obj.GistProof)
