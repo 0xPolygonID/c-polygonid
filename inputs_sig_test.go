@@ -488,8 +488,8 @@ func assertEqualWithoutTimestamp(t testing.TB, wantFName string,
 
 	wantObj["timestamp"] = inputsObj["timestamp"]
 
-	require.Equal(t, wantObj, inputsObj, "want: %s\ngot: %s",
-		jsonWant, inputsBytes)
+	require.Equal(t, wantObj, inputsObj, "file name: %s\nwant: %s\ngot: %s",
+		wantFName, jsonWant, inputsBytes)
 }
 
 func TestAtomicQuerySigV2OnChainInputsFromJson(t *testing.T) {
