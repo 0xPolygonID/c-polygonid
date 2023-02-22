@@ -73,10 +73,10 @@ github.com/holiman/bloomfilter/v2 v2.0.3 h1:73e0e/V0tCydx14a0SCYS/EWCxgwLZ18CZcZ
 github.com/holiman/uint256 v1.2.0 h1:gpSYcPLWGv4sG43I2mVLiDZCNDh/EpGjSk8tmtxitHM=
 github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpOxQnU=
 github.com/huin/goupnp v1.0.3 h1:N8No57ls+MnjlB+JPiCVSOyy/ot7MJTqlo7rn+NYSqQ=
-github.com/iden3/go-circuits v1.0.1-alpha.2.0.20230201125125-a577b49b3828 h1:LyI5DuTrcbYPPdio/60Q6MFL0bDpuKiZHoDevZsOrLk=
-github.com/iden3/go-circuits v1.0.1-alpha.2.0.20230201125125-a577b49b3828/go.mod h1:Uc5hMA+/pqxGvPcA6RL8jY7pWEw1sqBBxtgCpZJvtTU=
-github.com/iden3/go-iden3-core v0.1.1-0.20230203121535-f87e411939ff h1:yHNiuCIpbl0U96dWqpWRhwdD1m9L7lutL1x2qerPnRc=
-github.com/iden3/go-iden3-core v0.1.1-0.20230203121535-f87e411939ff/go.mod h1:wJtcMK/bSazyW/JrQaRrbpUMgSMg79Pke3xgtfPxDnQ=
+github.com/iden3/go-circuits v1.0.2 h1:6hxPbaxS1YaSZh36K5I8Nb1WAnUdYC9VK5Hqgyhh1EY=
+github.com/iden3/go-circuits v1.0.2/go.mod h1:FPomaHjcVj4H4Czs2PKRoJphWcCc68dh8PDKhNDFZ+U=
+github.com/iden3/go-iden3-core v1.0.0 h1:GNwuYOHZD7hiWjmW+wv26RW9f/JwF4lRQu7/55f2YB8=
+github.com/iden3/go-iden3-core v1.0.0/go.mod h1:wJtcMK/bSazyW/JrQaRrbpUMgSMg79Pke3xgtfPxDnQ=
 github.com/iden3/go-iden3-crypto v0.0.13 h1:ixWRiaqDULNyIDdOWz2QQJG5t4PpNHkQk2P6GV94cok=
 github.com/iden3/go-iden3-crypto v0.0.13/go.mod h1:swXIv0HFbJKobbQBtsB50G7IHr6PbTowutSew/iBEoo=
 github.com/iden3/go-merkletree-sql/v2 v2.0.0 h1:7tMgHCUJCo0jxyM15fjCc7G9Dy0x2rmX+lwa8tqEfho=

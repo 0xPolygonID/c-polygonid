@@ -4,8 +4,8 @@ go 1.19
 
 require (
 	github.com/ethereum/go-ethereum v1.10.26
-	github.com/iden3/go-circuits v1.0.1-alpha.2.0.20230201125125-a577b49b3828
-	github.com/iden3/go-iden3-core v0.1.1-0.20230203121535-f87e411939ff
+	github.com/iden3/go-circuits v1.0.2
+	github.com/iden3/go-iden3-core v1.0.0
 	github.com/iden3/go-iden3-crypto v0.0.13
 	github.com/iden3/go-merkletree-sql/v2 v2.0.0
 	github.com/iden3/go-schema-processor v0.2.1-0.20230113192644-d923e79da717
