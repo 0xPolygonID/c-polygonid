@@ -1,0 +1,12 @@
+{
+  "issuer": {
+    "state": "2b9d4abe9012cc337d3d347b66659cc45091f822dccb004d88d9f1459e2de306",
+    "rootOfRoots": "de10563602d76d3ea12bc4d33ecf965dc09151da6139fcdc719bcdb79a20401e",
+    "claimsTreeRoot": "ff95462f61fd6c72e16c2ca5a71c55d2456e695f5d50cc05ede2340fd54d651f",
+    "revocationTreeRoot": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "mtp": {
+    "existence": false,
+    "siblings": []
+  }
+}

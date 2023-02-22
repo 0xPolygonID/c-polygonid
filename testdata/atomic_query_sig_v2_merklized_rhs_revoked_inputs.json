@@ -1,0 +1,109 @@
+{
+  "id": "2qJ55bMdroaDbeM94FWerJE6hzqwxGQezbRRYwDCgC",
+  "profileNonce": "0",
+  "claimSubjectProfileNonce": "0",
+  "verifiableCredentials": {
+    "id": "http://localhost:8001/api/v1/identities/did:polygonid:polygon:mumbai:2qMfUw1D3PBtv1MUAzyjtMubX9t9GFaGWqwYYMEqNc/claims/6511e2a4-aea5-11ed-9c71-e24d9cbdb31c",
+    "@context": [
+      "https://www.w3.org/2018/credentials/v1",
+      "https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld",
+      "https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld"
+    ],
+    "type": [
+      "VerifiableCredential",
+      "KYCAgeCredential"
+    ],
+    "expirationDate": "2361-03-21T15:14:48-04:00",
+    "issuanceDate": "2023-02-17T04:28:10.68609-05:00",
+    "credentialSubject": {
+      "birthday": 19960424,
+      "documentType": 2,
+      "id": "did:polygonid:polygon:mumbai:2qJ55bMdroaDbeM94FWerJE6hzqwxGQezbRRYwDCgC",
+      "type": "KYCAgeCredential"
+    },
+    "credentialStatus": {
+      "id": "http://localhost:8003/node",
+      "revocationNonce": 105,
+      "statusIssuer": {
+        "id": "http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qMfUw1D3PBtv1MUAzyjtMubX9t9GFaGWqwYYMEqNc/claims/revocation/status/2886056678",
+        "revocationNonce": 105,
+        "type": "SparseMerkleTreeProof"
+      },
+      "type": "Iden3ReverseSparseMerkleTreeProof"
+    },
+    "issuer": "did:polygonid:polygon:mumbai:2qMfUw1D3PBtv1MUAzyjtMubX9t9GFaGWqwYYMEqNc",
+    "credentialSchema": {
+      "id": "https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json/KYCAgeCredential-v3.json",
+      "type": "JsonSchemaValidator2018"
+    },
+    "proof": [
+      {
+        "type": "BJJSignature2021",
+        "issuerData": {
+          "id": "did:polygonid:polygon:mumbai:2qMfUw1D3PBtv1MUAzyjtMubX9t9GFaGWqwYYMEqNc",
+          "state": {
+            "claimsTreeRoot": "f3782723cb8e0212fa33e12e25f53ddabcae2f70921d332c80138b5caeffc80c",
+            "value": "5461c22e7bca95a2ef5ec9b0a3876680849d8142f2032c4e0398c9ea25205928"
+          },
+          "authCoreClaim": "cca3371a6cb1b715004407e325bd993c0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000009de2a29a472475bb01aeba7692e4612f4d801b89255608fd9d386d5c4b8d2e016af1597deebd783998a4d0e06251a1507ec014730ca0631ff195e8efcedc37120000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+          "mtp": {
+            "existence": true,
+            "siblings": [
+              "4279857894024381210738963358901593999051755562955228651698456715189739068192"
+            ]
+          },
+          "credentialStatus": {
+            "id": "http://localhost:8003/node",
+            "statusIssuer": {
+              "id": "http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qMfUw1D3PBtv1MUAzyjtMubX9t9GFaGWqwYYMEqNc/claims/revocation/status/0",
+              "revocationNonce": 0,
+              "type": "SparseMerkleTreeProof"
+            },
+            "revocationNonce": 0,
+            "type": "Iden3ReverseSparseMerkleTreeProof"
+          }
+        },
+        "coreClaim": "c9b2370371b7fa8b3dab2a5ba81b68382a00000000000000000000000000000002127b6f663f98bd535f2a27c39efbbcee5fb33c05c8f0d42a71df2a098d0d00bae5eec9424cb23bc17ae2e6d5ca9ab962af11646f2a3bf987c0d58bbd2248180000000000000000000000000000000000000000000000000000000000000000e6ba05ac00000000281cdcdf0200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "signature": "24b6139da2436e589a35b509579ad096ab55a023b6abab243d82b4933de19e8cd2696267a4e3c44b1b447712f59e6304fb09f352f22403168afc9bdf46ee3101"
+      },
+      {
+        "type": "Iden3SparseMerkleProof",
+        "issuerData": {
+          "id": "did:polygonid:polygon:mumbai:2qMfUw1D3PBtv1MUAzyjtMubX9t9GFaGWqwYYMEqNc",
+          "state": {
+            "txId": "0xaff41d2beeb028849dea9604972577bde2da89ec5f85ee5e3b1cafe7a4a2952e",
+            "blockTimestamp": 1676626504,
+            "blockNumber": 1501,
+            "rootOfRoots": "c61b3dd5d0e8534c8a8010031b96583ae4b279a7c4bf06973b1f2f1e8037ac2a",
+            "claimsTreeRoot": "64e271a00c11a86f33e342e81ecc090bd6a341ae2ae8c61051d2e0f0dcf96202",
+            "revocationTreeRoot": "0000000000000000000000000000000000000000000000000000000000000000",
+            "value": "484e0593442846c34558ec082b7b27a549761e8585e182aad236b5601577f50f"
+          }
+        },
+        "coreClaim": "c9b2370371b7fa8b3dab2a5ba81b68382a00000000000000000000000000000002127b6f663f98bd535f2a27c39efbbcee5fb33c05c8f0d42a71df2a098d0d00bae5eec9424cb23bc17ae2e6d5ca9ab962af11646f2a3bf987c0d58bbd2248180000000000000000000000000000000000000000000000000000000000000000e6ba05ac00000000281cdcdf0200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "mtp": {
+          "existence": true,
+          "siblings": [
+            "4279857894024381210738963358901593999051755562955228651698456715189739068192",
+            "1682514848699531785783550321529157432848119191365943250349153315590164451997",
+            "10157282305907021346987366707543180392691387125331920441822925521241174935573"
+          ]
+        }
+      }
+    ]
+  },
+  "request": {
+    "id": 84239,
+    "circuitId": "credentialAtomicQuerySigV2",
+    "query": {
+      "allowedIssuers": "unused",
+      "context": "https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld",
+      "type": "KYCAgeCredential",
+      "credentialSubject": {
+        "documentType": {
+          "$eq": 2
+        }
+      }
+    }
+  }
+}

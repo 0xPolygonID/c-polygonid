@@ -19,7 +19,7 @@ ios-simulator:
 	SDK=iphonesimulator16.2 \
 	CC=$(PWD)/clangwrap.sh \
 	CGO_CFLAGS="-fembed-bitcode" \
-	go build -buildmode=c-archive -o $(IOS_OUT)/libpolygonid-ios-simulator.a ./cmd/polygonid
+	go build -tags ios -buildmode=c-archive -o $(IOS_OUT)/libpolygonid-ios-simulator.a ./cmd/polygonid
 
 darwin-arm64:
 	GOOS=darwin \
