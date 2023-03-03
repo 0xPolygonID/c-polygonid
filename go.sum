@@ -91,8 +91,10 @@ github.com/iden3/go-iden3-crypto v0.0.13 h1:ixWRiaqDULNyIDdOWz2QQJG5t4PpNHkQk2P6
 github.com/iden3/go-iden3-crypto v0.0.13/go.mod h1:swXIv0HFbJKobbQBtsB50G7IHr6PbTowutSew/iBEoo=
 github.com/iden3/go-merkletree-sql/v2 v2.0.0 h1:7tMgHCUJCo0jxyM15fjCc7G9Dy0x2rmX+lwa8tqEfho=
 github.com/iden3/go-merkletree-sql/v2 v2.0.0/go.mod h1:hQbfImlyOJiI+c8FFuFiEMrjpZN0PylRb0aT8uAa+Sg=
-github.com/iden3/go-schema-processor v1.1.0 h1:WPGq8ngXandfpMgEmtVfTCiJ3I6am3qDrGy5BigFue8=
-github.com/iden3/go-schema-processor v1.1.0/go.mod h1:/xyS8jh1d1mt+8i/QvU8pqMf21c/KjCClRcG181Ri1I=
+github.com/iden3/go-schema-processor v1.1.1-0.20230303071049-2feb516b9b79 h1:OYcc9RBkZ69oAjczyEzmhjybKqdfFcR9MfTm9JSFP8M=
+github.com/iden3/go-schema-processor v1.1.1-0.20230303071049-2feb516b9b79/go.mod h1:ToWYDGSIfhfQaE8JhHH9TUE1PqhlDvzXFWURvgcOZxw=
+github.com/iden3/go-schema-processor v1.1.1 h1:LbyDydNlppmohIR2JQcWQNhp434FHHWAij/IBwV9fno=
+github.com/iden3/go-schema-processor v1.1.1/go.mod h1:ToWYDGSIfhfQaE8JhHH9TUE1PqhlDvzXFWURvgcOZxw=
 github.com/iden3/merkletree-proof v0.0.2 h1:a6At2Mm/fEnC8MjsgAmTSrgVsTsKuWGNwdsDU0otJC4=
 github.com/iden3/merkletree-proof v0.0.2/go.mod h1:viUqFXdonLL6isznj1ts0CID77CJ11AlXi9vTC8ZD8A=
 github.com/ipfs/go-cid v0.0.7 h1:ysQJVJA3fNDF1qigJbsSQOdjhVLsOEoPdh0+R97k3jY=
@@ -227,8 +229,8 @@ golang.org/x/crypto v0.0.0-20200115085410-6d4e4cb37c7d/go.mod h1:LzIPMQfyMNhhGPh
 golang.org/x/crypto v0.0.0-20200510223506-06a226fb4e37/go.mod h1:LzIPMQfyMNhhGPhUkYOs5KpL4U8rLKemX1yGLhDgUto=
 golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9/go.mod h1:LzIPMQfyMNhhGPhUkYOs5KpL4U8rLKemX1yGLhDgUto=
 golang.org/x/crypto v0.0.0-20211117183948-ae814b36b871/go.mod h1:IxCIyHEi3zRg3s0A5j5BB6A9Jmi73HwBIUl50j+osU4=
-golang.org/x/crypto v0.1.0 h1:MDRAIl0xIo9Io2xV565hzXHw3zVseKrJKodhohM5CjU=
-golang.org/x/crypto v0.1.0/go.mod h1:RecgLatLF4+eUMCP1PoPZQb+cVrJcOPbHkTkbkB9sbw=
+golang.org/x/crypto v0.6.0 h1:qfktjS5LUO+fFKeJXZ+ikTRijMmljikvG68fpMMruSc=
+golang.org/x/crypto v0.6.0/go.mod h1:OFC/31mSvZgRz0V1QTNCzfAI1aIRzbiufJtkMIlEp58=
 golang.org/x/exp v0.0.0-20190121172915-509febef88a4/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
 golang.org/x/exp v0.0.0-20230206171751-46f607a40771 h1:xP7rWLUr1e1n2xkK5YB4LI0hPEy3LJC6Wk+D4pGlOJg=
 golang.org/x/lint v0.0.0-20181026193005-c67002cb31c3/go.mod h1:UVdnD1Gm6xHRNCYTkRU2/jEulfH38KcIWyp/GAMgvoE=
