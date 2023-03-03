@@ -1046,25 +1046,56 @@ func claimWithMtpProofFromObj(ctx context.Context, cfg EnvConfig,
 	skipClaimRevocationCheck bool) (circuits.ClaimWithMTPProof, error) {
 
 	var out circuits.ClaimWithMTPProof
-
-	proofI := findProofByType(w3cCred, verifiable.Iden3SparseMerkleProofType)
-	if proofI == nil {
-		return out, fmt.Errorf("no %v proofs found",
-			verifiable.Iden3SparseMerkleProofType)
-	}
-
 	var err error
-	proof, ok := proofI.(*verifiable.Iden3SparseMerkleProof)
-	if !ok {
-		return out, errors.New("proof is not a sparse merkle proof")
+	var proofI verifiable.CredentialProof
+	var issuerDID *core.DID
+
+	if proofI = findProofByType(w3cCred,
+		verifiable.Iden3SparseMerkleTreeProofType); proofI != nil {
+
+		proof, ok := proofI.(*verifiable.Iden3SparseMerkleTreeProof)
+		if !ok {
+			return out, errors.New("proof is not a sparse merkle proof")
+		}
+		issuerDID, err = core.ParseDID(proof.IssuerData.ID)
+		if err != nil {
+			return out, err
+		}
+		out.IncProof.Proof = proof.MTP
+		out.IncProof.TreeState, err = circuitsTreeStateFromSchemaState(proof.IssuerData.State)
+		if err != nil {
+			return out, err
+		}
+
+	} else if proofI = findProofByType(w3cCred,
+		verifiable.Iden3SparseMerkleProofType); proofI != nil { //nolint:staticcheck //reason: need to support deprecated proofs for backward compatibility
+
+		//nolint:staticcheck //reason: need to support deprecated proofs for backward compatibility
+		proof, ok := proofI.(*verifiable.Iden3SparseMerkleProof)
+		if !ok {
+			return out, errors.New("proof is not a sparse merkle proof")
+		}
+		issuerDID, err = core.ParseDID(proof.IssuerData.ID)
+		if err != nil {
+			return out, err
+		}
+		out.IncProof.Proof = proof.MTP
+		out.IncProof.TreeState, err = circuitsTreeStateFromSchemaState(proof.IssuerData.State)
+		if err != nil {
+			return out, err
+		}
+
+	} else {
+		return out, fmt.Errorf("no %v proofs found",
+			verifiable.Iden3SparseMerkleTreeProofType)
 	}
-	issuerDID, err := core.ParseDID(proof.IssuerData.ID)
+
+	out.IssuerID = &issuerDID.ID
 	if err != nil {
 		return out, err
 	}
 
-	out.IssuerID = &issuerDID.ID
-	out.Claim, err = proof.GetCoreClaim()
+	out.Claim, err = proofI.GetCoreClaim()
 	if err != nil {
 		return out, err
 	}
@@ -1073,13 +1104,9 @@ func claimWithMtpProofFromObj(ctx context.Context, cfg EnvConfig,
 	if !ok {
 		return out, errors.New("not a json object")
 	}
+
 	out.NonRevProof, err = buildAndValidateCredentialStatus(ctx, cfg,
 		credStatus, out.IssuerID, skipClaimRevocationCheck)
-	if err != nil {
-		return out, err
-	}
-	out.IncProof.Proof = proof.MTP
-	out.IncProof.TreeState, err = circuitsTreeStateFromSchemaState(proof.IssuerData.State)
 	if err != nil {
 		return out, err
 	}

@@ -96,7 +96,7 @@
         "signature": "d608a6be79730a6bf873438ff23b31b9e1d3caa5d2a30470ec3b2ff3633e4798262e192336b0b4588cc0c80417b4cd6e89182451f20cfddc77d784022f566300"
       },
       {
-        "type": "Iden3SparseMerkleProof",
+        "type": "Iden3SparseMerkleTreeProof",
         "issuerData": {
           "id": "did:polygonid:polygon:mumbai:2qDnyCaxj4zdYmj6LbegYMjWSnkbKAyqtq31YeuyZV",
           "state": {

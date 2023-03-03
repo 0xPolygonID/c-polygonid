@@ -8,7 +8,7 @@ require (
 	github.com/iden3/go-iden3-core v1.0.0
 	github.com/iden3/go-iden3-crypto v0.0.13
 	github.com/iden3/go-merkletree-sql/v2 v2.0.0
-	github.com/iden3/go-schema-processor v1.1.0
+	github.com/iden3/go-schema-processor v1.1.1
 	github.com/iden3/merkletree-proof v0.0.2
 	github.com/stretchr/testify v1.8.1
 )
@@ -59,7 +59,7 @@ require (
 	github.com/whyrusleeping/tar-utils v0.0.0-20201201191210-20a61371de5b // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
 	go.opencensus.io v0.22.4 // indirect
-	golang.org/x/crypto v0.1.0 // indirect
+	golang.org/x/crypto v0.6.0 // indirect
 	golang.org/x/sys v0.5.0 // indirect
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
