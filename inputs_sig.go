@@ -1068,8 +1068,9 @@ func claimWithMtpProofFromObj(ctx context.Context, cfg EnvConfig,
 		}
 
 	} else if proofI = findProofByType(w3cCred,
-		verifiable.Iden3SparseMerkleProofType); proofI != nil {
+		verifiable.Iden3SparseMerkleProofType); proofI != nil { //nolint:staticcheck //reason: need to support deprecated proofs for backward compatibility
 
+		//nolint:staticcheck //reason: need to support deprecated proofs for backward compatibility
 		proof, ok := proofI.(*verifiable.Iden3SparseMerkleProof)
 		if !ok {
 			return out, errors.New("proof is not a sparse merkle proof")
@@ -1095,6 +1096,9 @@ func claimWithMtpProofFromObj(ctx context.Context, cfg EnvConfig,
 	}
 
 	out.Claim, err = proofI.GetCoreClaim()
+	if err != nil {
+		return out, err
+	}
 
 	credStatus, ok := w3cCred.CredentialStatus.(jsonObj)
 	if !ok {
