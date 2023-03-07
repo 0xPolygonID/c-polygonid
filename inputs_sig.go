@@ -10,6 +10,7 @@ import (
 	"math/big"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 	"time"
 
@@ -436,7 +437,7 @@ func AtomicQueryMtpV2InputsFromJson(ctx context.Context, cfg EnvConfig,
 
 func verifiablePresentationFromCred(ctx context.Context,
 	w3cCred verifiable.W3CCredential, requestObj jsonObj, field string) (
-	verifiablePresentation map[string]any, valueEntry *big.Int, err error) {
+	verifiablePresentation map[string]any, mzValue merklize.Value, err error) {
 
 	mz, err := w3cCred.Merklize(ctx)
 	if err != nil {
@@ -465,12 +466,7 @@ func verifiablePresentationFromCred(ctx context.Context,
 		return nil, nil, err
 	}
 
-	_, value, err := mz.Proof(ctx, path)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	valueEntry, err = value.MtEntry()
+	_, mzValue, err = mz.Proof(ctx, path)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -841,6 +837,13 @@ func queryFromObjNonMerklized(ctx context.Context,
 	if !ok {
 		return out, nil, errors.New("operation on field is not a json object")
 	}
+
+	vp, mzValue, err :=
+		verifiablePresentationFromCred(ctx, w3cCred, requestObj, field)
+	if err != nil {
+		return out, nil, err
+	}
+
 	opStr, val, err := extractSingleEntry(opObj)
 	switch err {
 	case errMultipleEntries:
@@ -848,15 +851,17 @@ func queryFromObjNonMerklized(ctx context.Context,
 	case errNoEntry:
 		// handle selective disclosure
 		var valueEntry *big.Int
-		verifiablePresentation, valueEntry, err =
-			verifiablePresentationFromCred(ctx, w3cCred, requestObj, field)
+		valueEntry, err = mzValue.MtEntry()
 		if err != nil {
 			return out, nil, err
 		}
+
+		verifiablePresentation = vp
 		out.Operator = circuits.EQ
 		out.Values = []*big.Int{valueEntry}
 	default:
-		out.Operator, out.Values, err = unpackOperatorWithArgs(opStr, val)
+		out.Operator, out.Values, err = unpackOperatorWithArgs(opStr, val,
+			mzValue)
 		if err != nil {
 			return out, nil, err
 		}
@@ -864,44 +869,207 @@ func queryFromObjNonMerklized(ctx context.Context,
 	return out, verifiablePresentation, nil
 }
 
-func unpackOperatorValue(val any) ([]*big.Int, error) {
+func unpackOperatorBooleanValue(val any) ([]*big.Int, error) {
 	switch vt := val.(type) {
-	case string:
-		i, ok := new(big.Int).SetString(vt, 10)
-		if !ok {
-			return nil, errors.New("invalid big int value")
+	case bool:
+		val, err := merklize.NewValue(merklize.PoseidonHasher{}, vt)
+		if err != nil {
+			return nil, err
+		}
+		i, err := val.MtEntry()
+		if err != nil {
+			return nil, err
 		}
 		return []*big.Int{i}, nil
-	case float64:
-		intVal := int64(vt)
-		if float64(intVal) != vt {
-			return nil, errors.New("invalid int value")
-		}
-		return []*big.Int{big.NewInt(intVal)}, nil
 	case []any:
-		return arrToBigInts(vt)
+		return boolArrToBigInts(vt)
 	default:
-		return nil, errors.New("value is not a number")
+		return nil, errors.New("value is not a boolean")
 	}
 
 }
 
-func arrToBigInts(in []any) ([]*big.Int, error) {
+func boolArrToBigInts(in []any) ([]*big.Int, error) {
+	out := make([]*big.Int, len(in))
+	for i, v := range in {
+		switch vt := v.(type) {
+		case bool:
+			val, err := merklize.NewValue(merklize.PoseidonHasher{}, vt)
+			if err != nil {
+				return nil, err
+			}
+			bi, err := val.MtEntry()
+			if err != nil {
+				return nil, err
+			}
+			out[i] = bi
+		default:
+			err := fmt.Errorf("value is not a boolean at idx = %v", i)
+			return nil, err
+		}
+	}
+	return out, nil
+}
+
+var dateRE = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}$`)
+
+func unpackOperatorTimeValue(val any) ([]*big.Int, error) {
+	switch vt := val.(type) {
+	case string:
+		var timeVal time.Time
+		var err error
+		if dateRE.MatchString(vt) {
+			timeVal, err = time.ParseInLocation("2006-01-02", vt, time.UTC)
+		} else {
+			timeVal, err = time.Parse(time.RFC3339Nano, vt)
+		}
+		if err != nil {
+			return nil, err
+		}
+
+		val, err := merklize.NewValue(merklize.PoseidonHasher{}, timeVal)
+		if err != nil {
+			return nil, err
+		}
+		i, err := val.MtEntry()
+		if err != nil {
+			return nil, err
+		}
+		return []*big.Int{i}, nil
+	case []any:
+		return timeArrToBigInts(vt)
+	default:
+		return nil, errors.New("value is not a string")
+	}
+}
+
+func timeArrToBigInts(in []any) ([]*big.Int, error) {
 	out := make([]*big.Int, len(in))
 	for i, v := range in {
 		switch vt := v.(type) {
 		case string:
-			bi, ok := new(big.Int).SetString(vt, 10)
-			if !ok {
-				return nil, errors.New("invalid big int value")
+			var timeVal time.Time
+			var err error
+			if dateRE.MatchString(vt) {
+				timeVal, err = time.ParseInLocation("2006-01-02", vt, time.UTC)
+			} else {
+				timeVal, err = time.Parse(time.RFC3339Nano, vt)
 			}
+			if err != nil {
+				return nil, err
+			}
+
+			val, err := merklize.NewValue(merklize.PoseidonHasher{}, timeVal)
+			if err != nil {
+				return nil, err
+			}
+
+			bi, err := val.MtEntry()
+			if err != nil {
+				return nil, err
+			}
+
 			out[i] = bi
+		default:
+			err := fmt.Errorf("value is not a string at idx = %v", i)
+			return nil, err
+		}
+	}
+	return out, nil
+}
+
+func unpackOperatorStringValue(val any) ([]*big.Int, error) {
+	switch vt := val.(type) {
+	case string:
+		val, err := merklize.NewValue(merklize.PoseidonHasher{}, vt)
+		if err != nil {
+			return nil, err
+		}
+
+		bi, err := val.MtEntry()
+		if err != nil {
+			return nil, err
+		}
+
+		return []*big.Int{bi}, nil
+	case []any:
+		return stringArrToBigInts(vt)
+	default:
+		return nil, errors.New("value is not a string or array of strings")
+	}
+
+}
+
+func stringArrToBigInts(in []any) ([]*big.Int, error) {
+	out := make([]*big.Int, len(in))
+	for i, v := range in {
+		vt, ok := v.(string)
+		if !ok {
+			return nil, errors.New("value is not a string")
+		}
+
+		val, err := merklize.NewValue(merklize.PoseidonHasher{}, vt)
+		if err != nil {
+			return nil, err
+		}
+
+		bi, err := val.MtEntry()
+		if err != nil {
+			return nil, err
+		}
+
+		out[i] = bi
+	}
+	return out, nil
+}
+
+func unpackOperatorIntValue(val any) ([]*big.Int, error) {
+	switch vt := val.(type) {
+	case float64:
+		vtI := int64(vt)
+		if float64(vtI) != vt {
+			return nil, errors.New("error converting json number to int64")
+		}
+		val, err := merklize.NewValue(merklize.PoseidonHasher{}, vtI)
+		if err != nil {
+			return nil, err
+		}
+
+		bi, err := val.MtEntry()
+		if err != nil {
+			return nil, err
+		}
+
+		return []*big.Int{bi}, nil
+	case []any:
+		return intArrToBigInts(vt)
+	default:
+		return nil, errors.New("value is not a number or array of numbers")
+	}
+
+}
+
+func intArrToBigInts(in []any) ([]*big.Int, error) {
+	out := make([]*big.Int, len(in))
+	for i, v := range in {
+		switch vt := v.(type) {
 		case float64:
-			intVal := int64(vt)
-			if float64(intVal) != vt {
-				return nil, errors.New("invalid int value")
+			vtI := int64(vt)
+			if float64(vtI) != vt {
+				return nil, errors.New("error converting json number to int64")
 			}
-			out[i] = big.NewInt(intVal)
+
+			val, err := merklize.NewValue(merklize.PoseidonHasher{}, vtI)
+			if err != nil {
+				return nil, err
+			}
+
+			bi, err := val.MtEntry()
+			if err != nil {
+				return nil, err
+			}
+
+			out[i] = bi
 		default:
 			return nil, errors.New("value is not a number")
 		}
@@ -943,12 +1111,12 @@ func queryFromObjMerklized(ctx context.Context,
 	if err != nil {
 		return out, nil, err
 	}
-	var value merklize.Value
-	out.ValueProof.MTP, value, err = mz.Proof(ctx, path)
+	var mzValue merklize.Value
+	out.ValueProof.MTP, mzValue, err = mz.Proof(ctx, path)
 	if err != nil {
 		return out, nil, err
 	}
-	out.ValueProof.Value, err = value.MtEntry()
+	out.ValueProof.Value, err = mzValue.MtEntry()
 	if err != nil {
 		return out, nil, err
 	}
@@ -974,7 +1142,8 @@ func queryFromObjMerklized(ctx context.Context,
 		verifiablePresentation = fmtVerifiablePresentation(contextURL,
 			contextType, field, rawValue)
 	default:
-		out.Operator, out.Values, err = unpackOperatorWithArgs(opStr, val)
+		out.Operator, out.Values, err = unpackOperatorWithArgs(opStr, val,
+			mzValue)
 		if err != nil {
 			return out, nil, err
 		}
@@ -982,17 +1151,43 @@ func queryFromObjMerklized(ctx context.Context,
 	return out, verifiablePresentation, nil
 }
 
-// return int operator value by its name and arguments as big.Ints array
-func unpackOperatorWithArgs(opStr string, val any) (int, []*big.Int, error) {
+// Return int operator value by its name and arguments as big.Ints array.
+// `mzValue` is used to get the type of value we expect from opValue.
+func unpackOperatorWithArgs(opStr string, opValue any,
+	mzValue merklize.Value) (int, []*big.Int, error) {
 	op, ok := circuits.QueryOperators[opStr]
 	if !ok {
 		return 0, nil, errors.New("unknown operator")
 	}
-	vals, err := unpackOperatorValue(val)
-	if err != nil {
-		return 0, nil, err
+
+	switch {
+	case mzValue.IsBool():
+		vals, err := unpackOperatorBooleanValue(opValue)
+		if err != nil {
+			return 0, nil, err
+		}
+		return op, vals, nil
+	case mzValue.IsString():
+		vals, err := unpackOperatorStringValue(opValue)
+		if err != nil {
+			return 0, nil, err
+		}
+		return op, vals, nil
+	case mzValue.IsInt64():
+		vals, err := unpackOperatorIntValue(opValue)
+		if err != nil {
+			return 0, nil, err
+		}
+		return op, vals, nil
+	case mzValue.IsTime():
+		vals, err := unpackOperatorTimeValue(opValue)
+		if err != nil {
+			return 0, nil, err
+		}
+		return op, vals, nil
+	default:
+		return 0, nil, errors.New("unsupported operator value type")
 	}
-	return op, vals, nil
 }
 
 func getQueryFieldAndOperator(requestObj jsonObj) (string, any, error) {
