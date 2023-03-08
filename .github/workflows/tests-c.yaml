@@ -55,6 +55,14 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
       - run: |
+          go build -buildmode=c-archive -o ios/libpolygonid.a ./cmd/polygonid
+          cp ios/libpolygonid.h ios/libpolygonid-darwin-arm64.h
+          brew install cjson
+          mkdir examples/build
+          cd examples/build
+          cmake ..
+          make
+          make test ARGS="--rerun-failed --output-on-failure"
           echo "Check the ios-arm64 build"
           make ios-arm64
           echo "Check the ios-simulator build"
@@ -71,14 +79,6 @@ jobs:
           make android-x86
           echo "Check the android-x86-64 build"
           make android-x86-64
-          go build -buildmode=c-archive -o ios/libpolygonid.a ./cmd/polygonid
-          cp ios/libpolygonid.h ios/libpolygonid-darwin-arm64.h
-          brew install cjson
-          mkdir examples/build
-          cd examples/build
-          cmake ..
-          make
-          make test ARGS="--rerun-failed --output-on-failure"
   compilation-test-macos:
     if: false
     strategy:
