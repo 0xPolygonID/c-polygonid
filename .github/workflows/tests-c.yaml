@@ -55,9 +55,22 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
       - run: |
-          echo "Check ios-arm64 build"
+          echo "Check the ios-arm64 build"
           make ios-arm64
-          cat xbc
+          echo "Check the ios-simulator build"
+          make ios-simulator
+          echo "Check the darwin-arm64 build"
+          make darwin-arm64
+          echo "Check the dylib build"
+          make dylib
+          echo "Check the android-armeabi-v7a build"
+          make android-armeabi-v7a
+          echo "Check the android-arm64-v8a build"
+          make android-arm64-v8a
+          echo "Check the android-x86 build"
+          make android-x86
+          echo "Check the android-x86-64 build"
+          make android-x86-64
           go build -buildmode=c-archive -o ios/libpolygonid.a ./cmd/polygonid
           cp ios/libpolygonid.h ios/libpolygonid-darwin-arm64.h
           brew install cjson
