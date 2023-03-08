@@ -63,6 +63,7 @@ jobs:
           cmake ..
           make
           make test ARGS="--rerun-failed --output-on-failure"
+          cd ../../
           echo "Check the ios-arm64 build"
           make ios-arm64
           echo "Check the ios-simulator build"
