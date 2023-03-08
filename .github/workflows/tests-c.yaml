@@ -64,26 +64,26 @@ jobs:
           make
           make test ARGS="--rerun-failed --output-on-failure"
       - name: Check the ios-arm64 build
-        if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
+        if: github.event_name == 'push'
         run: make ios-arm64
       - name: Check the ios-simulator build
-        if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
+        if: github.event_name == 'push'
         run: make ios-simulator
       - name: Check the darwin-arm64 build
-        if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
+        if: github.event_name == 'push'
         run: make darwin-arm64
       - name: Check the dylib build
-        if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
+        if: github.event_name == 'push'
         run: make dylib
       - name: Check the android-armeabi-v7a build
-        if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
+        if: github.event_name == 'push'
         run: make android-armeabi-v7a
       - name: Check the android-arm64-v8a build
-        if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
+        if: github.event_name == 'push'
         run: make android-arm64-v8a
       - name: Check the android-x86 build
-        if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
+        if: github.event_name == 'push'
         run: make android-x86
       - name: Check the android-x86-64 build
-        if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
+        if: github.event_name == 'push'
         run: make android-x86-64
