@@ -36,7 +36,7 @@ dylib:
 	go build -buildmode=c-shared -o $(IOS_OUT)/libpolygonid.dylib ./cmd/polygonid
 
 ANDROID_OUT=android
-ANDROID_NDK_HOME=$(ANDROID_HOME)/ndk/22.1.7171670
+ANDROID_NDK_HOME?=$(ANDROID_HOME)/ndk/22.1.7171670
 
 android-armeabi-v7a:
 	GOOS=android \
