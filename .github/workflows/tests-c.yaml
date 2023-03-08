@@ -8,7 +8,6 @@ on:
 
 jobs:
   integration-test-linux:
-    if: false
     strategy:
       matrix:
         containers:
@@ -88,31 +87,3 @@ jobs:
       - name: Check the android-x86-64 build
         if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
         run: make android-x86-64
-  compilation-test-macos:
-    if: false
-    strategy:
-      matrix:
-        targets:
-          - ios-arm64
-          - ios-simulator
-          - darwin-arm64
-          - dylib
-          - android-armeabi-v7a
-          - android-arm64-v8a
-          - android-x86
-          - android-x86-64
-    runs-on: macos-12
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-go@v3
-        with:
-          go-version: 1.20.2
-      - uses: actions/cache@v3
-        with:
-          path: |
-            ~/go/pkg/mod
-            ~/Library/Caches/go-build
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-      - run: make ${{matrix.containers}}
