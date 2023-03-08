@@ -64,22 +64,30 @@ jobs:
           make
           make test ARGS="--rerun-failed --output-on-failure"
           cd ../../
-          echo "Check the ios-arm64 build"
-          make ios-arm64
-          echo "Check the ios-simulator build"
-          make ios-simulator
-          echo "Check the darwin-arm64 build"
-          make darwin-arm64
-          echo "Check the dylib build"
-          make dylib
-          echo "Check the android-armeabi-v7a build"
-          make android-armeabi-v7a
-          echo "Check the android-arm64-v8a build"
-          make android-arm64-v8a
-          echo "Check the android-x86 build"
-          make android-x86
-          echo "Check the android-x86-64 build"
-          make android-x86-64
+      - name: Check the ios-arm64 build
+        if: true
+        run: make ios-arm64
+      - name: Check the ios-simulator build
+        if: false
+        run: make ios-simulator
+      - name: Check the darwin-arm64 build
+        if: false
+        run: make darwin-arm64
+      - name: Check the dylib build
+        if: false
+        run: make dylib
+      - name: Check the android-armeabi-v7a build
+        if: false
+        run: make android-armeabi-v7a
+      - name: Check the android-arm64-v8a build
+        if: false
+        run: make android-arm64-v8a
+      - name: Check the android-x86 build
+        if: false
+        run: make android-x86
+      - name: Check the android-x86-64 build
+        if: false
+        run: make android-x86-64
   compilation-test-macos:
     if: false
     strategy:
