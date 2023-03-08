@@ -54,7 +54,8 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-      - run: |
+      - name: Run ctests
+        run: |
           go build -buildmode=c-archive -o ios/libpolygonid.a ./cmd/polygonid
           cp ios/libpolygonid.h ios/libpolygonid-darwin-arm64.h
           brew install cjson
@@ -63,30 +64,29 @@ jobs:
           cmake ..
           make
           make test ARGS="--rerun-failed --output-on-failure"
-          cd ../../
       - name: Check the ios-arm64 build
-        if: true
+        if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
         run: make ios-arm64
       - name: Check the ios-simulator build
-        if: false
+        if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
         run: make ios-simulator
       - name: Check the darwin-arm64 build
-        if: false
+        if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
         run: make darwin-arm64
       - name: Check the dylib build
-        if: false
+        if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
         run: make dylib
       - name: Check the android-armeabi-v7a build
-        if: false
+        if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
         run: make android-armeabi-v7a
       - name: Check the android-arm64-v8a build
-        if: false
+        if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
         run: make android-arm64-v8a
       - name: Check the android-x86 build
-        if: false
+        if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
         run: make android-x86
       - name: Check the android-x86-64 build
-        if: false
+        if: github.event_name == 'pull_request' && github.event.action == 'closed' && github.event.pull_request.merged == true
         run: make android-x86-64
   compilation-test-macos:
     if: false
