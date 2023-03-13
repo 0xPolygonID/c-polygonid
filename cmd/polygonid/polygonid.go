@@ -540,13 +540,7 @@ func PLGNProfileID(jsonResponse **C.char, in *C.char,
 // Additional configuration may be required for Reverse Hash Service
 // revocation validation. In other case cfg may be nil.
 //
-// Sample configuration:
-//
-//	{
-//	 "ethereumUrl": "http://localhost:8545",
-//	 "stateContractAddr": "0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655",
-//	 "reverseHashServiceUrl": "http://localhost:8003"
-//	}
+// You can view a sample configuration in the README.md file.
 //
 //export PLGNAtomicQuerySigV2Inputs
 func PLGNAtomicQuerySigV2Inputs(jsonResponse **C.char, in *C.char, cfg *C.char,
@@ -626,13 +620,7 @@ func marshalInputsResponse(
 // Additional configuration may be required for Reverse Hash Service
 // revocation validation. In other case cfg may be nil.
 //
-// Sample configuration:
-//
-//	{
-//	  "ethereumUrl": "http://localhost:8545",
-//	  "stateContractAddr": "0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655",
-//	  "reverseHashServiceUrl": "http://localhost:8003"
-//	}
+// You can view a sample configuration in the README.md file.
 //
 //export PLGNAtomicQueryMtpV2Inputs
 func PLGNAtomicQueryMtpV2Inputs(jsonResponse **C.char, in *C.char, cfg *C.char,
@@ -687,13 +675,7 @@ func PLGNMtpV2Inputs(jsonResponse **C.char, in *C.char,
 // Additional configuration may be required for Reverse Hash Service
 // revocation validation. In other case cfg may be nil.
 //
-// Sample configuration:
-//
-//	{
-//	  "ethereumUrl": "http://localhost:8545",
-//	  "stateContractAddr": "0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655",
-//	  "reverseHashServiceUrl": "http://localhost:8003"
-//	}
+// You can view a sample configuration in the README.md file.
 //
 //export PLGNAtomicQuerySigV2OnChainInputs
 func PLGNAtomicQuerySigV2OnChainInputs(jsonResponse **C.char, in *C.char,
@@ -709,13 +691,7 @@ func PLGNAtomicQuerySigV2OnChainInputs(jsonResponse **C.char, in *C.char,
 // Additional configuration may be required for Reverse Hash Service
 // revocation validation. In other case cfg may be nil.
 //
-// Sample configuration:
-//
-//	{
-//	  "ethereumUrl": "http://localhost:8545",
-//	  "stateContractAddr": "0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655",
-//	  "reverseHashServiceUrl": "http://localhost:8003"
-//	}
+// You can view a sample configuration in the README.md file.
 //
 //export PLGNAtomicQueryMtpV2OnChainInputs
 func PLGNAtomicQueryMtpV2OnChainInputs(jsonResponse **C.char, in *C.char,

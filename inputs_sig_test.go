@@ -15,6 +15,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/iden3/go-circuits"
+	core "github.com/iden3/go-iden3-core"
 	"github.com/iden3/go-merkletree-sql/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -416,6 +417,66 @@ func TestPrepareInputs(t *testing.T) {
 				AtomicQuerySigV2InputsFromJson, nil, cfg, "")
 		})
 
+	t.Run("AtomicQuerySigV2InputsFromJson - RHS - cached proof",
+		func(t *testing.T) {
+			defer mockHttpClient(t, map[string]string{
+				"https://www.w3.org/2018/credentials/v1":                                                                     "testdata/httpresp_credentials_v1.json",
+				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld":             "testdata/httpresp_kyc_v3.json",
+				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld": "testdata/httpresp_iden3credential_v2.json",
+			})()
+
+			cfgJson := `{
+  "lastStates": {
+    "2qMfUw1D3PBtv1MUAzyjtMubX9t9GFaGWqwYYMEqNc": "14607222131959269157796898112515149574470873924816964353749764234372357482844"
+  },
+  "proofs": [
+    {
+      "revocationNonce": 2886056678,
+      "proof": {
+        "existence": false,
+        "siblings": [
+          "4367735500323132967783534789115830163832158248202304148659976167980081306791",
+          "20375294811927970185044555720542944452526306667139147819087972364693684950142",
+          "139979610252321678928423281296122355318282901501950089563631416810704376650"
+        ],
+        "node_aux": {"key": "102", "value": "0"}
+      },
+      "treeState": {
+        "state": "14607222131959269157796898112515149574470873924816964353749764234372357482844",
+        "claimsRoot": "2836527625241754096527323979275535614446236425327380861541716046427580899654",
+        "revocationRoot": "18825970788343951893627305751784555189480498806880648896736523758291687136213",
+        "rootOfRoots": "13732882888818730349164013218008654170629909626120443258166254047219250535747"
+      }
+    },
+    {
+      "revocationNonce": 0,
+      "proof": {
+        "existence": false,
+        "siblings": [
+          "4367735500323132967783534789115830163832158248202304148659976167980081306791",
+          "19136706176746726203687373893794124073801028269122291665959682157070937831204",
+          "10085642424983125049624057239113219601809471327694616260072795460834498085885"
+        ],
+        "node_aux": {"key": "104", "value": "0"}
+      },
+      "treeState": {
+        "state": "14607222131959269157796898112515149574470873924816964353749764234372357482844",
+        "claimsRoot": "2836527625241754096527323979275535614446236425327380861541716046427580899654",
+        "revocationRoot": "18825970788343951893627305751784555189480498806880648896736523758291687136213",
+        "rootOfRoots": "13732882888818730349164013218008654170629909626120443258166254047219250535747"
+      }
+    }
+  ]
+}`
+			var cfg EnvConfig
+			err := json.Unmarshal([]byte(cfgJson), &cfg)
+			require.NoError(t, err)
+
+			doTest(t, "atomic_query_sig_v2_merklized_rhs_inputs.json",
+				"atomic_query_sig_v2_merklized_rhs_nonempty_output.json",
+				AtomicQuerySigV2InputsFromJson, nil, cfg, "")
+		})
+
 	t.Run("AtomicQuerySigV2InputsFromJson - RHS - revoked",
 		func(t *testing.T) {
 			defer mockHttpClient(t, map[string]string{
@@ -443,7 +504,29 @@ func TestEnvConfig_UnmarshalJSON(t *testing.T) {
 	in := `{
   "ethereumUrl": "http://localhost:8545",
   "stateContractAddr": "0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655",
-  "reverseHashServiceUrl": "http://localhost:8003"
+  "reverseHashServiceUrl": "http://localhost:8003",
+  "lastStates": {
+    "2qHrsSHq8RG9YzDkFUU7R8x5z8HjfEWuAzWCAEK6g5": "7924836296154662029985637624264388880357698768622974179372216832362758350725",
+    "2qFuKxq6iPem5w2U6T6druwGFjqTinE1kqNkSN7oo9": "1731077184317746880604876415400072894642986932130192804318979776576650960989"
+  },
+  "proofs": [
+    {
+      "revocationNonce": 380518664,
+      "proof": {
+        "existence": true,
+        "siblings": [
+          "4160024929110510016837706240767461055576975198735514380169793693125931012555",
+          "20060418938379981844865470860146694481548238498242410261462902127954246272447"
+        ]
+      },
+      "treeState": {
+        "state": "1731077184317746880604876415400072894642986932130192804318979776576650960989",
+        "claimsRoot": "6010518131296266678809565100594611581963235659253095687849925082119913660925",
+        "revocationRoot": "0",
+        "rootOfRoots": "10577450719885973132556528210032589552361029052981833196590877660483544191550"
+      }
+    }
+  ]
 }`
 	var out EnvConfig
 	err := json.Unmarshal([]byte(in), &out)
@@ -453,9 +536,39 @@ func TestEnvConfig_UnmarshalJSON(t *testing.T) {
 	require.Equal(t, "http://localhost:8545", out.EthereumURL)
 	require.Equal(t, stateContractAddr, out.StateContractAddr)
 	require.Equal(t, "http://localhost:8003", out.ReverseHashServiceUrl)
+	require.Equal(t, uint64(380518664), out.Proofs[0].RevocationNonce)
+	require.Equal(t,
+		hashFromIntStr("7924836296154662029985637624264388880357698768622974179372216832362758350725"),
+		out.LastStates[idFromString("2qHrsSHq8RG9YzDkFUU7R8x5z8HjfEWuAzWCAEK6g5")])
+	require.Equal(t,
+		hashFromIntStr("1731077184317746880604876415400072894642986932130192804318979776576650960989"),
+		out.LastStates[idFromString("2qFuKxq6iPem5w2U6T6druwGFjqTinE1kqNkSN7oo9")])
+	wantProof, err := merkletree.NewProofFromData(true,
+		[]*merkletree.Hash{
+			hashFromIntStr("4160024929110510016837706240767461055576975198735514380169793693125931012555"),
+			hashFromIntStr("20060418938379981844865470860146694481548238498242410261462902127954246272447"),
+		},
+		nil)
+	require.NoError(t, err)
+	require.Equal(t, wantProof, out.Proofs[0].Proof)
+	wantTreeState := circuits.TreeState{
+		State:          hashFromIntStr("1731077184317746880604876415400072894642986932130192804318979776576650960989"),
+		ClaimsRoot:     hashFromIntStr("6010518131296266678809565100594611581963235659253095687849925082119913660925"),
+		RevocationRoot: hashFromIntStr("0"),
+		RootOfRoots:    hashFromIntStr("10577450719885973132556528210032589552361029052981833196590877660483544191550"),
+	}
+	require.Equal(t, wantTreeState, out.Proofs[0].TreeState)
 }
 
-func hexFromIntStr(intStr string) *merkletree.Hash {
+func idFromString(idStr string) core.ID {
+	id, err := core.IDFromString(idStr)
+	if err != nil {
+		panic(err)
+	}
+	return id
+}
+
+func hashFromIntStr(intStr string) *merkletree.Hash {
 	i, ok := new(big.Int).SetString(intStr, 10)
 	if !ok {
 		panic(intStr)
@@ -508,21 +621,21 @@ func TestAtomicQuerySigV2OnChainInputsFromJson(t *testing.T) {
 	require.NoError(t, err)
 
 	wantTreeState := circuits.TreeState{
-		State: hexFromIntStr(
+		State: hashFromIntStr(
 			"3455793648389793511224972913807237799755511487265044435383221641855224272477"),
-		ClaimsRoot: hexFromIntStr(
+		ClaimsRoot: hashFromIntStr(
 			"12863526460000963806360638100765589244767101189459134829137262186265339590400"),
-		RevocationRoot: hexFromIntStr("0"),
-		RootOfRoots:    hexFromIntStr("0"),
+		RevocationRoot: hashFromIntStr("0"),
+		RootOfRoots:    hashFromIntStr("0"),
 	}
 	require.Equal(t, &wantTreeState, obj.TreeState)
 
 	wantGistProof := circuits.GISTProof{
-		Root: hexFromIntStr("5005919421435686441886912154983595081356506147906956636160716123399604497694"),
+		Root: hashFromIntStr("5005919421435686441886912154983595081356506147906956636160716123399604497694"),
 		Proof: must(func() (*merkletree.Proof, error) {
 			return merkletree.NewProofFromData(false,
 				[]*merkletree.Hash{
-					hexFromIntStr("9572034982910400342435969278331518000622332242067560582395787734704675688171"),
+					hashFromIntStr("9572034982910400342435969278331518000622332242067560582395787734704675688171"),
 					&merkletree.HashZero, &merkletree.HashZero,
 					&merkletree.HashZero, &merkletree.HashZero,
 					&merkletree.HashZero, &merkletree.HashZero,
