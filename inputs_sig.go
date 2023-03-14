@@ -1502,14 +1502,15 @@ func lastStateByID(ctx context.Context, cfg EnvConfig,
 		issuerID)
 }
 
-func proofFromCache(cfg EnvConfig,
-	state *merkletree.Hash,
+func proofFromCache(cfg EnvConfig, state *merkletree.Hash,
 	revNonce *big.Int) *circuits.MTProof {
+
 	for idx := range cfg.Proofs {
 		if cfg.Proofs[idx].TreeState.State.Equals(state) &&
 			new(big.Int).SetUint64(cfg.Proofs[idx].RevocationNonce).Cmp(revNonce) == 0 {
-			mtpProof := &circuits.MTProof{cfg.Proofs[idx].Proof,
-				cfg.Proofs[idx].TreeState}
+			mtpProof := &circuits.MTProof{
+				Proof:     cfg.Proofs[idx].Proof,
+				TreeState: cfg.Proofs[idx].TreeState}
 			return mtpProof
 		}
 	}
