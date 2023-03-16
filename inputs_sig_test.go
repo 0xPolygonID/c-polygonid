@@ -209,8 +209,11 @@ func TestPrepareInputs(t *testing.T) {
 				},
 				"@type": "VerifiablePresentation",
 				"verifiableCredential": map[string]any{
-					"@type":        "KYCAgeCredential",
-					"documentType": float64(99),
+					"@type": "VerifiableCredential",
+					"credentialSubject": map[string]any{
+						"@type":        "KYCAgeCredential",
+						"documentType": float64(99),
+					},
 				},
 			}
 
@@ -237,8 +240,11 @@ func TestPrepareInputs(t *testing.T) {
 			},
 			"@type": "VerifiablePresentation",
 			"verifiableCredential": map[string]any{
-				"@type":        "KYCAgeCredential",
-				"documentType": float64(2),
+				"@type": "VerifiableCredential",
+				"credentialSubject": map[string]any{
+					"@type":        "KYCAgeCredential",
+					"documentType": float64(2),
+				},
 			},
 		}
 
@@ -319,8 +325,11 @@ func TestPrepareInputs(t *testing.T) {
 				},
 				"@type": "VerifiablePresentation",
 				"verifiableCredential": map[string]any{
-					"@type":        "KYCAgeCredential",
-					"documentType": float64(99),
+					"@type": "VerifiableCredential",
+					"credentialSubject": map[string]any{
+						"@type":        "KYCAgeCredential",
+						"documentType": float64(99),
+					},
 				},
 			}
 

@@ -497,8 +497,11 @@ func fmtVerifiablePresentation(context string, tp string, field string,
 		"@context": ldContext,
 		"@type":    "VerifiablePresentation",
 		"verifiableCredential": map[string]any{
-			"@type": tp,
-			field:   value,
+			"@type": "VerifiableCredential",
+			"credentialSubject": map[string]any{
+				"@type": tp,
+				field:   value,
+			},
 		},
 	}
 }
