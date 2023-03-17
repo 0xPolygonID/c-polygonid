@@ -486,18 +486,24 @@ func fmtVerifiablePresentation(context string, tp string, field string,
 
 	var ldContext any
 
-	const baseContext = "https://www.w3.org/2018/credentials/v1"
-	if context == baseContext {
+	var baseContext = []any{"https://www.w3.org/2018/credentials/v1"}
+	if context == baseContext[0] {
 		ldContext = baseContext
 	} else {
-		ldContext = []string{baseContext, context}
+		ldContext = append(baseContext, context)
+	}
+
+	vcTypes := []any{"VerifiableCredential"}
+	if tp != "VerifiableCredential" {
+		vcTypes = append(vcTypes, tp)
 	}
 
 	return map[string]any{
-		"@context": ldContext,
+		"@context": baseContext,
 		"@type":    "VerifiablePresentation",
 		"verifiableCredential": map[string]any{
-			"@type": "VerifiableCredential",
+			"@context": ldContext,
+			"@type":    vcTypes,
 			"credentialSubject": map[string]any{
 				"@type": tp,
 				field:   value,
