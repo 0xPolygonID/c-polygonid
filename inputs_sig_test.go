@@ -203,14 +203,18 @@ func TestPrepareInputs(t *testing.T) {
 			})()
 
 			wantVerifiablePresentation := map[string]any{
-				"@context": []string{
-					"https://www.w3.org/2018/credentials/v1",
-					"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld",
-				},
-				"@type": "VerifiablePresentation",
+				"@context": []any{"https://www.w3.org/2018/credentials/v1"},
+				"@type":    "VerifiablePresentation",
 				"verifiableCredential": map[string]any{
-					"@type":        "KYCAgeCredential",
-					"documentType": float64(99),
+					"@context": []any{
+						"https://www.w3.org/2018/credentials/v1",
+						"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld",
+					},
+					"@type": []any{"VerifiableCredential", "KYCAgeCredential"},
+					"credentialSubject": map[string]any{
+						"@type":        "KYCAgeCredential",
+						"documentType": float64(99),
+					},
 				},
 			}
 
@@ -231,14 +235,18 @@ func TestPrepareInputs(t *testing.T) {
 		})()
 
 		wantVerifiablePresentation := map[string]any{
-			"@context": []string{
-				"https://www.w3.org/2018/credentials/v1",
-				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld",
-			},
-			"@type": "VerifiablePresentation",
+			"@context": []any{"https://www.w3.org/2018/credentials/v1"},
+			"@type":    "VerifiablePresentation",
 			"verifiableCredential": map[string]any{
-				"@type":        "KYCAgeCredential",
-				"documentType": float64(2),
+				"@context": []any{
+					"https://www.w3.org/2018/credentials/v1",
+					"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld",
+				},
+				"@type": []any{"VerifiableCredential", "KYCAgeCredential"},
+				"credentialSubject": map[string]any{
+					"@type":        "KYCAgeCredential",
+					"documentType": float64(2),
+				},
 			},
 		}
 
@@ -313,14 +321,18 @@ func TestPrepareInputs(t *testing.T) {
 			})()
 
 			wantVerifiablePresentation := map[string]any{
-				"@context": []string{
-					"https://www.w3.org/2018/credentials/v1",
-					"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld",
-				},
-				"@type": "VerifiablePresentation",
+				"@context": []any{"https://www.w3.org/2018/credentials/v1"},
+				"@type":    "VerifiablePresentation",
 				"verifiableCredential": map[string]any{
-					"@type":        "KYCAgeCredential",
-					"documentType": float64(99),
+					"@context": []any{
+						"https://www.w3.org/2018/credentials/v1",
+						"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld",
+					},
+					"@type": []any{"VerifiableCredential", "KYCAgeCredential"},
+					"credentialSubject": map[string]any{
+						"@type":        "KYCAgeCredential",
+						"documentType": float64(99),
+					},
 				},
 			}
 
