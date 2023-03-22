@@ -436,43 +436,46 @@ func AtomicQueryMtpV2InputsFromJson(ctx context.Context, cfg EnvConfig,
 
 func verifiablePresentationFromCred(ctx context.Context,
 	w3cCred verifiable.W3CCredential, requestObj jsonObj, field string) (
-	verifiablePresentation map[string]any, valueEntry *big.Int, err error) {
+	verifiablePresentation map[string]any, mzValue merklize.Value,
+	datatype string, hasher merklize.Hasher, err error) {
 
 	mz, err := w3cCred.Merklize(ctx)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, datatype, hasher, err
 	}
+
+	hasher = mz.Hasher()
 
 	var contextType string
 	contextType, err = stringByPath(requestObj, "query.type")
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, datatype, hasher, err
 	}
 
 	var contextURL string
 	contextURL, err = stringByPath(requestObj, "query.context")
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, datatype, hasher, err
 	}
 
 	path, err := buildQueryPath(ctx, contextURL, contextType, field)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, datatype, hasher, err
+	}
+
+	datatype, err = mz.JSONLDType(path)
+	if err != nil {
+		return nil, nil, datatype, hasher, err
 	}
 
 	rawValue, err := mz.RawValue(path)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, datatype, hasher, err
 	}
 
-	_, value, err := mz.Proof(ctx, path)
+	_, mzValue, err = mz.Proof(ctx, path)
 	if err != nil {
-		return nil, nil, err
-	}
-
-	valueEntry, err = value.MtEntry()
-	if err != nil {
-		return nil, nil, err
+		return nil, nil, datatype, hasher, err
 	}
 
 	verifiablePresentation = fmtVerifiablePresentation(contextURL,
@@ -850,6 +853,13 @@ func queryFromObjNonMerklized(ctx context.Context,
 	if !ok {
 		return out, nil, errors.New("operation on field is not a json object")
 	}
+
+	vp, mzValue, datatype, hasher, err :=
+		verifiablePresentationFromCred(ctx, w3cCred, requestObj, field)
+	if err != nil {
+		return out, nil, err
+	}
+
 	opStr, val, err := extractSingleEntry(opObj)
 	switch err {
 	case errMultipleEntries:
@@ -857,65 +867,23 @@ func queryFromObjNonMerklized(ctx context.Context,
 	case errNoEntry:
 		// handle selective disclosure
 		var valueEntry *big.Int
-		verifiablePresentation, valueEntry, err =
-			verifiablePresentationFromCred(ctx, w3cCred, requestObj, field)
+		valueEntry, err = mzValue.MtEntry()
 		if err != nil {
 			return out, nil, err
 		}
+
+		verifiablePresentation = vp
 		out.Operator = circuits.EQ
 		out.Values = []*big.Int{valueEntry}
 	default:
-		out.Operator, out.Values, err = unpackOperatorWithArgs(opStr, val)
+		out.Operator, out.Values, err = unpackOperatorWithArgs(opStr, val,
+			datatype, hasher)
 		if err != nil {
 			return out, nil, err
 		}
 	}
+
 	return out, verifiablePresentation, nil
-}
-
-func unpackOperatorValue(val any) ([]*big.Int, error) {
-	switch vt := val.(type) {
-	case string:
-		i, ok := new(big.Int).SetString(vt, 10)
-		if !ok {
-			return nil, errors.New("invalid big int value")
-		}
-		return []*big.Int{i}, nil
-	case float64:
-		intVal := int64(vt)
-		if float64(intVal) != vt {
-			return nil, errors.New("invalid int value")
-		}
-		return []*big.Int{big.NewInt(intVal)}, nil
-	case []any:
-		return arrToBigInts(vt)
-	default:
-		return nil, errors.New("value is not a number")
-	}
-
-}
-
-func arrToBigInts(in []any) ([]*big.Int, error) {
-	out := make([]*big.Int, len(in))
-	for i, v := range in {
-		switch vt := v.(type) {
-		case string:
-			bi, ok := new(big.Int).SetString(vt, 10)
-			if !ok {
-				return nil, errors.New("invalid big int value")
-			}
-			out[i] = bi
-		case float64:
-			intVal := int64(vt)
-			if float64(intVal) != vt {
-				return nil, errors.New("invalid int value")
-			}
-			out[i] = big.NewInt(intVal)
-		default:
-			return nil, errors.New("value is not a number")
-		}
-	}
-	return out, nil
 }
 
 func queryFromObjMerklized(ctx context.Context,
@@ -952,12 +920,12 @@ func queryFromObjMerklized(ctx context.Context,
 	if err != nil {
 		return out, nil, err
 	}
-	var value merklize.Value
-	out.ValueProof.MTP, value, err = mz.Proof(ctx, path)
+	var mzValue merklize.Value
+	out.ValueProof.MTP, mzValue, err = mz.Proof(ctx, path)
 	if err != nil {
 		return out, nil, err
 	}
-	out.ValueProof.Value, err = value.MtEntry()
+	out.ValueProof.Value, err = mzValue.MtEntry()
 	if err != nil {
 		return out, nil, err
 	}
@@ -983,7 +951,13 @@ func queryFromObjMerklized(ctx context.Context,
 		verifiablePresentation = fmtVerifiablePresentation(contextURL,
 			contextType, field, rawValue)
 	default:
-		out.Operator, out.Values, err = unpackOperatorWithArgs(opStr, val)
+		fieldDatatype, err := mz.JSONLDType(path)
+		if err != nil {
+			return out, nil, err
+		}
+
+		out.Operator, out.Values, err = unpackOperatorWithArgs(opStr, val,
+			fieldDatatype, mz.Hasher())
 		if err != nil {
 			return out, nil, err
 		}
@@ -991,17 +965,42 @@ func queryFromObjMerklized(ctx context.Context,
 	return out, verifiablePresentation, nil
 }
 
-// return int operator value by its name and arguments as big.Ints array
-func unpackOperatorWithArgs(opStr string, val any) (int, []*big.Int, error) {
+// Return int operator value by its name and arguments as big.Ints array.
+func unpackOperatorWithArgs(opStr string, opValue any,
+	datatype string, hasher merklize.Hasher) (int, []*big.Int, error) {
+
+	hashFn := func(val any) (*big.Int, error) {
+		if hasher == nil {
+			return merklize.HashValue(datatype, val)
+		} else {
+			return merklize.HashValueWithHasher(hasher, datatype, val)
+		}
+	}
+
 	op, ok := circuits.QueryOperators[opStr]
 	if !ok {
 		return 0, nil, errors.New("unknown operator")
 	}
-	vals, err := unpackOperatorValue(val)
-	if err != nil {
-		return 0, nil, err
+
+	var err error
+	valArr, isArr := opValue.([]any)
+	if isArr {
+		vals := make([]*big.Int, len(valArr))
+		for i, v := range valArr {
+			vals[i], err = hashFn(v)
+			if err != nil {
+				return 0, nil, err
+			}
+		}
+		return op, vals, nil
+	} else {
+		vals := make([]*big.Int, 1)
+		vals[0], err = hashFn(opValue)
+		if err != nil {
+			return 0, nil, err
+		}
+		return op, vals, nil
 	}
-	return op, vals, nil
 }
 
 func getQueryFieldAndOperator(requestObj jsonObj) (string, any, error) {
