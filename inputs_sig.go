@@ -16,6 +16,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/iden3/contracts-abi/state/go/abi"
 	"github.com/iden3/go-circuits"
 	core "github.com/iden3/go-iden3-core"
 	"github.com/iden3/go-iden3-crypto/babyjub"
@@ -1240,7 +1241,7 @@ func lastStateFromContract(ctx context.Context, ethURL string,
 	}
 	defer client.Close()
 
-	contractCaller, err := NewCPolygonidCaller(contractAddr, client)
+	contractCaller, err := abi.NewStateCaller(contractAddr, client)
 	if err != nil {
 		return nil, err
 	}
