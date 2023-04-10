@@ -129,7 +129,7 @@ jobs:
           # cp android/jnilibs/x86-64/libpolygonid.h libpolygonid/android/jnilibs/x86-64/
 
       - name: Prepare release artifacts
-        # if: github.event_name == 'release'
+        if: github.event_name == 'release'
         run: |
           echo 1 ${{ github.event.release.tag_name }}
           echo 2 ${{ github.event_name }}
@@ -137,17 +137,16 @@ jobs:
           echo 4 ${{ github.ref }}
           echo 5 ${GITHUB_REF}
           echo 6 ${GITHUB_REF_NAME}
-          mkdir libpolygonid
-          # cp -r ios android libpolygonid/
-          # zip -r libpolygonid.zip libpolygonid
+          mkdir libpolygonid-${GITHUB_REF_NAME}
+          # cp -r ios android libpolygonid-${GITHUB_REF_NAME}/
+          zip -r libpolygonid-${GITHUB_REF_NAME}.zip libpolygonid-${GITHUB_REF_NAME}
 
       - name: Upload release artifacts
-        if: ${{ false }}
-        # if: github.event_name == 'release'
+        if: github.event_name == 'release'
         uses: actions/upload-artifact@v3
         with:
-          name: libpolygonid
-          path: libpolygonid.zip
+          name: libpolygonid-${GITHUB_REF_NAME}
+          path: libpolygonid-${GITHUB_REF_NAME}.zip
 
       # This step goes after archiving release artifacts as I don't want to
       # put this lib into release.
