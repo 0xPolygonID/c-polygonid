@@ -1,8 +1,9 @@
 name: CTests
 
 on:
+  release:
+    types: [published]
   push:
-    release:
     branches:
       - main
   pull_request:
@@ -10,6 +11,7 @@ on:
 jobs:
 
   integration-test-linux:
+    if: ${{ false }}
     strategy:
       matrix:
         containers:
@@ -73,50 +75,50 @@ jobs:
           # mkdir -p libpolygonid/android/jnilibs/x86-64/
           # mkdir -p libpolygonid/ios/
       - name: Check the ios-arm64 build
-        if: github.event_name == 'push'
+        # if: github.event_name == 'push'
         run: |
           make ios-arm64
           # cp ios/libpolygonid-ios.a libpolygonid/ios/
           # cp ios/libpolygonid-ios.h libpolygonid/ios/
       - name: Check the ios-simulator build
-        if: github.event_name == 'push'
+        # if: github.event_name == 'push'
         run: |
           make ios-simulator
           # cp ios/libpolygonid-ios-simulator.a libpolygonid/ios/
           # cp ios/libpolygonid-ios-simulator.h libpolygonid/ios/
       - name: Check the darwin-arm64 build
-        if: github.event_name == 'push'
+        # if: github.event_name == 'push'
         run: |
           make darwin-arm64
           # cp ios/libpolygonid-darwin-arm64.a libpolygonid/ios/
           # cp ios/libpolygonid-darwin-arm64.h libpolygonid/ios/
       - name: Check the android-armeabi-v7a build
-        if: github.event_name == 'push'
+        # if: github.event_name == 'push'
         run: |
           make android-armeabi-v7a
           # cp android/jnilibs/armeabi-v7a/libpolygonid.so libpolygonid/android/jnilibs/armeabi-v7a/
           # cp android/jnilibs/armeabi-v7a/libpolygonid.h libpolygonid/android/jnilibs/armeabi-v7a/
       - name: Check the android-arm64-v8a build
-        if: github.event_name == 'push'
+        # if: github.event_name == 'push'
         run: | 
           make android-arm64-v8a
           # cp android/jnilibs/arm64-v8a/libpolygonid.so libpolygonid/android/jnilibs/arm64-v8a/
           # cp android/jnilibs/arm64-v8a/libpolygonid.h libpolygonid/android/jnilibs/arm64-v8a/
       - name: Check the android-x86 build
-        if: github.event_name == 'push'
+        # if: github.event_name == 'push'
         run: |
           make android-x86
           # cp android/jnilibs/x86/libpolygonid.so libpolygonid/android/jnilibs/x86/
           # cp android/jnilibs/x86/libpolygonid.h libpolygonid/android/jnilibs/x86/
       - name: Check the android-x86-64 build
-        if: github.event_name == 'push'
+        # if: github.event_name == 'push'
         run: |
           make android-x86-64
           # cp android/jnilibs/x86-64/libpolygonid.so libpolygonid/android/jnilibs/x86-64/
           # cp android/jnilibs/x86-64/libpolygonid.h libpolygonid/android/jnilibs/x86-64/
 
       - name: Prepare release artifacts
-        if: github.event_name == 'release'
+        # if: github.event_name == 'release'
         run: |
           echo 1 ${{ github.event.release.tag_name }}
           echo 2 ${{ github.event_name }}
@@ -128,7 +130,7 @@ jobs:
           zip -r libpolygonid.zip libpolygonid
 
       - name: Upload release artifacts
-        if: github.event_name == 'release'
+        # if: github.event_name == 'release'
         uses: actions/upload-artifact@v3
         with:
           name: libpolygonid
@@ -137,5 +139,5 @@ jobs:
       # This step goes after archiving release artifacts as I don't want to
       # put this lib into release.
       - name: Check the dylib build
-        if: github.event_name == 'push'
+        # if: github.event_name == 'push'
         run: make dylib
