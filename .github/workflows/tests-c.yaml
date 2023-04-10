@@ -11,6 +11,7 @@ on:
 jobs:
 
   integration-test-linux:
+    if: github.event_name == 'push' || github.event_name == 'release'
     strategy:
       matrix:
         containers:
