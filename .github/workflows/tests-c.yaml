@@ -11,7 +11,6 @@ on:
 jobs:
 
   integration-test-linux:
-    if: github.event_name == 'push' || github.event_name == 'release'
     strategy:
       matrix:
         containers:
@@ -45,6 +44,7 @@ jobs:
 
   integration-test-macos:
     runs-on: macos-12
+    if: github.event_name == 'push' || github.event_name == 'release'
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v3
