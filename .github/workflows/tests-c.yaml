@@ -129,6 +129,8 @@ jobs:
           # cp android/jnilibs/x86-64/libpolygonid.h libpolygonid/android/jnilibs/x86-64/
 
       - name: Debug
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: gh run list
 
       - name: Prepare release artifacts
@@ -149,8 +151,8 @@ jobs:
         if: github.event_name == 'release'
         uses: actions/upload-artifact@v3
         with:
-          name: libpolygonid-${GITHUB_REF_NAME}
-          path: libpolygonid-${GITHUB_REF_NAME}.zip
+          name: libpolygonid-${{github.ref_name}}
+          path: libpolygonid-${{github.ref_name}}.zip
 
       # This step goes after archiving release artifacts as I don't want to
       # put this lib into release.
