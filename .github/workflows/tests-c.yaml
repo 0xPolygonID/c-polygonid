@@ -128,15 +128,19 @@ jobs:
           # cp android/jnilibs/x86-64/libpolygonid.so libpolygonid/android/jnilibs/x86-64/
           # cp android/jnilibs/x86-64/libpolygonid.h libpolygonid/android/jnilibs/x86-64/
 
+      - name: Debug
+        run: gh run list
+
       - name: Prepare release artifacts
-        if: github.event_name == 'release'
+        # if: github.event_name == 'release'
         run: |
           echo 1 ${{ github.event.release.tag_name }}
           echo 2 ${{ github.event_name }}
           echo 3 ${{ github.event.action }}
           echo 4 ${{ github.ref }}
-          echo 5 ${GITHUB_REF}
-          echo 6 ${GITHUB_REF_NAME}
+          echo 5 ${{ github.ref_name }}
+          echo 6 ${GITHUB_REF}
+          echo 7 ${GITHUB_REF_NAME}
           mkdir libpolygonid-${GITHUB_REF_NAME}
           # cp -r ios android libpolygonid-${GITHUB_REF_NAME}/
           zip -r libpolygonid-${GITHUB_REF_NAME}.zip libpolygonid-${GITHUB_REF_NAME}
