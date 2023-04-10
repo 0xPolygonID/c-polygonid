@@ -72,8 +72,6 @@ jobs:
         run: make ios-arm64
       - name: Check the ios-simulator build
         run: make ios-simulator
-      - name: Check the darwin-arm64 build
-        run: make darwin-arm64
       - name: Check the android-armeabi-v7a build
         run: make android-armeabi-v7a
       - name: Check the android-arm64-v8a build
@@ -82,6 +80,10 @@ jobs:
         run: make android-x86
       - name: Check the android-x86-64 build
         run: make android-x86-64
+
+      - name: Create multiplatform bundle for iOS
+        if: github.event_name == 'release'
+        run: make ios
 
       - name: Prepare release artifacts
         if: github.event_name == 'release'
@@ -94,8 +96,9 @@ jobs:
           zip -r libpolygonid-${{ github.ref_name }}.zip libpolygonid-${{ github.ref_name }}
           gh release upload ${{ github.event.release.tag_name }} libpolygonid-${{ github.ref_name }}.zip
 
-      # This step goes after archiving release artifacts as I don't want to
-      # put this lib into release.
+      # These steps goes after archiving release artifacts as I don't want to
+      # put these libs into release zip.
       - name: Check the dylib build
-        # if: github.event_name == 'push'
         run: make dylib
+      - name: Check the darwin-arm64 build
+        run: make darwin-arm64
