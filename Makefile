@@ -5,7 +5,7 @@ ios-arm64:
 	GOARCH=arm64 \
 	CGO_ENABLED=1 \
 	CLANGARCH=arm64 \
-	SDK=iphoneos16.2 \
+	SDK=iphoneos \
 	CC=$(PWD)/clangwrap.sh \
 	CGO_CFLAGS="-fembed-bitcode" \
 	go build -buildmode=c-archive -o $(IOS_OUT)/libpolygonid-ios.a ./cmd/polygonid
@@ -16,7 +16,7 @@ ios-simulator:
 	GOARCH=amd64 \
 	CGO_ENABLED=1 \
 	CLANGARCH=x86_64 \
-	SDK=iphonesimulator16.2 \
+	SDK=iphonesimulator \
 	CC=$(PWD)/clangwrap.sh \
 	CGO_CFLAGS="-fembed-bitcode" \
 	go build -tags ios -buildmode=c-archive -o $(IOS_OUT)/libpolygonid-ios-simulator.a ./cmd/polygonid

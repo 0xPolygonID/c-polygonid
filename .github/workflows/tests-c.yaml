@@ -2,17 +2,19 @@ name: CTests
 
 on:
   push:
+    release:
     branches:
       - main
   pull_request:
 
 jobs:
+
   integration-test-linux:
     strategy:
       matrix:
         containers:
           - 1.19.7-bullseye
-          - 1.20.2-bullseye
+          - 1.20.3-bullseye
     runs-on: ubuntu-22.04
     container: golang:${{matrix.containers}}
     steps:
@@ -38,13 +40,15 @@ jobs:
           cmake ..
           make
           make test ARGS="--rerun-failed --output-on-failure"
+
   integration-test-macos:
     runs-on: macos-12
+    if: github.event_name == 'push' || github.event_name == 'release'
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v3
         with:
-          go-version: 1.20.2
+          go-version: 1.20.3
       - uses: actions/cache@v3
         with:
           path: |
@@ -63,27 +67,75 @@ jobs:
           cmake ..
           make
           make test ARGS="--rerun-failed --output-on-failure"
+          # mkdir -p libpolygonid/android/jnilibs/arm64-v8a/
+          # mkdir -p libpolygonid/android/jnilibs/armeabi-v7a/
+          # mkdir -p libpolygonid/android/jnilibs/x86/
+          # mkdir -p libpolygonid/android/jnilibs/x86-64/
+          # mkdir -p libpolygonid/ios/
       - name: Check the ios-arm64 build
         if: github.event_name == 'push'
-        run: make ios-arm64
+        run: |
+          make ios-arm64
+          # cp ios/libpolygonid-ios.a libpolygonid/ios/
+          # cp ios/libpolygonid-ios.h libpolygonid/ios/
       - name: Check the ios-simulator build
         if: github.event_name == 'push'
-        run: make ios-simulator
+        run: |
+          make ios-simulator
+          # cp ios/libpolygonid-ios-simulator.a libpolygonid/ios/
+          # cp ios/libpolygonid-ios-simulator.h libpolygonid/ios/
       - name: Check the darwin-arm64 build
         if: github.event_name == 'push'
-        run: make darwin-arm64
+        run: |
+          make darwin-arm64
+          # cp ios/libpolygonid-darwin-arm64.a libpolygonid/ios/
+          # cp ios/libpolygonid-darwin-arm64.h libpolygonid/ios/
+      - name: Check the android-armeabi-v7a build
+        if: github.event_name == 'push'
+        run: |
+          make android-armeabi-v7a
+          # cp android/jnilibs/armeabi-v7a/libpolygonid.so libpolygonid/android/jnilibs/armeabi-v7a/
+          # cp android/jnilibs/armeabi-v7a/libpolygonid.h libpolygonid/android/jnilibs/armeabi-v7a/
+      - name: Check the android-arm64-v8a build
+        if: github.event_name == 'push'
+        run: | 
+          make android-arm64-v8a
+          # cp android/jnilibs/arm64-v8a/libpolygonid.so libpolygonid/android/jnilibs/arm64-v8a/
+          # cp android/jnilibs/arm64-v8a/libpolygonid.h libpolygonid/android/jnilibs/arm64-v8a/
+      - name: Check the android-x86 build
+        if: github.event_name == 'push'
+        run: |
+          make android-x86
+          # cp android/jnilibs/x86/libpolygonid.so libpolygonid/android/jnilibs/x86/
+          # cp android/jnilibs/x86/libpolygonid.h libpolygonid/android/jnilibs/x86/
+      - name: Check the android-x86-64 build
+        if: github.event_name == 'push'
+        run: |
+          make android-x86-64
+          # cp android/jnilibs/x86-64/libpolygonid.so libpolygonid/android/jnilibs/x86-64/
+          # cp android/jnilibs/x86-64/libpolygonid.h libpolygonid/android/jnilibs/x86-64/
+
+      - name: Prepare release artifacts
+        if: github.event_name == 'release'
+        run: |
+          echo 1 ${{ github.event.release.tag_name }}
+          echo 2 ${{ github.event_name }}
+          echo 3 ${{ github.event.action }}
+          echo 4 ${{ github.ref }}
+          echo 5 ${GITHUB_REF}
+          mkdir libpolygonid
+          cp -r ios android libpolygonid/
+          zip -r libpolygonid.zip libpolygonid
+
+      - name: Upload release artifacts
+        if: github.event_name == 'release'
+        uses: actions/upload-artifact@v3
+        with:
+          name: libpolygonid
+          path: libpolygonid.zip
+
+      # This step goes after archiving release artifacts as I don't want to
+      # put this lib into release.
       - name: Check the dylib build
         if: github.event_name == 'push'
         run: make dylib
-      - name: Check the android-armeabi-v7a build
-        if: github.event_name == 'push'
-        run: make android-armeabi-v7a
-      - name: Check the android-arm64-v8a build
-        if: github.event_name == 'push'
-        run: make android-arm64-v8a
-      - name: Check the android-x86 build
-        if: github.event_name == 'push'
-        run: make android-x86
-      - name: Check the android-x86-64 build
-        if: github.event_name == 'push'
-        run: make android-x86-64
