@@ -135,6 +135,7 @@ jobs:
       - name: Prepare release artifacts
         # if: github.event_name == 'release'
         run: |
+          set -x
           echo 1 ${{ github.event.release.tag_name }}
           echo 2 ${{ github.event_name }}
           echo 3 ${{ github.event.action }}
@@ -143,6 +144,8 @@ jobs:
           echo 6 ${GITHUB_REF}
           echo 7 ${GITHUB_REF_NAME}
           pwd
+          ls
+          mkdir testdir
           ls
           mkdir libpolygonid-${{ github.ref_name }}
           # cp -r ios android libpolygonid-${{ github.ref_name }}/
