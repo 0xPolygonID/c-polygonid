@@ -49,11 +49,9 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v3
-        if: ${{ false }}
         with:
           go-version: 1.20.3
       - uses: actions/cache@v3
-        if: ${{ false }}
         with:
           path: |
             ~/go/pkg/mod
@@ -62,7 +60,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
       - name: Run ctests
-        if: ${{ false }}
         run: |
           go build -buildmode=c-archive -o ios/libpolygonid.a ./cmd/polygonid
           cp ios/libpolygonid.h ios/libpolygonid-darwin-arm64.h
@@ -78,89 +75,71 @@ jobs:
           # mkdir -p libpolygonid/android/jnilibs/x86-64/
           # mkdir -p libpolygonid/ios/
       - name: Check the ios-arm64 build
-        if: ${{ false }}
         # if: github.event_name == 'push'
         run: |
           make ios-arm64
           # cp ios/libpolygonid-ios.a libpolygonid/ios/
           # cp ios/libpolygonid-ios.h libpolygonid/ios/
       - name: Check the ios-simulator build
-        if: ${{ false }}
         # if: github.event_name == 'push'
         run: |
           make ios-simulator
           # cp ios/libpolygonid-ios-simulator.a libpolygonid/ios/
           # cp ios/libpolygonid-ios-simulator.h libpolygonid/ios/
       - name: Check the darwin-arm64 build
-        if: ${{ false }}
         # if: github.event_name == 'push'
         run: |
           make darwin-arm64
           # cp ios/libpolygonid-darwin-arm64.a libpolygonid/ios/
           # cp ios/libpolygonid-darwin-arm64.h libpolygonid/ios/
       - name: Check the android-armeabi-v7a build
-        if: ${{ false }}
         # if: github.event_name == 'push'
         run: |
           make android-armeabi-v7a
           # cp android/jnilibs/armeabi-v7a/libpolygonid.so libpolygonid/android/jnilibs/armeabi-v7a/
           # cp android/jnilibs/armeabi-v7a/libpolygonid.h libpolygonid/android/jnilibs/armeabi-v7a/
       - name: Check the android-arm64-v8a build
-        if: ${{ false }}
         # if: github.event_name == 'push'
         run: | 
           make android-arm64-v8a
           # cp android/jnilibs/arm64-v8a/libpolygonid.so libpolygonid/android/jnilibs/arm64-v8a/
           # cp android/jnilibs/arm64-v8a/libpolygonid.h libpolygonid/android/jnilibs/arm64-v8a/
       - name: Check the android-x86 build
-        if: ${{ false }}
         # if: github.event_name == 'push'
         run: |
           make android-x86
           # cp android/jnilibs/x86/libpolygonid.so libpolygonid/android/jnilibs/x86/
           # cp android/jnilibs/x86/libpolygonid.h libpolygonid/android/jnilibs/x86/
       - name: Check the android-x86-64 build
-        if: ${{ false }}
         # if: github.event_name == 'push'
         run: |
           make android-x86-64
           # cp android/jnilibs/x86-64/libpolygonid.so libpolygonid/android/jnilibs/x86-64/
           # cp android/jnilibs/x86-64/libpolygonid.h libpolygonid/android/jnilibs/x86-64/
 
-      - name: Debug
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh run list
-
       - name: Prepare release artifacts
-        # if: github.event_name == 'release'
+        if: github.event_name == 'release'
         run: |
           set -x
-          echo 1 ${{ github.event.release.tag_name }}
-          echo 2 ${{ github.event_name }}
-          echo 3 ${{ github.event.action }}
-          echo 4 ${{ github.ref }}
-          echo 5 ${{ github.ref_name }}
-          echo 6 ${GITHUB_REF}
-          echo 7 ${GITHUB_REF_NAME}
-          pwd
-          ls
-          mkdir testdir
-          ls
           mkdir libpolygonid-${{ github.ref_name }}
           # cp -r ios android libpolygonid-${{ github.ref_name }}/
           zip -r libpolygonid-${{ github.ref_name }}.zip libpolygonid-${{ github.ref_name }}
 
-      - name: Upload release artifacts
-        if: github.event_name == 'release'
+      - name: Publish artifacts
+        if: ${{ false }}
         uses: actions/upload-artifact@v3
         with:
           name: libpolygonid-${{github.ref_name}}
           path: libpolygonid-${{github.ref_name}}.zip
 
+      - name: Upload release files
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload ${{ github.event.release.tag_name }} libpolygonid-${{ github.ref_name }}.zip
+
       # This step goes after archiving release artifacts as I don't want to
       # put this lib into release.
       - name: Check the dylib build
-        if: ${{ false }}
         # if: github.event_name == 'push'
         run: make dylib
