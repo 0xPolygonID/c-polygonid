@@ -142,9 +142,11 @@ jobs:
           echo 5 ${{ github.ref_name }}
           echo 6 ${GITHUB_REF}
           echo 7 ${GITHUB_REF_NAME}
-          mkdir libpolygonid-${GITHUB_REF_NAME}
-          # cp -r ios android libpolygonid-${GITHUB_REF_NAME}/
-          zip -r libpolygonid-${GITHUB_REF_NAME}.zip libpolygonid-${GITHUB_REF_NAME}
+          pwd
+          ls
+          mkdir libpolygonid-${{ github.ref_name }}
+          # cp -r ios android libpolygonid-${{ github.ref_name }}/
+          zip -r libpolygonid-${{ github.ref_name }}.zip libpolygonid-${{ github.ref_name }}
 
       - name: Upload release artifacts
         if: github.event_name == 'release'
