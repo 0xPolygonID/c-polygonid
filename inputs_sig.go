@@ -838,7 +838,11 @@ func queryFromObjNonMerklized(ctx context.Context,
 	}
 
 	field, op, err := getQueryFieldAndOperator(requestObj)
-	if err != nil {
+	if errors.As(err, &errPathNotFound{}) {
+		out.Operator = circuits.NOOP
+		out.Values = []*big.Int{}
+		return out, nil, nil
+	} else if err != nil {
 		return out, nil,
 			fmt.Errorf("unable to extract field from query: %w", err)
 	}
@@ -907,7 +911,11 @@ func queryFromObjMerklized(ctx context.Context,
 		return out, nil, err
 	}
 	field, op, err := getQueryFieldAndOperator(requestObj)
-	if err != nil {
+	if errors.As(err, &errPathNotFound{}) {
+		out.Operator = circuits.NOOP
+		out.Values = []*big.Int{}
+		return out, nil, nil
+	} else if err != nil {
 		return out, nil,
 			fmt.Errorf("unable to extract field from query: %w", err)
 	}
