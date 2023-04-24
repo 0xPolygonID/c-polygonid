@@ -912,8 +912,30 @@ func queryFromObjMerklized(ctx context.Context,
 	}
 	field, op, err := getQueryFieldAndOperator(requestObj)
 	if errors.As(err, &errPathNotFound{}) {
-		out.Operator = circuits.NOOP
-		out.Values = []*big.Int{}
+		out.Operator = circuits.EQ
+		var path merklize.Path
+		path, err = merklize.NewPath(
+			"https://www.w3.org/2018/credentials#credentialSubject")
+		if err != nil {
+			return out, nil, err
+		}
+		out.ValueProof = new(circuits.ValueProof)
+		var mzValue merklize.Value
+		out.ValueProof.MTP, mzValue, err = mz.Proof(ctx, path)
+		if err != nil {
+			return out, nil, err
+		}
+		var val *big.Int
+		val, err = mzValue.MtEntry()
+		if err != nil {
+			return out, nil, err
+		}
+		out.Values = []*big.Int{val}
+		out.ValueProof.Value = val
+		out.ValueProof.Path, err = path.MtEntry()
+		if err != nil {
+			return out, nil, err
+		}
 		return out, nil, nil
 	} else if err != nil {
 		return out, nil,
