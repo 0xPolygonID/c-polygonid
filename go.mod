@@ -6,10 +6,10 @@ require (
 	github.com/ethereum/go-ethereum v1.11.5
 	github.com/iden3/contracts-abi/state/go/abi v0.0.0-20230405152923-4a25f6f1f0f4
 	github.com/iden3/go-circuits v1.0.2
-	github.com/iden3/go-iden3-core v1.0.0
-	github.com/iden3/go-iden3-crypto v0.0.14
-	github.com/iden3/go-merkletree-sql/v2 v2.0.2
-	github.com/iden3/go-schema-processor v1.1.3
+	github.com/iden3/go-iden3-core v1.0.2
+	github.com/iden3/go-iden3-crypto v0.0.15
+	github.com/iden3/go-merkletree-sql/v2 v2.0.4
+	github.com/iden3/go-schema-processor v1.1.5
 	github.com/iden3/merkletree-proof v0.0.2
 	github.com/stretchr/testify v1.8.2
 )
