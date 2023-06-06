@@ -54,3 +54,49 @@ jq .abi artifacts/contracts/state/StateV2.sol/StateV2.json > StateV2.abi
 # Generate Go package from ABI.
 `go env GOPATH`/bin/abigen --bin=StateV2.bcode --abi=StateV2.abi --pkg=c_polygonid --out=../c-polygonid/StateV2.go
 ```
+
+## Structure of Configuration
+
+Some functions may require additional configuration.
+
+```json5
+{
+  "ethereumUrl": "http://localhost:8545",
+  // If we require the latest state for core.ID, we get it by calling this
+  // contract.
+  "stateContractAddr": "0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655",
+  "reverseHashServiceUrl": "http://localhost:8003",
+  // If we require the latest state for core.ID by contacting the contract, we
+  // will initially search for it in this object. If the state is found, we will
+  // not call the state contract and instead use this value.
+  "lastStates": {
+    "2qHrsSHq8RG9YzDkFUU7R8x5z8HjfEWuAzWCAEK6g5": "7924836296154662029985637624264388880357698768622974179372216832362758350725",
+    "2qFuKxq6iPem5w2U6T6druwGFjqTinE1kqNkSN7oo9": "1731077184317746880604876415400072894642986932130192804318979776576650960989"
+  },
+  // This is a list of proofs. When we need to resolve a proof by making a call
+  // to RHS, we first search for the proof in this array using the state and
+  // revocation nonce values. If the proof is found here, we use it and don't
+  // make a call to RHS.
+  "proofs": [
+    {
+      "revocationNonce": 380518664,
+      // instance of merkletree.Proof
+      "proof": {
+        "existence": true,
+        "siblings": [
+          "4160024929110510016837706240767461055576975198735514380169793693125931012555",
+          "20060418938379981844865470860146694481548238498242410261462902127954246272447"
+        ],
+        "node_aux": {"key": "100500", "value": "0"}
+      },
+      // instance of circuits.TreeState
+      "treeState": {
+        "state": "1731077184317746880604876415400072894642986932130192804318979776576650960989",
+        "claimsRoot": "6010518131296266678809565100594611581963235659253095687849925082119913660925",
+        "revocationRoot": "0",
+        "rootOfRoots": "10577450719885973132556528210032589552361029052981833196590877660483544191550"
+      }
+    }
+  ]
+}
+```

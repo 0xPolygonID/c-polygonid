@@ -1238,10 +1238,18 @@ func resolveRevStatus(ctx context.Context,
 	}
 }
 
+type revNonceProof struct {
+	RevocationNonce uint64
+	Proof           *merkletree.Proof
+	TreeState       circuits.TreeState
+}
+
 type EnvConfig struct {
 	EthereumURL           string
 	StateContractAddr     common.Address
 	ReverseHashServiceUrl string
+	LastStates            map[core.ID]*merkletree.Hash
+	Proofs                []revNonceProof
 }
 
 // Currently, our library does not have a Close function. As a result, we
@@ -1324,15 +1332,49 @@ func treeStateFromRHS(ctx context.Context, rhsCli *mp.HTTPReverseHashCli,
 	return treeState, err
 }
 
+func lastStateByID(ctx context.Context, cfg EnvConfig,
+	issuerID *core.ID) (*merkletree.Hash, error) {
+
+	if cfg.LastStates != nil {
+		state, ok := cfg.LastStates[*issuerID]
+		if ok {
+			return state, nil
+		}
+	}
+
+	return lastStateFromContract(ctx, cfg.EthereumURL, cfg.StateContractAddr,
+		issuerID)
+}
+
+func proofFromCache(cfg EnvConfig, state *merkletree.Hash,
+	revNonce *big.Int) *circuits.MTProof {
+
+	for idx := range cfg.Proofs {
+		if cfg.Proofs[idx].TreeState.State.Equals(state) &&
+			new(big.Int).SetUint64(cfg.Proofs[idx].RevocationNonce).Cmp(revNonce) == 0 {
+			mtpProof := &circuits.MTProof{
+				Proof:     cfg.Proofs[idx].Proof,
+				TreeState: cfg.Proofs[idx].TreeState}
+			return mtpProof
+		}
+	}
+	return nil
+}
+
 func resolveRevStatusFromRHS(ctx context.Context, cfg EnvConfig,
 	issuerID *core.ID, revNonce *big.Int) (circuits.MTProof, error) {
 
 	var p circuits.MTProof
 
-	state, err := lastStateFromContract(ctx, cfg.EthereumURL,
-		cfg.StateContractAddr, issuerID)
+	state, err := lastStateByID(ctx, cfg, issuerID)
 	if err != nil {
 		return p, err
+	}
+
+	cachedProof := proofFromCache(cfg, state, revNonce)
+	if cachedProof != nil {
+		p = *cachedProof
+		return p, nil
 	}
 
 	rhsCli, err := newRhsCli(cfg.ReverseHashServiceUrl)
