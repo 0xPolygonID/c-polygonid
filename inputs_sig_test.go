@@ -479,19 +479,49 @@ func TestPrepareInputs(t *testing.T) {
 }
 
 func TestEnvConfig_UnmarshalJSON(t *testing.T) {
-	in := `{
+	testCases := []struct {
+		title string
+		in    string
+		want  EnvConfig
+	}{
+		{
+			title: "one",
+			in: `{
   "ethereumUrl": "http://localhost:8545",
   "stateContractAddr": "0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655",
   "reverseHashServiceUrl": "http://localhost:8003"
-}`
-	var out EnvConfig
-	err := json.Unmarshal([]byte(in), &out)
-	require.NoError(t, err)
-	stateContractAddr := common.HexToAddress(
-		"0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655")
-	require.Equal(t, "http://localhost:8545", out.EthereumURL)
-	require.Equal(t, stateContractAddr, out.StateContractAddr)
-	require.Equal(t, "http://localhost:8003", out.ReverseHashServiceUrl)
+}`,
+			want: EnvConfig{
+				EthereumURL:           "http://localhost:8545",
+				StateContractAddr:     common.HexToAddress("0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655"),
+				ReverseHashServiceUrl: "http://localhost:8003",
+			},
+		},
+		{
+			title: "ipfs node",
+			in: `{
+  "ethereumUrl": "http://localhost:8545",
+  "stateContractAddr": "0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655",
+  "reverseHashServiceUrl": "http://localhost:8003",
+  "ipfsNodeUrl": "http://localhost:5001"
+}`,
+			want: EnvConfig{
+				EthereumURL:           "http://localhost:8545",
+				StateContractAddr:     common.HexToAddress("0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655"),
+				ReverseHashServiceUrl: "http://localhost:8003",
+				IPFSNodeURL:           "http://localhost:5001",
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.title, func(t *testing.T) {
+			var got EnvConfig
+			err := json.Unmarshal([]byte(tc.in), &got)
+			require.NoError(t, err)
+			require.Equal(t, tc.want, got)
+		})
+	}
 }
 
 func hexFromIntStr(intStr string) *merkletree.Hash {
