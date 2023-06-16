@@ -1197,6 +1197,9 @@ func resolveRevStatus(ctx context.Context,
 	switch status := credStatus.(type) {
 	case *verifiable.RHSCredentialStatus:
 		revNonce := new(big.Int).SetUint64(status.RevocationNonce)
+		if cfg.ReverseHashServiceUrl == "" {
+			cfg.ReverseHashServiceUrl = credStatus.(*verifiable.RHSCredentialStatus).ID
+		}
 		return resolveRevStatusFromRHS(ctx, cfg, issuerID, revNonce)
 	case *verifiable.CredentialStatus:
 		return resolveRevocationStatusFromIssuerService(ctx, status.ID)
@@ -1241,7 +1244,7 @@ func resolveRevStatus(ctx context.Context,
 type EnvConfig struct {
 	EthereumURL           string
 	StateContractAddr     common.Address
-	ReverseHashServiceUrl string
+	ReverseHashServiceUrl string // deprecated
 }
 
 // Currently, our library does not have a Close function. As a result, we
@@ -1335,6 +1338,7 @@ func resolveRevStatusFromRHS(ctx context.Context, cfg EnvConfig,
 		return p, err
 	}
 
+	//
 	rhsCli, err := newRhsCli(cfg.ReverseHashServiceUrl)
 	if err != nil {
 		return p, err
