@@ -16,6 +16,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/iden3/go-circuits"
 	"github.com/iden3/go-merkletree-sql/v2"
+	shell "github.com/ipfs/go-ipfs-api"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -136,6 +137,20 @@ func TestHexHash_UnmarshalJSON(t *testing.T) {
 	var h hexHash
 	err := h.UnmarshalJSON([]byte(s))
 	require.NoError(t, err)
+}
+
+func uploadIPFSFile(t testing.TB, ipfsURL string, fName string) string {
+	ipfsCli := shell.NewShell(ipfsURL)
+
+	f, err := os.Open(fName)
+	require.NoError(t, err)
+	// no need to close f
+
+	// Context is a pure file (no directory)
+	cid, err := ipfsCli.Add(f)
+	require.NoError(t, err)
+
+	return cid
 }
 
 func TestPrepareInputs(t *testing.T) {
@@ -271,6 +286,30 @@ func TestPrepareInputs(t *testing.T) {
 		doTest(t, "atomic_query_sig_v2_merklized_inputs.json",
 			"atomic_query_sig_v2_merklized_output.json",
 			AtomicQuerySigV2InputsFromJson, nil, EnvConfig{}, "")
+	})
+
+	t.Run("AtomicQuerySigV2InputsFromJson - ipfs", func(t *testing.T) {
+		ipfsURL := os.Getenv("IPFS_URL")
+		if ipfsURL == "" {
+			t.Skip("IPFS_URL is not set")
+		}
+
+		cid := uploadIPFSFile(t, ipfsURL, "testdata/httpresp_kyc-v3.json-ld")
+		// CID should correspond to the URL from the
+		// atomic_query_sig_v2_merklized_ipfs_inputs.json test input.
+		require.Equal(t, "QmXwNybNDvsdva11ypERby1nYnR5vJPTy9ZvHdnhaPMD7z", cid)
+
+		defer mockHttpClient(t, map[string]string{
+			"https://www.w3.org/2018/credentials/v1": "testdata/httpresp_credentials_v1.json",
+			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld":                                             "testdata/httpresp_iden3credential_v2.json",
+			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/2376431481": "testdata/httpresp_rev_status_2376431481.json",
+			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/0":          "testdata/httpresp_rev_status_wuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU_0.json",
+		})()
+
+		doTest(t, "atomic_query_sig_v2_merklized_ipfs_inputs.json",
+			"atomic_query_sig_v2_merklized_output.json",
+			AtomicQuerySigV2InputsFromJson, nil,
+			EnvConfig{IPFSNodeURL: ipfsURL}, "")
 	})
 
 	t.Run("AtomicQuerySigV2InputsFromJson - noop", func(t *testing.T) {

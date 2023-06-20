@@ -30,6 +30,7 @@ import (
 	"github.com/iden3/go-schema-processor/verifiable"
 	mp "github.com/iden3/merkletree-proof"
 	shell "github.com/ipfs/go-ipfs-api"
+	"github.com/piprate/json-gold/ld"
 )
 
 type jsonObj = map[string]any
@@ -424,7 +425,8 @@ func AtomicQueryMtpV2InputsFromJson(ctx context.Context, cfg EnvConfig,
 	}
 
 	inpMarsh.Query, out.VerifiablePresentation, err = queryFromObj(ctx, w3cCred,
-		obj.Request, inpMarsh.Claim.Claim, cfg.IPFSNodeURL)
+		obj.Request, inpMarsh.Claim.Claim, cfg.IPFSNodeURL,
+		cfg.documentLoader())
 	if err != nil {
 		return out, err
 	}
@@ -438,11 +440,12 @@ func AtomicQueryMtpV2InputsFromJson(ctx context.Context, cfg EnvConfig,
 
 func verifiablePresentationFromCred(ctx context.Context,
 	w3cCred verifiable.W3CCredential, requestObj jsonObj, field string,
-	ipfsNodeURL string) (verifiablePresentation map[string]any,
+	documentLoader ld.DocumentLoader) (verifiablePresentation map[string]any,
 	mzValue merklize.Value, datatype string, hasher merklize.Hasher,
 	err error) {
 
-	mz, err := w3cCred.Merklize(ctx, merklizeOptions(ipfsNodeURL)...)
+	mz, err := w3cCred.Merklize(ctx,
+		merklize.WithDocumentLoader(documentLoader))
 	if err != nil {
 		return nil, nil, datatype, hasher, err
 	}
@@ -461,7 +464,8 @@ func verifiablePresentationFromCred(ctx context.Context,
 		return nil, nil, datatype, hasher, err
 	}
 
-	path, err := buildQueryPath(ctx, contextURL, contextType, field)
+	path, err := buildQueryPath(ctx, contextURL, contextType, field,
+		documentLoader)
 	if err != nil {
 		return nil, nil, datatype, hasher, err
 	}
@@ -562,7 +566,8 @@ func AtomicQuerySigV2InputsFromJson(ctx context.Context, cfg EnvConfig,
 	}
 
 	inpMarsh.Query, out.VerifiablePresentation, err = queryFromObj(ctx, w3cCred,
-		obj.Request, inpMarsh.Claim.Claim, cfg.IPFSNodeURL)
+		obj.Request, inpMarsh.Claim.Claim, cfg.IPFSNodeURL,
+		cfg.documentLoader())
 	if err != nil {
 		return out, err
 	}
@@ -640,7 +645,8 @@ func AtomicQueryMtpV2OnChainInputsFromJson(ctx context.Context, cfg EnvConfig,
 	}
 
 	inpMarsh.Query, out.VerifiablePresentation, err = queryFromObj(ctx, w3cCred,
-		obj.Request, inpMarsh.Claim.Claim, cfg.IPFSNodeURL)
+		obj.Request, inpMarsh.Claim.Claim, cfg.IPFSNodeURL,
+		cfg.documentLoader())
 	if err != nil {
 		return out, err
 	}
@@ -718,7 +724,8 @@ func AtomicQuerySigV2OnChainInputsFromJson(ctx context.Context, cfg EnvConfig,
 	}
 
 	inpMarsh.Query, out.VerifiablePresentation, err = queryFromObj(ctx, w3cCred,
-		obj.Request, inpMarsh.Claim.Claim, cfg.IPFSNodeURL)
+		obj.Request, inpMarsh.Claim.Claim, cfg.IPFSNodeURL,
+		cfg.documentLoader())
 	if err != nil {
 		return out, err
 	}
@@ -731,32 +738,19 @@ func AtomicQuerySigV2OnChainInputsFromJson(ctx context.Context, cfg EnvConfig,
 }
 
 func buildQueryPath(ctx context.Context, contextURL string, contextType string,
-	field string) (path merklize.Path, err error) {
+	field string,
+	documentLoader ld.DocumentLoader) (path merklize.Path, err error) {
 
-	var httpReq *http.Request
-	httpReq, err = http.NewRequestWithContext(ctx, http.MethodGet, contextURL,
-		http.NoBody)
+	schemaDoc, err := documentLoader.LoadDocument(contextURL)
 	if err != nil {
 		return merklize.Path{}, err
 	}
-	httpResp, err := httpClient.Do(httpReq)
+
+	schemaBytes, err := json.Marshal(schemaDoc.Document)
 	if err != nil {
 		return merklize.Path{}, err
 	}
-	defer func() {
-		err2 := httpResp.Body.Close()
-		if err == nil {
-			err = err2
-		}
-	}()
-
-	var contextBytes []byte
-	contextBytes, err = io.ReadAll(io.LimitReader(httpResp.Body, 16*1024))
-	if err != nil {
-		return
-	}
-
-	path, err = merklize.NewFieldPathFromContext(contextBytes, contextType,
+	path, err = merklize.NewFieldPathFromContext(schemaBytes, contextType,
 		field)
 	if err != nil {
 		return
@@ -788,8 +782,9 @@ func querySkipRevocation(requestObj jsonObj) (bool, error) {
 
 func queryFromObj(ctx context.Context, w3cCred verifiable.W3CCredential,
 	requestObj jsonObj, claim *core.Claim,
-	ipfsNodeURL string) (out circuits.Query, verifiablePresentation jsonObj,
-	err error) {
+	ipfsNodeURL string,
+	documentLoader ld.DocumentLoader) (out circuits.Query,
+	verifiablePresentation jsonObj, err error) {
 
 	merklizePosition, err := claim.GetMerklizedPosition()
 	if err != nil {
@@ -797,10 +792,11 @@ func queryFromObj(ctx context.Context, w3cCred verifiable.W3CCredential,
 	}
 
 	if merklizePosition == core.MerklizedRootPositionNone {
-		return queryFromObjNonMerklized(ctx, w3cCred, requestObj, ipfsNodeURL)
+		return queryFromObjNonMerklized(ctx, w3cCred, requestObj, ipfsNodeURL,
+			documentLoader)
 	}
 
-	return queryFromObjMerklized(ctx, w3cCred, requestObj, ipfsNodeURL)
+	return queryFromObjMerklized(ctx, w3cCred, requestObj, documentLoader)
 }
 
 func getSchemaLoader(schemaURL string,
@@ -825,8 +821,8 @@ func getSchemaLoader(schemaURL string,
 
 func queryFromObjNonMerklized(ctx context.Context,
 	w3cCred verifiable.W3CCredential, requestObj jsonObj,
-	ipfsNodeURL string) (out circuits.Query, verifiablePresentation jsonObj,
-	err error) {
+	ipfsNodeURL string, documentLoader ld.DocumentLoader) (out circuits.Query,
+	verifiablePresentation jsonObj, err error) {
 
 	loader, err := getSchemaLoader(w3cCred.CredentialSchema.ID, ipfsNodeURL)
 	if err != nil {
@@ -866,7 +862,7 @@ func queryFromObjNonMerklized(ctx context.Context,
 	}
 
 	vp, mzValue, datatype, hasher, err := verifiablePresentationFromCred(ctx,
-		w3cCred, requestObj, field, ipfsNodeURL)
+		w3cCred, requestObj, field, documentLoader)
 	if err != nil {
 		return out, nil, err
 	}
@@ -897,22 +893,13 @@ func queryFromObjNonMerklized(ctx context.Context,
 	return out, verifiablePresentation, nil
 }
 
-func merklizeOptions(ipfsNodeURL string) []merklize.MerklizeOption {
-	if ipfsNodeURL == "" {
-		return nil
-	}
-
-	return []merklize.MerklizeOption{
-		merklize.WithIPFSClient(shell.NewShell(ipfsNodeURL)),
-	}
-}
-
 func queryFromObjMerklized(ctx context.Context,
 	w3cCred verifiable.W3CCredential, requestObj jsonObj,
-	ipfsNodeURL string) (out circuits.Query,
+	documentLoader ld.DocumentLoader) (out circuits.Query,
 	verifiablePresentation jsonObj, err error) {
 
-	mz, err := w3cCred.Merklize(ctx, merklizeOptions(ipfsNodeURL)...)
+	mz, err := w3cCred.Merklize(ctx,
+		merklize.WithDocumentLoader(documentLoader))
 	if err != nil {
 		return out, nil, err
 	}
@@ -958,7 +945,8 @@ func queryFromObjMerklized(ctx context.Context,
 		return out, nil,
 			fmt.Errorf("unable to extract field from query: %w", err)
 	}
-	path, err := buildQueryPath(ctx, contextURL, contextType, field)
+	path, err := buildQueryPath(ctx, contextURL, contextType, field,
+		documentLoader)
 	if err != nil {
 		return out, nil, err
 	}
@@ -1263,6 +1251,14 @@ type EnvConfig struct {
 	StateContractAddr     common.Address
 	ReverseHashServiceUrl string // deprecated
 	IPFSNodeURL           string
+}
+
+func (cfg EnvConfig) documentLoader() ld.DocumentLoader {
+	var ipfsNode *shell.Shell
+	if cfg.IPFSNodeURL != "" {
+		ipfsNode = shell.NewShell(cfg.IPFSNodeURL)
+	}
+	return merklize.NewDocumentLoader(ipfsNode, "")
 }
 
 // Currently, our library does not have a Close function. As a result, we
