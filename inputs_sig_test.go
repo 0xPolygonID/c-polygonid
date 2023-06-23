@@ -8,14 +8,19 @@ import (
 	"math/big"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/iden3/go-circuits"
+	core "github.com/iden3/go-iden3-core"
+	"github.com/iden3/go-iden3-crypto/poseidon"
 	"github.com/iden3/go-merkletree-sql/v2"
+	"github.com/iden3/go-schema-processor/verifiable"
 	shell "github.com/ipfs/go-ipfs-api"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -183,6 +188,18 @@ func TestPrepareInputs(t *testing.T) {
 		}
 	}
 
+	t.Run("AtomicQueryMtpV2Onchain", func(t *testing.T) {
+		t.Skip("for manual testing only")
+		cfg := EnvConfig{
+			EthereumURL:       "https://polygon-mumbai.infura.io/v3/b",
+			StateContractAddr: common.HexToAddress("0x66277D6E1Ad434772AF2A88de2901e3435Dbb8E6"),
+		}
+
+		doTest(t, "atomic_query_mtp_v2_onchain_inputs.json",
+			"atomic_query_mtp_v2_output.json", AtomicQueryMtpV2InputsFromJson,
+			nil, cfg, "")
+	})
+
 	t.Run("AtomicQueryMtpV2InputsFromJson", func(t *testing.T) {
 		defer mockHttpClient(t, map[string]string{
 			"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qFuKxq6iPem5w2U6T6druwGFjqTinE1kqNkSN7oo9/claims/revocation/status/380518664": "testdata/httpresp_rev_status_380518664.json",
@@ -190,10 +207,14 @@ func TestPrepareInputs(t *testing.T) {
 			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld": "testdata/httpresp_iden3credential_v2.json",
 			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld":             "testdata/httpresp_kyc-v3.json-ld",
 		})()
+		cfg := EnvConfig{
+			EthereumURL:       "https://polygon-mumbai.infura.io/v3/b936512326ea4e22a2a8552b6e9db7b7",
+			StateContractAddr: common.HexToAddress("0x66277D6E1Ad434772AF2A88de2901e3435Dbb8E6"),
+		}
 
 		doTest(t, "atomic_query_mtp_v2_inputs.json",
 			"atomic_query_mtp_v2_output.json", AtomicQueryMtpV2InputsFromJson,
-			nil, EnvConfig{}, "")
+			nil, cfg, "")
 	})
 
 	t.Run("AtomicQueryMtpV2InputsFromJson NonMerklized", func(t *testing.T) {
@@ -668,4 +689,66 @@ func TestAtomicQuerySigV2OnChainInputsFromJson(t *testing.T) {
 		}),
 	}
 	require.Equal(t, &wantGistProof, obj.GistProof)
+}
+
+func TestTest(t *testing.T) {
+
+	uri, _ := url.Parse("did:polygonid:polygon:mumbai:2qCU58EJgrEM9Lvkv6vTqkybetLHDL4yfpRNS32eas/credentialStatus" +
+		"?revocationNonce=689689820&contractAddress=80001:0xA5055e131A3544BfB4eA20CD269e6f738fAE32B0")
+	contract := uri.Query().Get("contractAddress")
+	fmt.Println(strings.Split(contract, ":")[1])
+	contractAddress := common.HexToAddress(strings.Split(contract, ":")[1])
+	fmt.Println(contractAddress.Hex())
+
+	revocationNonce := uri.Query().Get("revocationNonce")
+	fmt.Println(revocationNonce)
+
+	revocationNonceInt, _ := strconv.ParseUint(revocationNonce, 10, 64)
+	fmt.Println(revocationNonceInt)
+
+}
+
+func Test_resolverOnChainRevocationStatus(t *testing.T) {
+	t.Skip("skipping test, this is for debugging OnchainRevocation status only")
+	cfg := EnvConfig{
+		EthereumURL:       "<RPC>",
+		StateContractAddr: common.HexToAddress("0x66277D6E1Ad434772AF2A88de2901e3435Dbb8E6"),
+	}
+
+	did, _ := core.ParseDID("did:polygonid:polygon:mumbai:2qCU58EJgrEM9Lvkv6vTqkybetLHDL4yfpRNS32eas")
+	id := did.ID
+	status := &verifiable.CredentialStatus{
+		ID:              "did:polygonid:polygon:mumbai:2qCU58EJgrEM9Lvkv6vTqkybetLHDL4yfpRNS32eas/credentialStatus?revocationNonce=689689820&contractAddress=80001:0xA5055e131A3544BfB4eA20CD269e6f738fAE32B0",
+		Type:            "Iden3OnchainSparseMerkleTreeProof2023",
+		RevocationNonce: 689689820,
+	}
+
+	got, err := resolverOnChainRevocationStatus(context.Background(), cfg, &id, status)
+	require.NoError(t, err)
+
+	proofJson, _ := json.Marshal(got)
+	fmt.Println(string(proofJson))
+
+	fmt.Printf("%+v\n", got.TreeState)
+	fmt.Println("RevTreeRoot : ", got.TreeState.RevocationRoot.BigInt())
+
+	root, _ := merkletree.RootFromProof(got.Proof, big.NewInt(689689820), big.NewInt(0))
+	fmt.Println("Root : ", root.BigInt())
+
+	// ????
+	nonce, b := new(big.Int).SetString("689689820", 10)
+	require.True(t, b)
+
+	fmt.Printf("Proof %+v\n", got.Proof)
+
+	proofValid := merkletree.VerifyProof(got.TreeState.RevocationRoot,
+		got.Proof, nonce, big.NewInt(0))
+
+	require.True(t, proofValid)
+
+	state, _ := poseidon.Hash([]*big.Int{got.TreeState.ClaimsRoot.BigInt(), got.TreeState.RevocationRoot.BigInt(),
+		got.TreeState.RootOfRoots.BigInt()})
+
+	fmt.Println("State : ", state)
+	require.Equal(t, state, got.TreeState.State.BigInt())
 }
