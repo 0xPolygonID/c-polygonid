@@ -1315,8 +1315,6 @@ func resolverOnChainRevocationStatus(ctx context.Context, cfg EnvConfig, id *cor
 		return circuits.MTProof{}, errors.New(fmt.Sprintf("GetRevocationProof smart contract call, %s", err.Error()))
 	}
 
-	fmt.Printf("resp %+v\n", resp)
-
 	return toMerkleTreeProof(resp)
 }
 

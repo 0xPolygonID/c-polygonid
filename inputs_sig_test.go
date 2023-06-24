@@ -8,9 +8,7 @@ import (
 	"math/big"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"os"
-	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -189,14 +187,20 @@ func TestPrepareInputs(t *testing.T) {
 	}
 
 	t.Run("AtomicQueryMtpV2Onchain", func(t *testing.T) {
-		t.Skip("for manual testing only")
+		defer mockHttpClient(t, map[string]string{
+			`http://localhost:8545%%%{"jsonrpc":"2.0","id":1,"method":"eth_call","params":[{"data":"0xeb62ed0e00000000000000000000000000000000000000000000000000000000291bd4dc","from":"0x0000000000000000000000000000000000000000","to":"0xa5055e131a3544bfb4ea20cd269e6f738fae32b0"},"latest"]}`: "testdata/httpresp_eth_on_chain_status_resp.json",
+			"https://www.w3.org/2018/credentials/v1": "testdata/httpresp_credentials_v1.json",
+			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/cbade52faccea8c386bab0129c0ffffa64393849/core" +
+				"/jsonld/iden3proofs.jsonld": "testdata/httpresp_iden3proofs.jsonld",
+			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v4.jsonld": "testdata/httpresp_kyc_v4.jsonld",
+		})()
 		cfg := EnvConfig{
-			EthereumURL:       "https://polygon-mumbai.infura.io/v3/b",
+			EthereumURL:       "http://localhost:8545",
 			StateContractAddr: common.HexToAddress("0x66277D6E1Ad434772AF2A88de2901e3435Dbb8E6"),
 		}
 
-		doTest(t, "atomic_query_mtp_v2_onchain_inputs.json",
-			"atomic_query_mtp_v2_output.json", AtomicQueryMtpV2InputsFromJson,
+		doTest(t, "atomic_query_mtp_v2_on_chain_status_inputs.json",
+			"atomic_query_mtp_v2_on_chain_status_output.json", AtomicQueryMtpV2InputsFromJson,
 			nil, cfg, "")
 	})
 
@@ -207,14 +211,10 @@ func TestPrepareInputs(t *testing.T) {
 			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld": "testdata/httpresp_iden3credential_v2.json",
 			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld":             "testdata/httpresp_kyc-v3.json-ld",
 		})()
-		cfg := EnvConfig{
-			EthereumURL:       "https://polygon-mumbai.infura.io/v3/b936512326ea4e22a2a8552b6e9db7b7",
-			StateContractAddr: common.HexToAddress("0x66277D6E1Ad434772AF2A88de2901e3435Dbb8E6"),
-		}
 
 		doTest(t, "atomic_query_mtp_v2_inputs.json",
 			"atomic_query_mtp_v2_output.json", AtomicQueryMtpV2InputsFromJson,
-			nil, cfg, "")
+			nil, EnvConfig{}, "")
 	})
 
 	t.Run("AtomicQueryMtpV2InputsFromJson NonMerklized", func(t *testing.T) {
@@ -691,27 +691,10 @@ func TestAtomicQuerySigV2OnChainInputsFromJson(t *testing.T) {
 	require.Equal(t, &wantGistProof, obj.GistProof)
 }
 
-func TestTest(t *testing.T) {
-
-	uri, _ := url.Parse("did:polygonid:polygon:mumbai:2qCU58EJgrEM9Lvkv6vTqkybetLHDL4yfpRNS32eas/credentialStatus" +
-		"?revocationNonce=689689820&contractAddress=80001:0xA5055e131A3544BfB4eA20CD269e6f738fAE32B0")
-	contract := uri.Query().Get("contractAddress")
-	fmt.Println(strings.Split(contract, ":")[1])
-	contractAddress := common.HexToAddress(strings.Split(contract, ":")[1])
-	fmt.Println(contractAddress.Hex())
-
-	revocationNonce := uri.Query().Get("revocationNonce")
-	fmt.Println(revocationNonce)
-
-	revocationNonceInt, _ := strconv.ParseUint(revocationNonce, 10, 64)
-	fmt.Println(revocationNonceInt)
-
-}
-
 func Test_resolverOnChainRevocationStatus(t *testing.T) {
-	t.Skip("skipping test, this is for debugging OnchainRevocation status only")
+	//t.Skip("skipping test, this is for debugging OnchainRevocation status only")
 	cfg := EnvConfig{
-		EthereumURL:       "<RPC>",
+		EthereumURL:       "https://polygon-mumbai.infura.io/v3/b936512326ea4e22a2a8552b6e9db7b7",
 		StateContractAddr: common.HexToAddress("0x66277D6E1Ad434772AF2A88de2901e3435Dbb8E6"),
 	}
 
