@@ -261,7 +261,7 @@ func buildAndValidateCredentialStatus(ctx context.Context, cfg EnvConfig,
 	proofValid := merkletree.VerifyProof(proof.TreeState.RevocationRoot,
 		proof.Proof, revNonce, big.NewInt(0))
 	if !proofValid {
-		return proof, errors.New(fmt.Sprintf("proof validation failed. revNonce=%d", revNonce))
+		return proof, fmt.Errorf("proof validation failed. revNonce=%d", revNonce)
 	}
 
 	if proof.Proof.Existence {
@@ -1274,6 +1274,9 @@ func resolverOnChainRevocationStatus(ctx context.Context, cfg EnvConfig, id *cor
 	}
 
 	uri, err := url.Parse(status.ID)
+	if err != nil {
+		return circuits.MTProof{}, errors.New("OnChainCredentialStatus ID is not a valid URI")
+	}
 	contract := uri.Query().Get("contractAddress")
 	if contract == "" {
 		return circuits.MTProof{}, errors.New("OnChainCredentialStatus contract address is empty")
@@ -1292,8 +1295,8 @@ func resolverOnChainRevocationStatus(ctx context.Context, cfg EnvConfig, id *cor
 
 	if revocationNonceInt != status.RevocationNonce {
 		return circuits.MTProof{},
-			errors.New(fmt.Sprintf("revocation revocationNonce is not equal to the one in OnChainCredentialStatus ID"+
-				" {%d} {%d}", revocationNonceInt, status.RevocationNonce))
+			fmt.Errorf("revocation revocationNonce is not equal to the one in OnChainCredentialStatus ID"+
+				" {%d} {%d}", revocationNonceInt, status.RevocationNonce)
 	}
 
 	client, err := ethclient.Dial(cfg.EthereumURL)
@@ -1312,7 +1315,7 @@ func resolverOnChainRevocationStatus(ctx context.Context, cfg EnvConfig, id *cor
 		&bind.CallOpts{Context: ctx},
 		revocationNonceInt)
 	if err != nil {
-		return circuits.MTProof{}, errors.New(fmt.Sprintf("GetRevocationProof smart contract call, %s", err.Error()))
+		return circuits.MTProof{}, fmt.Errorf("GetRevocationProof smart contract call, %s", err.Error())
 	}
 
 	return toMerkleTreeProof(resp)

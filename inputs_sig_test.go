@@ -692,9 +692,9 @@ func TestAtomicQuerySigV2OnChainInputsFromJson(t *testing.T) {
 }
 
 func Test_resolverOnChainRevocationStatus(t *testing.T) {
-	//t.Skip("skipping test, this is for debugging OnchainRevocation status only")
+	t.Skip("skipping test, this is for debugging OnchainRevocation status only")
 	cfg := EnvConfig{
-		EthereumURL:       "https://polygon-mumbai.infura.io/v3/b936512326ea4e22a2a8552b6e9db7b7",
+		EthereumURL:       "<RPC>",
 		StateContractAddr: common.HexToAddress("0x66277D6E1Ad434772AF2A88de2901e3435Dbb8E6"),
 	}
 
