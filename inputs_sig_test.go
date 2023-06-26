@@ -188,7 +188,7 @@ func TestPrepareInputs(t *testing.T) {
 
 	t.Run("AtomicQueryMtpV2Onchain", func(t *testing.T) {
 		defer mockHttpClient(t, map[string]string{
-			`http://localhost:8545%%%{"jsonrpc":"2.0","id":1,"method":"eth_call","params":[{"data":"0xeb62ed0e00000000000000000000000000000000000000000000000000000000291bd4dc","from":"0x0000000000000000000000000000000000000000","to":"0xa5055e131a3544bfb4ea20cd269e6f738fae32b0"},"latest"]}`: "testdata/httpresp_eth_on_chain_status_resp.json",
+			`http://localhost:8545%%%{"jsonrpc":"2.0","id":1,"method":"eth_call","params":[{"data":"0x110c96a70008d1b032ae8f736f9e26cd20eab4bf44351a135e05a500000000000000120200000000000000000000000000000000000000000000000000000000291bd4dc","from":"0x0000000000000000000000000000000000000000","to":"0xa5055e131a3544bfb4ea20cd269e6f738fae32b0"},"latest"]}`: "testdata/httpresp_eth_on_chain_status_resp.json",
 			"https://www.w3.org/2018/credentials/v1": "testdata/httpresp_credentials_v1.json",
 			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/cbade52faccea8c386bab0129c0ffffa64393849/core" +
 				"/jsonld/iden3proofs.jsonld": "testdata/httpresp_iden3proofs.jsonld",
@@ -196,7 +196,7 @@ func TestPrepareInputs(t *testing.T) {
 		})()
 		cfg := EnvConfig{
 			EthereumURL:       "http://localhost:8545",
-			StateContractAddr: common.HexToAddress("0x66277D6E1Ad434772AF2A88de2901e3435Dbb8E6"),
+			StateContractAddr: common.HexToAddress("0xAD8148c2aB7fe91BD492783a37b9FC2d52B38903"),
 		}
 
 		doTest(t, "atomic_query_mtp_v2_on_chain_status_inputs.json",

@@ -17,7 +17,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-	identityBase "github.com/iden3/contracts-abi/identityBase/go/abi"
+	onchainABI "github.com/iden3/contracts-abi/onchain-credential-status-resolver/go/abi"
 	"github.com/iden3/contracts-abi/state/go/abi"
 	"github.com/iden3/go-circuits"
 	core "github.com/iden3/go-iden3-core"
@@ -1270,7 +1270,7 @@ func resolverOnChainRevocationStatus(ctx context.Context, cfg EnvConfig, id *cor
 
 	var zeroID core.ID
 	if id == nil || *id == zeroID {
-		return circuits.MTProof{}, errors.New("ID is empty")
+		return circuits.MTProof{}, errors.New("issuer ID is empty")
 	}
 
 	uri, err := url.Parse(status.ID)
@@ -1305,7 +1305,7 @@ func resolverOnChainRevocationStatus(ctx context.Context, cfg EnvConfig, id *cor
 	}
 	defer client.Close()
 
-	contractCaller, err := identityBase.NewIdentityBase(contractAddress, client)
+	contractCaller, err := onchainABI.NewOnchainCredentialStatusResolverCaller(contractAddress, client)
 	if err != nil {
 		return circuits.MTProof{}, err
 	}
@@ -1313,6 +1313,7 @@ func resolverOnChainRevocationStatus(ctx context.Context, cfg EnvConfig, id *cor
 	// TODO: it is not finial version of contract GetRevocationProof must accept issuer id as parameter
 	resp, err := contractCaller.GetRevocationStatus(
 		&bind.CallOpts{Context: ctx},
+		id.BigInt(),
 		revocationNonceInt)
 	if err != nil {
 		return circuits.MTProof{}, fmt.Errorf("GetRevocationProof smart contract call, %s", err.Error())
@@ -1321,7 +1322,7 @@ func resolverOnChainRevocationStatus(ctx context.Context, cfg EnvConfig, id *cor
 	return toMerkleTreeProof(resp)
 }
 
-func toMerkleTreeProof(status identityBase.IdentityBaseCredentialStatus) (circuits.MTProof, error) {
+func toMerkleTreeProof(status onchainABI.IOnchainCredentialStatusResolverCredentialStatus) (circuits.MTProof, error) {
 	var existence bool
 	var nodeAux *merkletree.NodeAux
 	var err error
