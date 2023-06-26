@@ -15,7 +15,10 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/iden3/go-circuits"
+	core "github.com/iden3/go-iden3-core"
+	"github.com/iden3/go-iden3-crypto/poseidon"
 	"github.com/iden3/go-merkletree-sql/v2"
+	"github.com/iden3/go-schema-processor/verifiable"
 	shell "github.com/ipfs/go-ipfs-api"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -182,6 +185,24 @@ func TestPrepareInputs(t *testing.T) {
 			require.Equal(t, wantVR, out.VerifiablePresentation)
 		}
 	}
+
+	t.Run("AtomicQueryMtpV2Onchain", func(t *testing.T) {
+		defer mockHttpClient(t, map[string]string{
+			`http://localhost:8545%%%{"jsonrpc":"2.0","id":1,"method":"eth_call","params":[{"data":"0x110c96a70008d1b032ae8f736f9e26cd20eab4bf44351a135e05a500000000000000120200000000000000000000000000000000000000000000000000000000291bd4dc","from":"0x0000000000000000000000000000000000000000","to":"0xa5055e131a3544bfb4ea20cd269e6f738fae32b0"},"latest"]}`: "testdata/httpresp_eth_on_chain_status_resp.json",
+			"https://www.w3.org/2018/credentials/v1": "testdata/httpresp_credentials_v1.json",
+			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/cbade52faccea8c386bab0129c0ffffa64393849/core" +
+				"/jsonld/iden3proofs.jsonld": "testdata/httpresp_iden3proofs.jsonld",
+			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v4.jsonld": "testdata/httpresp_kyc_v4.jsonld",
+		})()
+		cfg := EnvConfig{
+			EthereumURL:       "http://localhost:8545",
+			StateContractAddr: common.HexToAddress("0xAD8148c2aB7fe91BD492783a37b9FC2d52B38903"),
+		}
+
+		doTest(t, "atomic_query_mtp_v2_on_chain_status_inputs.json",
+			"atomic_query_mtp_v2_on_chain_status_output.json", AtomicQueryMtpV2InputsFromJson,
+			nil, cfg, "")
+	})
 
 	t.Run("AtomicQueryMtpV2InputsFromJson", func(t *testing.T) {
 		defer mockHttpClient(t, map[string]string{
@@ -668,4 +689,49 @@ func TestAtomicQuerySigV2OnChainInputsFromJson(t *testing.T) {
 		}),
 	}
 	require.Equal(t, &wantGistProof, obj.GistProof)
+}
+
+func Test_resolverOnChainRevocationStatus(t *testing.T) {
+	t.Skip("skipping test, this is for debugging OnchainRevocation status only")
+	cfg := EnvConfig{
+		EthereumURL:       "<RPC>",
+		StateContractAddr: common.HexToAddress("0x66277D6E1Ad434772AF2A88de2901e3435Dbb8E6"),
+	}
+
+	did, _ := core.ParseDID("did:polygonid:polygon:mumbai:2qCU58EJgrEM9Lvkv6vTqkybetLHDL4yfpRNS32eas")
+	id := did.ID
+	status := &verifiable.CredentialStatus{
+		ID:              "did:polygonid:polygon:mumbai:2qCU58EJgrEM9Lvkv6vTqkybetLHDL4yfpRNS32eas/credentialStatus?revocationNonce=689689820&contractAddress=80001:0xA5055e131A3544BfB4eA20CD269e6f738fAE32B0",
+		Type:            "Iden3OnchainSparseMerkleTreeProof2023",
+		RevocationNonce: 689689820,
+	}
+
+	got, err := resolverOnChainRevocationStatus(context.Background(), cfg, &id, status)
+	require.NoError(t, err)
+
+	proofJson, _ := json.Marshal(got)
+	fmt.Println(string(proofJson))
+
+	fmt.Printf("%+v\n", got.TreeState)
+	fmt.Println("RevTreeRoot : ", got.TreeState.RevocationRoot.BigInt())
+
+	root, _ := merkletree.RootFromProof(got.Proof, big.NewInt(689689820), big.NewInt(0))
+	fmt.Println("Root : ", root.BigInt())
+
+	// ????
+	nonce, b := new(big.Int).SetString("689689820", 10)
+	require.True(t, b)
+
+	fmt.Printf("Proof %+v\n", got.Proof)
+
+	proofValid := merkletree.VerifyProof(got.TreeState.RevocationRoot,
+		got.Proof, nonce, big.NewInt(0))
+
+	require.True(t, proofValid)
+
+	state, _ := poseidon.Hash([]*big.Int{got.TreeState.ClaimsRoot.BigInt(), got.TreeState.RevocationRoot.BigInt(),
+		got.TreeState.RootOfRoots.BigInt()})
+
+	fmt.Println("State : ", state)
+	require.Equal(t, state, got.TreeState.State.BigInt())
 }

@@ -10,12 +10,14 @@ import (
 	"math/big"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
+	onchainABI "github.com/iden3/contracts-abi/onchain-credential-status-resolver/go/abi"
 	"github.com/iden3/contracts-abi/state/go/abi"
 	"github.com/iden3/go-circuits"
 	core "github.com/iden3/go-iden3-core"
@@ -259,7 +261,7 @@ func buildAndValidateCredentialStatus(ctx context.Context, cfg EnvConfig,
 	proofValid := merkletree.VerifyProof(proof.TreeState.RevocationRoot,
 		proof.Proof, revNonce, big.NewInt(0))
 	if !proofValid {
-		return proof, errors.New("proof validation failed")
+		return proof, fmt.Errorf("proof validation failed. revNonce=%d", revNonce)
 	}
 
 	if proof.Proof.Existence {
@@ -1129,6 +1131,8 @@ func claimWithMtpProofFromObj(ctx context.Context, cfg EnvConfig,
 			return out, err
 		}
 
+	} else if proofI = findProofByType(w3cCred, verifiable.ProofType(verifiable.Iden3OnchainSparseMerkleTreeProof2023)); proofI != nil {
+
 	} else {
 		return out, fmt.Errorf("no %v proofs found",
 			verifiable.Iden3SparseMerkleTreeProofType)
@@ -1207,6 +1211,9 @@ func resolveRevStatus(ctx context.Context,
 		}
 		return resolveRevStatusFromRHS(ctx, cfg, issuerID, revNonce)
 	case *verifiable.CredentialStatus:
+		if status.Type == verifiable.Iden3OnchainSparseMerkleTreeProof2023 {
+			return resolverOnChainRevocationStatus(ctx, cfg, issuerID, status)
+		}
 		return resolveRevocationStatusFromIssuerService(ctx, status.ID)
 	case verifiable.RHSCredentialStatus:
 		return resolveRevStatus(ctx, cfg, &status, issuerID)
@@ -1228,6 +1235,8 @@ func resolveRevStatus(ctx context.Context,
 			s = &verifiable.RHSCredentialStatus{}
 		case verifiable.SparseMerkleTreeProof:
 			s = &verifiable.CredentialStatus{}
+		case verifiable.Iden3OnchainSparseMerkleTreeProof2023:
+			s = &verifiable.CredentialStatus{}
 		default:
 			return circuits.MTProof{}, fmt.Errorf(
 				"credential status type %s id not supported",
@@ -1244,6 +1253,151 @@ func resolveRevStatus(ctx context.Context,
 		return circuits.MTProof{},
 			errors.New("unknown credential status format")
 	}
+}
+
+// Currently, our library does not have a Close function. As a result, we
+// create and destroy an Ethereum client for each usage of this function.
+// Although this approach may be inefficient, it is acceptable if the function
+// is rarely called. If this becomes an issue in the future, or if a Close
+// function is implemented, we will need to refactor this function to use a
+// global Ethereum client.
+func resolverOnChainRevocationStatus(ctx context.Context, cfg EnvConfig, id *core.ID,
+	status *verifiable.CredentialStatus) (circuits.MTProof, error) {
+
+	if cfg.EthereumURL == "" {
+		return circuits.MTProof{}, errors.New("ethereum url is empty")
+	}
+
+	var zeroID core.ID
+	if id == nil || *id == zeroID {
+		return circuits.MTProof{}, errors.New("issuer ID is empty")
+	}
+
+	uri, err := url.Parse(status.ID)
+	if err != nil {
+		return circuits.MTProof{}, errors.New("OnChainCredentialStatus ID is not a valid URI")
+	}
+	contract := uri.Query().Get("contractAddress")
+	if contract == "" {
+		return circuits.MTProof{}, errors.New("OnChainCredentialStatus contract address is empty")
+	}
+	contractAddress := common.HexToAddress(strings.Split(contract, ":")[1])
+
+	revocationNonce := uri.Query().Get("revocationNonce")
+	if revocationNonce == "" {
+		return circuits.MTProof{}, errors.New("revocationNonce is empty in OnChainCredentialStatus ID")
+	}
+
+	revocationNonceInt, err := strconv.ParseUint(revocationNonce, 10, 64)
+	if err != nil {
+		return circuits.MTProof{}, errors.New("revocationNonce is not a number in OnChainCredentialStatus ID")
+	}
+
+	if revocationNonceInt != status.RevocationNonce {
+		return circuits.MTProof{},
+			fmt.Errorf("revocation revocationNonce is not equal to the one in OnChainCredentialStatus ID"+
+				" {%d} {%d}", revocationNonceInt, status.RevocationNonce)
+	}
+
+	client, err := ethclient.Dial(cfg.EthereumURL)
+	if err != nil {
+		return circuits.MTProof{}, err
+	}
+	defer client.Close()
+
+	contractCaller, err := onchainABI.NewOnchainCredentialStatusResolverCaller(contractAddress, client)
+	if err != nil {
+		return circuits.MTProof{}, err
+	}
+
+	// TODO: it is not finial version of contract GetRevocationProof must accept issuer id as parameter
+	resp, err := contractCaller.GetRevocationStatus(
+		&bind.CallOpts{Context: ctx},
+		id.BigInt(),
+		revocationNonceInt)
+	if err != nil {
+		return circuits.MTProof{}, fmt.Errorf("GetRevocationProof smart contract call, %s", err.Error())
+	}
+
+	return toMerkleTreeProof(resp)
+}
+
+func toMerkleTreeProof(status onchainABI.IOnchainCredentialStatusResolverCredentialStatus) (circuits.MTProof, error) {
+	var existence bool
+	var nodeAux *merkletree.NodeAux
+	var err error
+
+	if status.Mtp.Existence {
+		existence = true
+	} else {
+		existence = false
+		if status.Mtp.AuxExistence {
+			nodeAux = &merkletree.NodeAux{}
+			nodeAux.Key, err = merkletree.NewHashFromBigInt(status.Mtp.AuxIndex)
+			if err != nil {
+				return circuits.MTProof{}, errors.New("aux index is not a number")
+			}
+			nodeAux.Value, err = merkletree.NewHashFromBigInt(status.Mtp.AuxValue)
+			if err != nil {
+				return circuits.MTProof{}, errors.New("aux value is not a number")
+			}
+		}
+	}
+
+	//allSiblings := make([]*merkletree.Hash, len(status.Mtp.Siblings))
+	depth := calculateDepth(status.Mtp.Siblings)
+	allSiblings := make([]*merkletree.Hash, depth)
+	for i := 0; i < depth; i++ {
+		sh, err2 := merkletree.NewHashFromBigInt(status.Mtp.Siblings[i])
+		if err2 != nil {
+			return circuits.MTProof{}, errors.New("sibling is not a number")
+		}
+		allSiblings[i] = sh
+	}
+
+	proof, err := merkletree.NewProofFromData(existence, allSiblings, nodeAux)
+	if err != nil {
+		return circuits.MTProof{}, errors.New("failed to create proof")
+	}
+
+	state, err := merkletree.NewHashFromBigInt(status.Issuer.State)
+	if err != nil {
+		return circuits.MTProof{}, errors.New("state is not a number")
+	}
+
+	claimsRoot, err := merkletree.NewHashFromBigInt(status.Issuer.ClaimsTreeRoot)
+	if err != nil {
+		return circuits.MTProof{}, errors.New("state is not a number")
+	}
+
+	revocationRoot, err := merkletree.NewHashFromBigInt(status.Issuer.RevocationTreeRoot)
+	if err != nil {
+		return circuits.MTProof{}, errors.New("state is not a number")
+	}
+
+	rootOfRoots, err := merkletree.NewHashFromBigInt(status.Issuer.RootOfRoots)
+	if err != nil {
+		return circuits.MTProof{}, errors.New("state is not a number")
+	}
+
+	return circuits.MTProof{
+		Proof: proof,
+		TreeState: circuits.TreeState{
+			State:          state,
+			ClaimsRoot:     claimsRoot,
+			RevocationRoot: revocationRoot,
+			RootOfRoots:    rootOfRoots,
+		},
+	}, nil
+}
+
+func calculateDepth(siblings []*big.Int) int {
+	for i := len(siblings) - 1; i >= 0; i-- {
+		if siblings[i].Cmp(big.NewInt(0)) != 0 {
+			return i + 1
+		}
+	}
+	return 0
 }
 
 type EnvConfig struct {
