@@ -8,7 +8,7 @@ require (
 	github.com/iden3/go-circuits v1.0.2
 	github.com/iden3/go-iden3-core v1.0.2
 	github.com/iden3/go-iden3-crypto v0.0.15
-	github.com/iden3/go-merkletree-sql/v2 v2.0.4
+	github.com/iden3/go-merkletree-sql/v2 v2.0.6
 	github.com/iden3/go-schema-processor v1.3.1
 	github.com/iden3/merkletree-proof v0.0.2
 	github.com/ipfs/go-ipfs-api v0.6.0
