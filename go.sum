@@ -73,8 +73,6 @@ github.com/holiman/uint256 v1.2.2-0.20230321075855-87b91420868c h1:DZfsyhDK1hnSS
 github.com/holiman/uint256 v1.2.2-0.20230321075855-87b91420868c/go.mod h1:SC8Ryt4n+UBbPbIBKaG9zbbDlp4jOru9xFZmPzLUTxw=
 github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpOxQnU=
 github.com/huin/goupnp v1.0.3 h1:N8No57ls+MnjlB+JPiCVSOyy/ot7MJTqlo7rn+NYSqQ=
-github.com/iden3/contracts-abi/identityBase/go/abi v0.0.0-20230621153633-7549c4edaf16 h1:ZK0P87QMoUejpFAJ3egkAKj3IpSCtRRf/ztgZGcFQW4=
-github.com/iden3/contracts-abi/identityBase/go/abi v0.0.0-20230621153633-7549c4edaf16/go.mod h1:VazDjFNz60ZVIZ0twlDRbW+4xp3IE+rLTbJQWSm11cQ=
 github.com/iden3/contracts-abi/onchain-credential-status-resolver/go/abi v0.0.0-20230623092404-d47a0a434f65 h1:K8dUsVWB2FMSK/4+Vyg3U6khNGkGFzJChJmcGNjm/KY=
 github.com/iden3/contracts-abi/onchain-credential-status-resolver/go/abi v0.0.0-20230623092404-d47a0a434f65/go.mod h1:8fkd2xyUG/V7ovpvZRyD2LyK2zZ4ALbgf5vJGyhzKdg=
 github.com/iden3/contracts-abi/state/go/abi v0.0.0-20230405152923-4a25f6f1f0f4 h1:iPvYa/AhhGo3juoUFDm/fBE2CZKy4WfQu7JY90tRf9Q=
@@ -85,8 +83,8 @@ github.com/iden3/go-iden3-core v1.0.2 h1:HwNDFeqcUv4ybZj5tH+58JKWKarn/qqBpNCqTLx
 github.com/iden3/go-iden3-core v1.0.2/go.mod h1:X4PjlJG8OsEQEsSbzzYqqAk2olYGZ2nuGqiUPyEYjOo=
 github.com/iden3/go-iden3-crypto v0.0.15 h1:4MJYlrot1l31Fzlo2sF56u7EVFeHHJkxGXXZCtESgK4=
 github.com/iden3/go-iden3-crypto v0.0.15/go.mod h1:dLpM4vEPJ3nDHzhWFXDjzkn1qHoBeOT/3UEhXsEsP3E=
-github.com/iden3/go-merkletree-sql/v2 v2.0.4 h1:Dp089P3YNX1BE8+T1tKQHWTtnk84Y/Kr7ZAGTqwscoY=
-github.com/iden3/go-merkletree-sql/v2 v2.0.4/go.mod h1:kRhHKYpui5DUsry5RpveP6IC4XMe6iApdV9VChRYuEk=
+github.com/iden3/go-merkletree-sql/v2 v2.0.6 h1:vsVDImnvnHf7Ggr45ptFOXJyWNA/8IwVQO1jzRLUlY8=
+github.com/iden3/go-merkletree-sql/v2 v2.0.6/go.mod h1:kRhHKYpui5DUsry5RpveP6IC4XMe6iApdV9VChRYuEk=
 github.com/iden3/go-schema-processor v1.3.1 h1:LJfFInfYGMOp0bTKKC17R8q4XI+VtqhFLPTEqnOIvlM=
 github.com/iden3/go-schema-processor v1.3.1/go.mod h1:NwJ1nuGdRlCFaN1/V6mS0AOAdvpLcGf4KKq0mluLG7U=
 github.com/iden3/merkletree-proof v0.0.2 h1:a6At2Mm/fEnC8MjsgAmTSrgVsTsKuWGNwdsDU0otJC4=

@@ -4,11 +4,12 @@ go 1.19
 
 require (
 	github.com/ethereum/go-ethereum v1.12.0
+	github.com/iden3/contracts-abi/onchain-credential-status-resolver/go/abi v0.0.0-20230623092404-d47a0a434f65
 	github.com/iden3/contracts-abi/state/go/abi v0.0.0-20230405152923-4a25f6f1f0f4
 	github.com/iden3/go-circuits v1.0.2
 	github.com/iden3/go-iden3-core v1.0.2
 	github.com/iden3/go-iden3-crypto v0.0.15
-	github.com/iden3/go-merkletree-sql/v2 v2.0.4
+	github.com/iden3/go-merkletree-sql/v2 v2.0.6
 	github.com/iden3/go-schema-processor v1.3.1
 	github.com/iden3/merkletree-proof v0.0.2
 	github.com/ipfs/go-ipfs-api v0.6.0
@@ -31,7 +32,6 @@ require (
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/holiman/uint256 v1.2.2-0.20230321075855-87b91420868c // indirect
-	github.com/iden3/contracts-abi/onchain-credential-status-resolver/go/abi v0.0.0-20230623092404-d47a0a434f65 // indirect
 	github.com/ipfs/boxo v0.8.0 // indirect
 	github.com/ipfs/go-cid v0.4.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.3 // indirect
