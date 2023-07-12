@@ -493,6 +493,16 @@ func verifiablePresentationFromCred(ctx context.Context,
 	return
 }
 
+func mkVPObj(field string, value any) (string, any) {
+	idx := strings.Index(field, ".")
+	if idx == -1 {
+		return field, value
+	}
+
+	nestedField, value := mkVPObj(field[idx+1:], value)
+	return field[:idx], map[string]any{nestedField: value}
+}
+
 func fmtVerifiablePresentation(context string, tp string, field string,
 	value any) map[string]any {
 
@@ -509,6 +519,9 @@ func fmtVerifiablePresentation(context string, tp string, field string,
 	if tp != "VerifiableCredential" {
 		vcTypes = append(vcTypes, tp)
 	}
+
+	// if field name is a dot-separated path, create nested object from it.
+	field, value = mkVPObj(field, value)
 
 	return map[string]any{
 		"@context": baseContext,

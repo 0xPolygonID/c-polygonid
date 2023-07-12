@@ -536,6 +536,50 @@ func TestPrepareInputs(t *testing.T) {
 				"", AtomicQuerySigV2InputsFromJson, nil, cfg,
 				"credential is revoked")
 		})
+
+	t.Run("AtomicQuerySigV2InputsFromJson Nested Disclosure", func(t *testing.T) {
+
+		ipfsURL := os.Getenv("IPFS_URL")
+		if ipfsURL == "" {
+			t.Skip("IPFS_URL is not set")
+		}
+
+		cid := uploadIPFSFile(t, ipfsURL, "testdata/ipfs_QmcAJCriUKiU4WQogfhqpi6j8S8XTmZdmg7hpaVr4eGynW.json-ld")
+		// CID should correspond to the URL
+		require.Equal(t, "QmcAJCriUKiU4WQogfhqpi6j8S8XTmZdmg7hpaVr4eGynW", cid)
+
+		defer mockHttpClient(t, map[string]string{
+			"https://www.w3.org/2018/credentials/v1": "testdata/httpresp_credentials_v1.json",
+			"https://dev.polygonid.me/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qLPqvayNQz9TA2r5VPxUugoF18teGU583zJ859wfy/claims/revocation/status/214490175":  "testdata/httpresp_rev_status_214490175.json",
+			"https://dev.polygonid.me/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qLPqvayNQz9TA2r5VPxUugoF18teGU583zJ859wfy/claims/revocation/status/2575161389": "testdata/httpresp_rev_status_2575161389.json",
+			"https://schema.iden3.io/core/jsonld/iden3proofs.jsonld": "testdata/httpresp_iden3proofs.jsonld",
+		})()
+
+		wantVerifiablePresentation := map[string]any{
+			"@context": []any{"https://www.w3.org/2018/credentials/v1"},
+			"@type":    "VerifiablePresentation",
+			"verifiableCredential": map[string]any{
+				"@context": []any{
+					"https://www.w3.org/2018/credentials/v1",
+					"ipfs://QmcAJCriUKiU4WQogfhqpi6j8S8XTmZdmg7hpaVr4eGynW",
+				},
+				"@type": []any{"VerifiableCredential", "DeliveryAddress"},
+				"credentialSubject": map[string]any{
+					"@type": "DeliveryAddress",
+					"postalProviderInformation": map[string]any{
+						"address1": map[string]any{
+							"name": "addressName",
+						},
+					},
+				},
+			},
+		}
+
+		doTest(t, "atomic_query_sig_v2_nested_selective_disclosure_inputs.json",
+			"atomic_query_sig_v2_nested_selective_disclosure_output.json",
+			AtomicQuerySigV2InputsFromJson, wantVerifiablePresentation,
+			EnvConfig{IPFSNodeURL: ipfsURL}, "")
+	})
 }
 
 func TestEnvConfig_UnmarshalJSON(t *testing.T) {
