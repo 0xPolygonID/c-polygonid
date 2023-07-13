@@ -1,0 +1,97 @@
+{
+  "id": "2qMELfwwoRkhwjNh4qbZekm7rFddwWb2rTcHYkCh63",
+  "profileNonce": "123",
+  "claimSubjectProfileNonce": "234",
+  "verifiableCredentials": {
+    "id": "https://dev.polygonid.me/api/v1/identities/did:polygonid:polygon:mumbai:2qLPqvayNQz9TA2r5VPxUugoF18teGU583zJ859wfy/claims/9b401f13-20b1-11ee-9b72-0242ac1d0007",
+    "@context": [
+      "https://www.w3.org/2018/credentials/v1",
+      "https://schema.iden3.io/core/jsonld/iden3proofs.jsonld",
+      "ipfs://QmcAJCriUKiU4WQogfhqpi6j8S8XTmZdmg7hpaVr4eGynW"
+    ],
+    "type": [
+      "VerifiableCredential",
+      "DeliveryAddress"
+    ],
+    "expirationDate": "2030-01-07T00:00:00Z",
+    "issuanceDate": "2023-07-12T12:42:48.103469079Z",
+    "credentialSubject": {
+      "deliveryTime": "2022-02-02T00:00:00Z",
+      "homeAddress": {
+        "line1": "l1",
+        "line2": "l2"
+      },
+      "id": "did:polygonid:polygon:mumbai:2qMELfwwoRkhwjNh4qbZekm7rFddwWb2rTcHYkCh63",
+      "isPostalProvider": true,
+      "postalProviderInformation": {
+        "address1": {
+          "name": "addressName"
+        },
+        "name": "n1",
+        "officeNo": 123
+      },
+      "price": 3.1,
+      "type": "DeliveryAddress"
+    },
+    "credentialStatus": {
+      "id": "https://dev.polygonid.me/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qLPqvayNQz9TA2r5VPxUugoF18teGU583zJ859wfy/claims/revocation/status/214490175",
+      "revocationNonce": 214490175,
+      "type": "SparseMerkleTreeProof"
+    },
+    "issuer": "did:polygonid:polygon:mumbai:2qLPqvayNQz9TA2r5VPxUugoF18teGU583zJ859wfy",
+    "credentialSchema": {
+      "id": "ipfs://QmX1aAdypawZoVXZ2YT8fHgapeRtDhnP96vPg2Btoe1Ujz",
+      "type": "JsonSchema2023"
+    },
+    "proof": [
+      {
+        "type": "BJJSignature2021",
+        "issuerData": {
+          "id": "did:polygonid:polygon:mumbai:2qLPqvayNQz9TA2r5VPxUugoF18teGU583zJ859wfy",
+          "state": {
+            "txId": "0xde8c8e234e9e4c159b9ce6361234c15eaaa123bddf15f395489a75e634e11182",
+            "blockTimestamp": 1683792462,
+            "blockNumber": 35452981,
+            "rootOfRoots": "03beaa14074a91698084d2dc077067babb8334584a7d73a047e6b238341b581d",
+            "claimsTreeRoot": "a5faef8b1fc67f65c55ad667919e51abfed008ca97475c41b26a5e70fd4c4a0a",
+            "revocationTreeRoot": "0000000000000000000000000000000000000000000000000000000000000000",
+            "value": "5ab768f8f2ec3f94e6830908fbf428ca3386ff87a5e704fcd1f11cae3420611f"
+          },
+          "authCoreClaim": "cca3371a6cb1b715004407e325bd993c080000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000e3b9e422feb1dcf83882b33bddf3c9a64d300e2280e9c286bb75839c824ace27c5560b8ca92be27698a14f6970c32731e73768d74fe83d0fd4f16f14b4402d242dd87d9900000000281cdcdf0200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+          "mtp": {
+            "existence": true,
+            "siblings": [
+              "16600125203338042323361216512603158366636445287571403125891881295088432028008",
+              "11315256355804790111057838658876672619892914293003422319088357823149445991751",
+              "5953630948937947438067785504646477838099205855387889079750411149043045455341",
+              "7144700925452824210038939338852356191428773494854012082867969138805603048585",
+              "3921545027306074721354497759643961758048633515411954472382458013486548057049",
+              "0",
+              "0",
+              "5436254548464410857916946211162171910597645182542037135954554779197265908702"
+            ]
+          },
+          "credentialStatus": {
+            "id": "https://dev.polygonid.me/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qLPqvayNQz9TA2r5VPxUugoF18teGU583zJ859wfy/claims/revocation/status/2575161389",
+            "revocationNonce": 2575161389,
+            "type": "SparseMerkleTreeProof"
+          }
+        },
+        "coreClaim": "2feab48f30556e1d360007ba70de6c0b2a0000000000000000000000000000000212c10920c6b9e7785793a5476724d306bca0d820017ea61b5f6886534a0c002b5c94984280d3e02c5bc84e404894ac2fa978d36d6c5fbb8b169a4e754ef72b00000000000000000000000000000000000000000000000000000000000000003fdcc80c0000000080c1e3700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "signature": "f0bf038137d09c57fe214d74262320137bbb83c83ed827bb7f376d29ac7a441743ee46521e54735fc9e33ece2b1624f3c767a1567f84e011aa02b8c83ba37201"
+      }
+    ]
+  },
+  "request": {
+    "id": 84239,
+    "circuitId": "credentialAtomicQuerySigV2",
+    "query": {
+      "allowedIssuers": "unused",
+      "context": "ipfs://QmcAJCriUKiU4WQogfhqpi6j8S8XTmZdmg7hpaVr4eGynW",
+      "type": "DeliveryAddress",
+      "credentialSubject": {
+        "postalProviderInformation.address1.name": {}
+      }
+    }
+  }
+}
