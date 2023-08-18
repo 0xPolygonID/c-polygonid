@@ -1413,10 +1413,46 @@ func calculateDepth(siblings []*big.Int) int {
 	return 0
 }
 
+type ChainConfig struct {
+	EthereumURL       string
+	StateContractAddr common.Address
+}
+
+type PerChainConfig map[uint64]ChainConfig
+
+func (p *PerChainConfig) UnmarshalJSON(bytes []byte) error {
+	if (*p) == nil {
+		*p = make(PerChainConfig)
+	}
+	var o map[string]ChainConfig
+	err := json.Unmarshal(bytes, &o)
+	if err != nil {
+		return err
+	}
+	for k, v := range o {
+		var chainID uint64
+		if strings.HasPrefix(k, "0x") ||
+			strings.HasPrefix(k, "0X") {
+			chainID, err = strconv.ParseUint(k[2:], 16, 64)
+			if err != nil {
+				return err
+			}
+		} else {
+			chainID, err = strconv.ParseUint(k, 10, 64)
+			if err != nil {
+				return err
+			}
+		}
+		(*p)[chainID] = v
+	}
+	return nil
+}
+
 type EnvConfig struct {
-	EthereumURL           string
-	StateContractAddr     common.Address
-	ReverseHashServiceUrl string // deprecated
+	ChainConfigs          PerChainConfig
+	EthereumURL           string         // Deprecated: Use ChainConfigs instead
+	StateContractAddr     common.Address // Deprecated: Use ChainConfigs instead
+	ReverseHashServiceUrl string         // Deprecated
 	IPFSNodeURL           string
 }
 
