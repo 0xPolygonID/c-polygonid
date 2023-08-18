@@ -10,6 +10,7 @@
         "@context": {
           "@version": 1.1,
           "@protected": true,
+          "iden3_serialization": "iden3:v1:slotIndexA=birthday&slotIndexB=documentType",
           "id": "@id",
           "type": "@type",
           "kyc-vocab": "https://github.com/iden3/claim-schema-vocab/blob/main/credentials/kyc.md#",

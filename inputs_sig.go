@@ -19,17 +19,18 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	onchainABI "github.com/iden3/contracts-abi/onchain-credential-status-resolver/go/abi"
 	"github.com/iden3/contracts-abi/state/go/abi"
-	"github.com/iden3/go-circuits"
-	core "github.com/iden3/go-iden3-core"
+	"github.com/iden3/go-circuits/v2"
+	core "github.com/iden3/go-iden3-core/v2"
+	"github.com/iden3/go-iden3-core/v2/w3c"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/iden3/go-iden3-crypto/poseidon"
 	"github.com/iden3/go-iden3-crypto/utils"
 	"github.com/iden3/go-merkletree-sql/v2"
-	json2 "github.com/iden3/go-schema-processor/json"
-	"github.com/iden3/go-schema-processor/loaders"
-	"github.com/iden3/go-schema-processor/merklize"
-	"github.com/iden3/go-schema-processor/processor"
-	"github.com/iden3/go-schema-processor/verifiable"
+	json2 "github.com/iden3/go-schema-processor/v2/json"
+	"github.com/iden3/go-schema-processor/v2/loaders"
+	"github.com/iden3/go-schema-processor/v2/merklize"
+	"github.com/iden3/go-schema-processor/v2/processor"
+	"github.com/iden3/go-schema-processor/v2/verifiable"
 	mp "github.com/iden3/merkletree-proof"
 	shell "github.com/ipfs/go-ipfs-api"
 	"github.com/piprate/json-gold/ld"
@@ -201,12 +202,15 @@ func claimWithSigProofFromObj(ctx context.Context, cfg EnvConfig,
 	if !ok {
 		return out, errors.New("proof is not of type BJJSignatureProof2021")
 	}
-	issuerDID, err := core.ParseDID(proof.IssuerData.ID)
+	issuerDID, err := w3c.ParseDID(proof.IssuerData.ID)
 	if err != nil {
 		return out, err
 	}
-
-	out.IssuerID = &issuerDID.ID
+	issuerID, err := core.IDFromDID(*issuerDID)
+	if err != nil {
+		return out, err
+	}
+	out.IssuerID = &issuerID
 	out.Claim, err = proof.GetCoreClaim()
 	if err != nil {
 		return out, err
@@ -427,8 +431,7 @@ func AtomicQueryMtpV2InputsFromJson(ctx context.Context, cfg EnvConfig,
 	}
 
 	inpMarsh.Query, out.VerifiablePresentation, err = queryFromObj(ctx, w3cCred,
-		obj.Request, inpMarsh.Claim.Claim, cfg.IPFSNodeURL,
-		cfg.documentLoader())
+		obj.Request, inpMarsh.Claim.Claim, cfg.documentLoader())
 	if err != nil {
 		return out, err
 	}
@@ -581,8 +584,7 @@ func AtomicQuerySigV2InputsFromJson(ctx context.Context, cfg EnvConfig,
 	}
 
 	inpMarsh.Query, out.VerifiablePresentation, err = queryFromObj(ctx, w3cCred,
-		obj.Request, inpMarsh.Claim.Claim, cfg.IPFSNodeURL,
-		cfg.documentLoader())
+		obj.Request, inpMarsh.Claim.Claim, cfg.documentLoader())
 	if err != nil {
 		return out, err
 	}
@@ -660,8 +662,7 @@ func AtomicQueryMtpV2OnChainInputsFromJson(ctx context.Context, cfg EnvConfig,
 	}
 
 	inpMarsh.Query, out.VerifiablePresentation, err = queryFromObj(ctx, w3cCred,
-		obj.Request, inpMarsh.Claim.Claim, cfg.IPFSNodeURL,
-		cfg.documentLoader())
+		obj.Request, inpMarsh.Claim.Claim, cfg.documentLoader())
 	if err != nil {
 		return out, err
 	}
@@ -739,8 +740,7 @@ func AtomicQuerySigV2OnChainInputsFromJson(ctx context.Context, cfg EnvConfig,
 	}
 
 	inpMarsh.Query, out.VerifiablePresentation, err = queryFromObj(ctx, w3cCred,
-		obj.Request, inpMarsh.Claim.Claim, cfg.IPFSNodeURL,
-		cfg.documentLoader())
+		obj.Request, inpMarsh.Claim.Claim, cfg.documentLoader())
 	if err != nil {
 		return out, err
 	}
@@ -797,7 +797,6 @@ func querySkipRevocation(requestObj jsonObj) (bool, error) {
 
 func queryFromObj(ctx context.Context, w3cCred verifiable.W3CCredential,
 	requestObj jsonObj, claim *core.Claim,
-	ipfsNodeURL string,
 	documentLoader ld.DocumentLoader) (out circuits.Query,
 	verifiablePresentation jsonObj, err error) {
 
@@ -807,52 +806,22 @@ func queryFromObj(ctx context.Context, w3cCred verifiable.W3CCredential,
 	}
 
 	if merklizePosition == core.MerklizedRootPositionNone {
-		return queryFromObjNonMerklized(ctx, w3cCred, requestObj, ipfsNodeURL,
+		return queryFromObjNonMerklized(ctx, w3cCred, requestObj,
 			documentLoader)
 	}
 
 	return queryFromObjMerklized(ctx, w3cCred, requestObj, documentLoader)
 }
 
-func getSchemaLoader(schemaURL string,
-	ipfsNodeURL string) (processor.SchemaLoader, error) {
-
-	u, err := url.Parse(schemaURL)
-	if err != nil {
-		return nil, err
-	}
-	switch u.Scheme {
-	case "http", "https":
-		return &loaders.HTTP{URL: schemaURL}, nil
-	case "ipfs":
-		if ipfsNodeURL == "" {
-			return nil, errors.New("IPFS is not configured")
-		}
-		return loaders.IPFS{URL: ipfsNodeURL, CID: u.Host}, nil
-	default:
-		return nil, fmt.Errorf("loader for %s is not supported", u.Scheme)
-	}
-}
-
 func queryFromObjNonMerklized(ctx context.Context,
 	w3cCred verifiable.W3CCredential, requestObj jsonObj,
-	ipfsNodeURL string, documentLoader ld.DocumentLoader) (out circuits.Query,
+	documentLoader ld.DocumentLoader) (out circuits.Query,
 	verifiablePresentation jsonObj, err error) {
 
-	loader, err := getSchemaLoader(w3cCred.CredentialSchema.ID, ipfsNodeURL)
-	if err != nil {
-		return out, nil, err
-	}
-
 	pr := processor.InitProcessorOptions(&processor.Processor{
-		SchemaLoader: loader,
-		Parser:       json2.Parser{},
+		DocumentLoader: documentLoader,
+		Parser:         json2.Parser{},
 	})
-
-	schema, _, err := pr.Load(ctx)
-	if err != nil {
-		return out, nil, err
-	}
 
 	field, op, err := getQueryFieldAndOperator(requestObj)
 	if errors.As(err, &errPathNotFound{}) {
@@ -864,7 +833,17 @@ func queryFromObjNonMerklized(ctx context.Context,
 			fmt.Errorf("unable to extract field from query: %w", err)
 	}
 
-	out.SlotIndex, err = pr.GetFieldSlotIndex(field, schema)
+	schemaURL, typeName, err := getQuerySchemaAndType(requestObj)
+	if err != nil {
+		return out, nil, err
+	}
+
+	schema, err := pr.Load(ctx, schemaURL)
+	if err != nil {
+		return out, nil, err
+	}
+
+	out.SlotIndex, err = pr.GetFieldSlotIndex(field, typeName, schema)
 	if err != nil {
 		return out, nil, err
 	}
@@ -906,6 +885,18 @@ func queryFromObjNonMerklized(ctx context.Context,
 	}
 
 	return out, verifiablePresentation, nil
+}
+
+func getQuerySchemaAndType(requestObj jsonObj) (string, string, error) {
+	typeName, err := stringByPath(requestObj, "query.type")
+	if err != nil {
+		return "", "", err
+	}
+	schemaURL, err := stringByPath(requestObj, "query.context")
+	if err != nil {
+		return "", "", err
+	}
+	return schemaURL, typeName, nil
 }
 
 func queryFromObjMerklized(ctx context.Context,
@@ -1107,7 +1098,7 @@ func claimWithMtpProofFromObj(ctx context.Context, cfg EnvConfig,
 	var out circuits.ClaimWithMTPProof
 	var err error
 	var proofI verifiable.CredentialProof
-	var issuerDID *core.DID
+	var issuerDID *w3c.DID
 
 	if proofI = findProofByType(w3cCred,
 		verifiable.Iden3SparseMerkleTreeProofType); proofI != nil {
@@ -1116,7 +1107,7 @@ func claimWithMtpProofFromObj(ctx context.Context, cfg EnvConfig,
 		if !ok {
 			return out, errors.New("proof is not a sparse merkle proof")
 		}
-		issuerDID, err = core.ParseDID(proof.IssuerData.ID)
+		issuerDID, err = w3c.ParseDID(proof.IssuerData.ID)
 		if err != nil {
 			return out, err
 		}
@@ -1134,7 +1125,7 @@ func claimWithMtpProofFromObj(ctx context.Context, cfg EnvConfig,
 		if !ok {
 			return out, errors.New("proof is not a sparse merkle proof")
 		}
-		issuerDID, err = core.ParseDID(proof.IssuerData.ID)
+		issuerDID, err = w3c.ParseDID(proof.IssuerData.ID)
 		if err != nil {
 			return out, err
 		}
@@ -1151,10 +1142,11 @@ func claimWithMtpProofFromObj(ctx context.Context, cfg EnvConfig,
 			verifiable.Iden3SparseMerkleTreeProofType)
 	}
 
-	out.IssuerID = &issuerDID.ID
+	issuerID, err := core.IDFromDID(*issuerDID)
 	if err != nil {
 		return out, err
 	}
+	out.IssuerID = &issuerID
 
 	out.Claim, err = proofI.GetCoreClaim()
 	if err != nil {
@@ -1461,7 +1453,7 @@ func (cfg EnvConfig) documentLoader() ld.DocumentLoader {
 	if cfg.IPFSNodeURL != "" {
 		ipfsNode = shell.NewShell(cfg.IPFSNodeURL)
 	}
-	return merklize.NewDocumentLoader(ipfsNode, "")
+	return loaders.NewDocumentLoader(ipfsNode, "")
 }
 
 // Currently, our library does not have a Close function. As a result, we

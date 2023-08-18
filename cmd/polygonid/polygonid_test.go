@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	core "github.com/iden3/go-iden3-core"
+	core "github.com/iden3/go-iden3-core/v2"
 	"github.com/iden3/go-iden3-crypto/poseidon"
 	"github.com/stretchr/testify/require"
 )
@@ -48,7 +48,7 @@ func TestRndID(t *testing.T) {
 	t.Skip("generate random id")
 	state, err := poseidon.Hash([]*big.Int{big.NewInt(rand.Int63())})
 	require.NoError(t, err)
-	id, err := core.IdGenesisFromIdenState(core.TypeDefault, state)
+	id, err := core.NewIDFromIdenState(core.TypeDefault, state)
 	require.NoError(t, err)
 	t.Log(id)
 }

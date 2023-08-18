@@ -28,8 +28,9 @@ import (
 	"unsafe"
 
 	c_polygonid "github.com/0xPolygonID/c-polygonid"
-	"github.com/iden3/go-circuits"
-	core "github.com/iden3/go-iden3-core"
+	"github.com/iden3/go-circuits/v2"
+	core "github.com/iden3/go-iden3-core/v2"
+	"github.com/iden3/go-iden3-core/v2/w3c"
 	"github.com/iden3/go-iden3-crypto/utils"
 	"github.com/iden3/go-merkletree-sql/v2"
 )
@@ -166,14 +167,20 @@ func PLGNAuthV2InputsMarshal(jsonResponse **C.char, in *C.char,
 		return false
 	}
 
-	did, err := core.ParseDID(didS)
+	did, err := w3c.ParseDID(didS)
 	if err != nil {
 		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR,
 			"PLGNAuthV2InputsMarshal: DID parse error: %v", err)
 		return false
 	}
 
-	obj["genesisID"] = did.ID.String()
+	id, err := core.IDFromDID(*did)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR,
+			"PLGNAuthV2InputsMarshal: error getting ID from DID: %v", err)
+		return false
+	}
+	obj["genesisID"] = id.String()
 
 	authV2InputsData, err := json.Marshal(obj)
 	if err != nil {
@@ -237,17 +244,16 @@ func PLGNCalculateGenesisID(jsonResponse **C.char, in *C.char,
 		return false
 	}
 
-	coreID, err := core.IdGenesisFromIdenState(typ, state.BigInt())
+	coreID, err := core.NewIDFromIdenState(typ, state.BigInt())
 	if err != nil {
 		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
 		return false
 	}
 
-	did := core.DID{
-		ID:         *coreID,
-		Method:     core.DIDMethodPolygonID,
-		Blockchain: req.Blockchain,
-		NetworkID:  req.Network,
+	did, err := core.ParseDIDFromID(*coreID)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		return false
 	}
 
 	resp := struct {
@@ -501,13 +507,19 @@ func PLGNProfileID(jsonResponse **C.char, in *C.char,
 		return false
 	}
 
-	did, err := core.ParseDID(req.GenesisDID)
+	did, err := w3c.ParseDID(req.GenesisDID)
 	if err != nil {
 		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
 		return false
 	}
 
-	id, err := core.ProfileID(did.ID, req.Nonce.BigInt())
+	id, err := core.IDFromDID(*did)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		return false
+	}
+
+	id, err = core.ProfileID(id, req.Nonce.BigInt())
 	if err != nil {
 		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
 		return false
