@@ -1286,7 +1286,20 @@ func resolverOnChainRevocationStatus(ctx context.Context, cfg EnvConfig, id *cor
 	if contract == "" {
 		return circuits.MTProof{}, errors.New("OnChainCredentialStatus contract address is empty")
 	}
-	contractAddress := common.HexToAddress(strings.Split(contract, ":")[1])
+	contractParts := strings.Split(contract, ":")
+	if len(contractParts) != 2 {
+		return circuits.MTProof{}, errors.New(
+			"OnChainCredentialStatus contract address is not valid")
+	}
+	chainID, err := newChainIDFromString(contractParts[0])
+	if err != nil {
+		return circuits.MTProof{}, err
+	}
+	contractAddress := common.HexToAddress(contractParts[1])
+	networkCfg, err := cfg.networkCfgByChainID(chainID)
+	if err != nil {
+		return circuits.MTProof{}, err
+	}
 
 	revocationNonce := uri.Query().Get("revocationNonce")
 	if revocationNonce == "" {
@@ -1304,7 +1317,7 @@ func resolverOnChainRevocationStatus(ctx context.Context, cfg EnvConfig, id *cor
 				" {%d} {%d}", revocationNonceInt, status.RevocationNonce)
 	}
 
-	client, err := ethclient.Dial(cfg.EthereumURL)
+	client, err := ethclient.Dial(networkCfg.EthereumURL)
 	if err != nil {
 		return circuits.MTProof{}, err
 	}
@@ -1410,7 +1423,19 @@ type ChainConfig struct {
 	StateContractAddr common.Address
 }
 
-type PerChainConfig map[uint64]ChainConfig
+func (cc ChainConfig) validate() error {
+	if cc.EthereumURL == "" {
+		return errors.New("ethereum url is empty")
+	}
+
+	if cc.StateContractAddr == (common.Address{}) {
+		return errors.New("contract address is empty")
+	}
+
+	return nil
+}
+
+type PerChainConfig map[ChainID]ChainConfig
 
 func (p *PerChainConfig) UnmarshalJSON(bytes []byte) error {
 	if (*p) == nil {
@@ -1422,18 +1447,10 @@ func (p *PerChainConfig) UnmarshalJSON(bytes []byte) error {
 		return err
 	}
 	for k, v := range o {
-		var chainID uint64
-		if strings.HasPrefix(k, "0x") ||
-			strings.HasPrefix(k, "0X") {
-			chainID, err = strconv.ParseUint(k[2:], 16, 64)
-			if err != nil {
-				return err
-			}
-		} else {
-			chainID, err = strconv.ParseUint(k, 10, 64)
-			if err != nil {
-				return err
-			}
+		var chainID ChainID
+		chainID, err = newChainIDFromString(k)
+		if err != nil {
+			return err
 		}
 		(*p)[chainID] = v
 	}
@@ -1456,20 +1473,86 @@ func (cfg EnvConfig) documentLoader() ld.DocumentLoader {
 	return loaders.NewDocumentLoader(ipfsNode, "")
 }
 
+type ChainID uint64
+
+func newChainIDFromString(in string) (ChainID, error) {
+	var chainID uint64
+	var err error
+	if strings.HasPrefix(in, "0x") ||
+		strings.HasPrefix(in, "0X") {
+		chainID, err = strconv.ParseUint(in[2:], 16, 64)
+		if err != nil {
+			return 0, err
+		}
+	} else {
+		chainID, err = strconv.ParseUint(in, 10, 64)
+		if err != nil {
+			return 0, err
+		}
+	}
+	return ChainID(chainID), nil
+}
+
+type chainIDKey struct {
+	blockchain core.Blockchain
+	networkID  core.NetworkID
+}
+
+var knownChainIDs = map[chainIDKey]ChainID{
+	{core.Ethereum, core.Main}:   1,
+	{core.Ethereum, core.Goerli}: 5,
+	{core.Polygon, core.Main}:    137,
+	{core.Polygon, core.Mumbai}:  80001,
+}
+
+func (cfg EnvConfig) networkCfgByID(id *core.ID) (ChainConfig, error) {
+	blockchain, err := core.BlockchainFromID(*id)
+	if err != nil {
+		return ChainConfig{}, err
+	}
+
+	networkID, err := core.NetworkIDFromID(*id)
+	if err != nil {
+		return ChainConfig{}, err
+	}
+
+	key := chainIDKey{blockchain, networkID}
+	chainID, ok := knownChainIDs[key]
+	if !ok {
+		return ChainConfig{}, fmt.Errorf("unknown chain: %s", id.String())
+	}
+
+	return cfg.networkCfgByChainID(chainID)
+}
+
+func (cfg EnvConfig) networkCfgByChainID(chainID ChainID) (ChainConfig, error) {
+	chainCfg, ok := cfg.ChainConfigs[chainID]
+	if !ok {
+		chainCfg = cfg.defaultChainCfg()
+	}
+
+	return chainCfg, chainCfg.validate()
+}
+
+func (cfg EnvConfig) defaultChainCfg() ChainConfig {
+	return ChainConfig{
+		EthereumURL:       cfg.EthereumURL,
+		StateContractAddr: cfg.StateContractAddr,
+	}
+}
+
 // Currently, our library does not have a Close function. As a result, we
 // create and destroy an Ethereum client for each usage of this function.
 // Although this approach may be inefficient, it is acceptable if the function
 // is rarely called. If this becomes an issue in the future, or if a Close
 // function is implemented, we will need to refactor this function to use a
 // global Ethereum client.
-func lastStateFromContract(ctx context.Context, ethURL string,
-	contractAddr common.Address, id *core.ID) (*merkletree.Hash, error) {
-	if ethURL == "" {
-		return nil, errors.New("ethereum url is empty")
-	}
+func lastStateFromContract(ctx context.Context,
+	cfg EnvConfig, id *core.ID) (*merkletree.Hash, error) {
 
-	if contractAddr == (common.Address{}) {
-		return nil, errors.New("contract address is empty")
+	networkCfg, err := cfg.networkCfgByID(id)
+	if err != nil {
+		return nil, err
 	}
 
 	var zeroID core.ID
@@ -1477,13 +1560,14 @@ func lastStateFromContract(ctx context.Context, ethURL string,
 		return nil, errors.New("ID is empty")
 	}
 
-	client, err := ethclient.Dial(ethURL)
+	client, err := ethclient.Dial(networkCfg.EthereumURL)
 	if err != nil {
 		return nil, err
 	}
 	defer client.Close()
 
-	contractCaller, err := abi.NewStateCaller(contractAddr, client)
+	contractCaller, err := abi.NewStateCaller(networkCfg.StateContractAddr,
+		client)
 	if err != nil {
 		return nil, err
 	}
@@ -1541,8 +1625,7 @@ func resolveRevStatusFromRHS(ctx context.Context, cfg EnvConfig,
 
 	var p circuits.MTProof
 
-	state, err := lastStateFromContract(ctx, cfg.EthereumURL,
-		cfg.StateContractAddr, issuerID)
+	state, err := lastStateFromContract(ctx, cfg, issuerID)
 	if err != nil {
 		return p, err
 	}
