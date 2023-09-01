@@ -1204,60 +1204,66 @@ func circuitsTreeStateFromSchemaState(
 	return
 }
 
-func resolveRevStatus(ctx context.Context,
-	cfg EnvConfig, credStatus interface{},
-	issuerID *core.ID) (circuits.MTProof, error) {
+var supportedCredentialStatusTypes = map[verifiable.CredentialStatusType]bool{
+	verifiable.Iden3ReverseSparseMerkleTreeProof:     true,
+	verifiable.SparseMerkleTreeProof:                 true,
+	verifiable.Iden3OnchainSparseMerkleTreeProof2023: true,
+}
+
+func resolveRevStatus(ctx context.Context, cfg EnvConfig,
+	credStatus interface{}, issuerID *core.ID) (circuits.MTProof, error) {
 
 	switch status := credStatus.(type) {
-	case *verifiable.RHSCredentialStatus:
-		revNonce := new(big.Int).SetUint64(status.RevocationNonce)
-		if cfg.ReverseHashServiceUrl == "" {
-			cfg.ReverseHashServiceUrl = credStatus.(*verifiable.RHSCredentialStatus).ID
-		}
-		return resolveRevStatusFromRHS(ctx, cfg, issuerID, revNonce)
 	case *verifiable.CredentialStatus:
+		if status.Type == verifiable.Iden3ReverseSparseMerkleTreeProof {
+			// TODO Use status.ID as a source of truth for RHS URL
+			if cfg.ReverseHashServiceUrl == "" {
+				cfg.ReverseHashServiceUrl = status.ID
+			}
+			revNonce := new(big.Int).SetUint64(status.RevocationNonce)
+			return resolveRevStatusFromRHS(ctx, cfg, issuerID, revNonce)
+		}
 		if status.Type == verifiable.Iden3OnchainSparseMerkleTreeProof2023 {
 			return resolverOnChainRevocationStatus(ctx, cfg, issuerID, status)
 		}
 		return resolveRevocationStatusFromIssuerService(ctx, status.ID)
-	case verifiable.RHSCredentialStatus:
-		return resolveRevStatus(ctx, cfg, &status, issuerID)
+
 	case verifiable.CredentialStatus:
 		return resolveRevStatus(ctx, cfg, &status, issuerID)
-	case map[string]interface{}:
+
+	case jsonObj:
 		credStatusType, ok := status["type"].(string)
 		if !ok {
 			return circuits.MTProof{},
 				errors.New("credential status doesn't contain type")
 		}
-		marshaledStatus, err := json.Marshal(status)
-		if err != nil {
-			return circuits.MTProof{}, err
-		}
-		var s interface{}
-		switch verifiable.CredentialStatusType(credStatusType) {
-		case verifiable.Iden3ReverseSparseMerkleTreeProof:
-			s = &verifiable.RHSCredentialStatus{}
-		case verifiable.SparseMerkleTreeProof:
-			s = &verifiable.CredentialStatus{}
-		case verifiable.Iden3OnchainSparseMerkleTreeProof2023:
-			s = &verifiable.CredentialStatus{}
-		default:
+		credentialStatusType := verifiable.CredentialStatusType(credStatusType)
+		if !supportedCredentialStatusTypes[credentialStatusType] {
 			return circuits.MTProof{}, fmt.Errorf(
 				"credential status type %s id not supported",
 				credStatusType)
 		}
 
-		err = json.Unmarshal(marshaledStatus, s)
+		var typedCredentialStatus verifiable.CredentialStatus
+		err := remarshalObj(&typedCredentialStatus, status)
 		if err != nil {
 			return circuits.MTProof{}, err
 		}
-		return resolveRevStatus(ctx, cfg, s, issuerID)
+		return resolveRevStatus(ctx, cfg, &typedCredentialStatus, issuerID)
 
 	default:
 		return circuits.MTProof{},
 			errors.New("unknown credential status format")
 	}
+}
+
+// marshal/unmarshal object from one type to ther
+func remarshalObj(dst, src any) error {
+	objBytes, err := json.Marshal(src)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(objBytes, dst)
 }
 
 // Currently, our library does not have a Close function. As a result, we
