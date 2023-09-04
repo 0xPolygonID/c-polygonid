@@ -477,7 +477,6 @@ func TestPrepareInputs(t *testing.T) {
 				EthereumURL: "http://localhost:8545",
 				StateContractAddr: common.HexToAddress(
 					"0x6F0a444Df4d231D85F66e4836f836034F0feFE24"),
-				ReverseHashServiceUrl: "http://localhost:8003",
 			}
 			doTest(t, "atomic_query_sig_v2_merklized_rhs_inputs.json",
 				"atomic_query_sig_v2_merklized_rhs_output.json",
@@ -504,7 +503,6 @@ func TestPrepareInputs(t *testing.T) {
 				EthereumURL: "http://localhost:8545",
 				StateContractAddr: common.HexToAddress(
 					"0x6F0a444Df4d231D85F66e4836f836034F0feFE24"),
-				ReverseHashServiceUrl: "http://localhost:8003",
 			}
 			doTest(t, "atomic_query_sig_v2_merklized_rhs_inputs.json",
 				"atomic_query_sig_v2_merklized_rhs_nonempty_output.json",
@@ -526,7 +524,6 @@ func TestPrepareInputs(t *testing.T) {
 				EthereumURL: "http://localhost:8545",
 				StateContractAddr: common.HexToAddress(
 					"0x6F0a444Df4d231D85F66e4836f836034F0feFE24"),
-				ReverseHashServiceUrl: "http://localhost:8003",
 			}
 			doTest(t, "atomic_query_sig_v2_merklized_rhs_revoked_inputs.json",
 				"", AtomicQuerySigV2InputsFromJson, nil, cfg,
@@ -819,4 +816,137 @@ func Test_resolverOnChainRevocationStatus(t *testing.T) {
 
 	fmt.Println("State : ", state)
 	require.Equal(t, state, got.TreeState.State.BigInt())
+}
+
+func TestNetworkCfgByID(t *testing.T) {
+	defaultChainCfg := ChainConfig{
+		EthereumURL:       "http://host2.com/default",
+		StateContractAddr: common.BytesToAddress([]byte{1}),
+	}
+
+	cfg := EnvConfig{
+		ChainConfigs: PerChainConfig{
+			80001: ChainConfig{
+				EthereumURL:       "http://host1.com/mumbai",
+				StateContractAddr: common.BytesToAddress([]byte{2}),
+			},
+		},
+		EthereumURL:           defaultChainCfg.EthereumURL,
+		StateContractAddr:     defaultChainCfg.StateContractAddr,
+		ReverseHashServiceUrl: "",
+		IPFSNodeURL:           "",
+	}
+
+	emptyCfg := EnvConfig{}
+
+	mkID := func(t testing.TB, method core.DIDMethod,
+		blockchain core.Blockchain, network core.NetworkID) *core.ID {
+
+		tp, err := core.BuildDIDType(method, blockchain, network)
+		require.NoError(t, err)
+		id, err := core.NewIDFromIdenState(tp, big.NewInt(1))
+		require.NoError(t, err)
+		return id
+	}
+
+	t.Run("chain config found", func(t *testing.T) {
+		polygonMumbaiID := mkID(t, core.DIDMethodPolygonID, core.Polygon,
+			core.Mumbai)
+		chainCfg, err := cfg.networkCfgByID(polygonMumbaiID)
+		require.NoError(t, err)
+		require.Equal(t, cfg.ChainConfigs[80001], chainCfg)
+	})
+
+	t.Run("default chain config", func(t *testing.T) {
+		ethMainID := mkID(t, core.DIDMethodIden3, core.Ethereum, core.Main)
+		chainCfg, err := cfg.networkCfgByID(ethMainID)
+		require.NoError(t, err)
+		require.Equal(t, defaultChainCfg, chainCfg)
+	})
+
+	t.Run("config is empty", func(t *testing.T) {
+		ethMainID := mkID(t, core.DIDMethodIden3, core.Ethereum, core.Main)
+		_, err := emptyCfg.networkCfgByID(ethMainID)
+		require.EqualError(t, err, "ethereum url is empty")
+	})
+
+}
+
+func TestRHSBaseURL(t *testing.T) {
+	mkHash := func(t testing.TB, hexStr string) *merkletree.Hash {
+		h, err := merkletree.NewHashFromHex(hexStr)
+		require.NoError(t, err)
+		return h
+	}
+
+	testCases := []struct {
+		title   string
+		in      string
+		baseURL string
+		hash    *merkletree.Hash
+		wantErr string
+	}{
+		{
+			title:   "old format 1",
+			in:      "http://localhost:8003/node/",
+			baseURL: "http://localhost:8003/",
+			hash:    nil,
+			wantErr: "",
+		},
+		{
+			title:   "old format 2",
+			in:      "http://localhost:8003/node/",
+			baseURL: "http://localhost:8003/",
+			hash:    nil,
+			wantErr: "",
+		},
+		{
+			title:   "without node suffix",
+			in:      "http://localhost:8003/",
+			baseURL: "http://localhost:8003/",
+			hash:    nil,
+			wantErr: "",
+		},
+		{
+			title:   "full format",
+			in:      "http://localhost:8003/node/7e1415c74c9dacbd81786ab93f3bf50425f10566f96d1bf1a47d7d6218020c2d",
+			baseURL: "http://localhost:8003/",
+			hash:    nil,
+			wantErr: "",
+		},
+		{
+			title:   "full format with state",
+			in:      "http://localhost:8003/node/7e1415c74c9dacbd81786ab93f3bf50425f10566f96d1bf1a47d7d6218020c2d?state=46a119b1184b2f4256c13633d1f36dc2f489523e14ca4058e1c53324f16a4506",
+			baseURL: "http://localhost:8003/",
+			hash:    mkHash(t, "46a119b1184b2f4256c13633d1f36dc2f489523e14ca4058e1c53324f16a4506"),
+			wantErr: "",
+		},
+		{
+			title:   "error parsing genesis state",
+			in:      "http://localhost:8003/node/7e1415c74c9dacbd81786ab93f3bf50425f10566f96d1bf1a47d7d6218020c2d?state=46a119b1184b2f4256c13633d1f36dc2f489523e14ca4058e1c53324f16a45",
+			baseURL: "",
+			hash:    nil,
+			wantErr: "invalid hash length",
+		},
+		{
+			title:   "unsupported url",
+			in:      "http://localhost:8003/node1/7e1415c74c9dacbd81786ab93f3bf50425f10566f96d1bf1a47d7d6218020c2d",
+			baseURL: "",
+			hash:    nil,
+			wantErr: "error on parsing the RHS URL: we do not support RHS URLs without /node in the path yet",
+		},
+	}
+	for i := range testCases {
+		tc := testCases[i]
+		t.Run(tc.title, func(t *testing.T) {
+			baseURL, hash, err := rhsBaseURL(tc.in)
+			if tc.wantErr != "" {
+				require.EqualError(t, err, tc.wantErr)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.baseURL, baseURL)
+				require.Equal(t, tc.hash, hash)
+			}
+		})
+	}
 }

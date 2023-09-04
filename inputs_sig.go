@@ -1,6 +1,7 @@
 package c_polygonid
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"encoding/json"
@@ -10,6 +11,7 @@ import (
 	"math/big"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -17,6 +19,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/rpc"
 	onchainABI "github.com/iden3/contracts-abi/onchain-credential-status-resolver/go/abi"
 	"github.com/iden3/contracts-abi/state/go/abi"
 	"github.com/iden3/go-circuits/v2"
@@ -1216,12 +1219,9 @@ func resolveRevStatus(ctx context.Context, cfg EnvConfig,
 	switch status := credStatus.(type) {
 	case *verifiable.CredentialStatus:
 		if status.Type == verifiable.Iden3ReverseSparseMerkleTreeProof {
-			// TODO Use status.ID as a source of truth for RHS URL
-			if cfg.ReverseHashServiceUrl == "" {
-				cfg.ReverseHashServiceUrl = status.ID
-			}
 			revNonce := new(big.Int).SetUint64(status.RevocationNonce)
-			return resolveRevStatusFromRHS(ctx, cfg, issuerID, revNonce)
+			return resolveRevStatusFromRHS(ctx, status.ID, cfg, issuerID,
+				revNonce)
 		}
 		if status.Type == verifiable.Iden3OnchainSparseMerkleTreeProof2023 {
 			return resolverOnChainRevocationStatus(ctx, cfg, issuerID, status)
@@ -1553,8 +1553,8 @@ func (cfg EnvConfig) defaultChainCfg() ChainConfig {
 // is rarely called. If this becomes an issue in the future, or if a Close
 // function is implemented, we will need to refactor this function to use a
 // global Ethereum client.
-func lastStateFromContract(ctx context.Context,
-	cfg EnvConfig, id *core.ID) (*merkletree.Hash, error) {
+func lastStateFromContract(ctx context.Context, cfg EnvConfig,
+	id *core.ID) (*merkletree.Hash, error) {
 
 	networkCfg, err := cfg.networkCfgByID(id)
 	if err != nil {
@@ -1581,7 +1581,9 @@ func lastStateFromContract(ctx context.Context,
 	resp, err := contractCaller.GetStateInfoById(
 		&bind.CallOpts{Context: ctx},
 		id.BigInt())
-	if err != nil {
+	if isErrIdentityDoesNotExist(err) {
+		return nil, errIdentityDoesNotExist
+	} else if err != nil {
 		return nil, err
 	}
 
@@ -1590,6 +1592,17 @@ func lastStateFromContract(ctx context.Context,
 	}
 
 	return merkletree.NewHashFromBigInt(resp.State)
+}
+
+var errIdentityDoesNotExist = errors.New("identity does not exist")
+
+func isErrIdentityDoesNotExist(err error) bool {
+	rpcErr, isRPCErr := err.(rpc.Error)
+	if !isRPCErr {
+		return false
+	}
+	return rpcErr.ErrorCode() == 3 &&
+		rpcErr.Error() == "execution reverted: Identity does not exist"
 }
 
 func newRhsCli(rhsURL string) (*mp.HTTPReverseHashCli, error) {
@@ -1626,18 +1639,100 @@ func treeStateFromRHS(ctx context.Context, rhsCli *mp.HTTPReverseHashCli,
 	return treeState, err
 }
 
-func resolveRevStatusFromRHS(ctx context.Context, cfg EnvConfig,
+func identityStateForRHS(ctx context.Context, cfg EnvConfig, issuerID *core.ID,
+	genesisState *merkletree.Hash) (*merkletree.Hash, error) {
+
+	state, err := lastStateFromContract(ctx, cfg, issuerID)
+	if !errors.Is(err, errIdentityDoesNotExist) {
+		return state, err
+	}
+
+	if genesisState == nil {
+		return nil, errors.New("current state is not found for the identity")
+	}
+
+	stateIsGenesis, err := genesisStateMatch(state, *issuerID)
+	if err != nil {
+		return nil, err
+	}
+
+	if !stateIsGenesis {
+		return nil, errors.New("state is not genesis for the identity")
+	}
+
+	return genesisState, nil
+}
+
+// check if genesis state matches the state from the ID
+func genesisStateMatch(state *merkletree.Hash, id core.ID) (bool, error) {
+	var tp [2]byte
+	copy(tp[:], id[:2])
+	otherID, err := core.NewIDFromIdenState(tp, state.BigInt())
+	if err != nil {
+		return false, err
+	}
+	return bytes.Equal(otherID[:], id[:]), nil
+}
+
+var hashSuffixRE = regexp.MustCompile(`^(.*)/[a-fA-F0-9]{64}$`)
+
+func rhsBaseURL(rhsURL string) (string, *merkletree.Hash, error) {
+	u, err := url.Parse(rhsURL)
+	if err != nil {
+		return "", nil, err
+	}
+	var state *merkletree.Hash
+	stateStr := u.Query().Get("state")
+	if stateStr != "" {
+		state, err = merkletree.NewHashFromHex(stateStr)
+		if err != nil {
+			return "", nil, err
+		}
+	}
+
+	m := hashSuffixRE.FindAllStringSubmatch(u.Path, -1)
+	switch len(m) {
+	case 0:
+		if strings.HasSuffix(u.Path, "/node") {
+			u.Path = strings.TrimSuffix(u.Path, "node")
+		}
+		if strings.HasSuffix(u.Path, "/node/") {
+			u.Path = strings.TrimSuffix(u.Path, "node/")
+		}
+	case 1:
+		if strings.HasSuffix(m[0][1], "/node") {
+			u.Path = strings.TrimSuffix(m[0][1], "node")
+		} else {
+			return "", nil, errors.New(
+				"error on parsing the RHS URL: we do not support " +
+					"RHS URLs without /node in the path yet")
+		}
+	default:
+		return "", nil, errors.New(
+			"error on looking for the state in the RHS URL: " +
+				"multiple matches found")
+	}
+
+	u.RawQuery = ""
+	return u.String(), state, nil
+}
+
+func resolveRevStatusFromRHS(ctx context.Context, rhsURL string, cfg EnvConfig,
 	issuerID *core.ID, revNonce *big.Int) (circuits.MTProof, error) {
 
 	var p circuits.MTProof
 
-	state, err := lastStateFromContract(ctx, cfg, issuerID)
+	baseRHSURL, genesisState, err := rhsBaseURL(rhsURL)
 	if err != nil {
 		return p, err
 	}
 
-	//
-	rhsCli, err := newRhsCli(cfg.ReverseHashServiceUrl)
+	state, err := identityStateForRHS(ctx, cfg, issuerID, genesisState)
+	if err != nil {
+		return p, err
+	}
+
+	rhsCli, err := newRhsCli(baseRHSURL)
 	if err != nil {
 		return p, err
 	}
