@@ -24,6 +24,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"runtime"
+	"runtime/trace"
+	"strings"
 	"time"
 	"unsafe"
 
@@ -140,6 +143,9 @@ func maybeCreateStatus(status **C.PLGNStatus, code C.PLGNStatusCode,
 func PLGNAuthV2InputsMarshal(jsonResponse **C.char, in *C.char,
 	status **C.PLGNStatus) bool {
 
+	_, cancel := logAPITime()
+	defer cancel()
+
 	if jsonResponse == nil {
 		maybeCreateStatus(status, C.PLGNSTATUSCODE_NIL_POINTER,
 			"jsonResponse pointer is nil")
@@ -212,6 +218,9 @@ func PLGNAuthV2InputsMarshal(jsonResponse **C.char, in *C.char,
 func PLGNCalculateGenesisID(jsonResponse **C.char, in *C.char,
 	status **C.PLGNStatus) bool {
 
+	_, cancel := logAPITime()
+	defer cancel()
+
 	var req struct {
 		ClaimsTreeRoot *jsonIntStr     `json:"claimsTreeRoot"`
 		Blockchain     core.Blockchain `json:"blockchain"`
@@ -278,6 +287,9 @@ func PLGNCalculateGenesisID(jsonResponse **C.char, in *C.char,
 //export PLGNCreateClaim
 func PLGNCreateClaim(jsonResponse **C.char, in *C.char,
 	status **C.PLGNStatus) (ok bool) {
+
+	_, cancel := logAPITime()
+	defer cancel()
 
 	req := struct {
 		Schema             hexBytesStr `json:"schema"`
@@ -417,6 +429,9 @@ func PLGNCreateClaim(jsonResponse **C.char, in *C.char,
 func PLGNIDToInt(jsonResponse **C.char, in *C.char,
 	status **C.PLGNStatus) (ok bool) {
 
+	_, cancel := logAPITime()
+	defer cancel()
+
 	if in == nil {
 		maybeCreateStatus(status, C.PLGNSTATUSCODE_NIL_POINTER,
 			"pointer to request is nil")
@@ -449,6 +464,9 @@ func PLGNIDToInt(jsonResponse **C.char, in *C.char,
 //export PLGNProofFromSmartContract
 func PLGNProofFromSmartContract(jsonResponse **C.char, in *C.char,
 	status **C.PLGNStatus) (ok bool) {
+
+	_, cancel := logAPITime()
+	defer cancel()
 
 	if in == nil {
 		maybeCreateStatus(status, C.PLGNSTATUSCODE_NIL_POINTER,
@@ -489,6 +507,9 @@ func PLGNProofFromSmartContract(jsonResponse **C.char, in *C.char,
 //export PLGNProfileID
 func PLGNProfileID(jsonResponse **C.char, in *C.char,
 	status **C.PLGNStatus) bool {
+
+	_, cancel := logAPITime()
+	defer cancel()
 
 	if jsonResponse == nil {
 		maybeCreateStatus(status, C.PLGNSTATUSCODE_NIL_POINTER,
@@ -564,7 +585,10 @@ func PLGNProfileID(jsonResponse **C.char, in *C.char,
 func PLGNAtomicQuerySigV2Inputs(jsonResponse **C.char, in *C.char, cfg *C.char,
 	status **C.PLGNStatus) bool {
 
-	return prepareInputs(c_polygonid.AtomicQuerySigV2InputsFromJson,
+	ctx, cancel := logAPITime()
+	defer cancel()
+
+	return prepareInputs(ctx, c_polygonid.AtomicQuerySigV2InputsFromJson,
 		jsonResponse, in, cfg, status)
 }
 
@@ -578,14 +602,17 @@ func PLGNAtomicQuerySigV2Inputs(jsonResponse **C.char, in *C.char, cfg *C.char,
 func PLGNSigV2Inputs(jsonResponse **C.char, in *C.char,
 	status **C.PLGNStatus) bool {
 
+	ctx, cancel := logAPITime()
+	defer cancel()
+
 	if jsonResponse == nil {
 		maybeCreateStatus(status, C.PLGNSTATUSCODE_NIL_POINTER,
 			"jsonResponse pointer is nil")
 		return false
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	ctx, ctxCancel := context.WithTimeout(ctx, 10*time.Second)
+	defer ctxCancel()
 
 	inData := C.GoBytes(unsafe.Pointer(in), C.int(C.strlen(in)))
 
@@ -650,7 +677,10 @@ func marshalInputsResponse(
 func PLGNAtomicQueryMtpV2Inputs(jsonResponse **C.char, in *C.char, cfg *C.char,
 	status **C.PLGNStatus) bool {
 
-	return prepareInputs(c_polygonid.AtomicQueryMtpV2InputsFromJson,
+	ctx, cancel := logAPITime()
+	defer cancel()
+
+	return prepareInputs(ctx, c_polygonid.AtomicQueryMtpV2InputsFromJson,
 		jsonResponse, in, cfg, status)
 }
 
@@ -664,8 +694,11 @@ func PLGNAtomicQueryMtpV2Inputs(jsonResponse **C.char, in *C.char, cfg *C.char,
 func PLGNMtpV2Inputs(jsonResponse **C.char, in *C.char,
 	status **C.PLGNStatus) bool {
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := logAPITime()
 	defer cancel()
+
+	ctx, ctxCancel := context.WithTimeout(ctx, 10*time.Second)
+	defer ctxCancel()
 
 	if jsonResponse == nil {
 		maybeCreateStatus(status, C.PLGNSTATUSCODE_NIL_POINTER,
@@ -711,7 +744,10 @@ func PLGNMtpV2Inputs(jsonResponse **C.char, in *C.char,
 func PLGNAtomicQuerySigV2OnChainInputs(jsonResponse **C.char, in *C.char,
 	cfg *C.char, status **C.PLGNStatus) bool {
 
-	return prepareInputs(c_polygonid.AtomicQuerySigV2OnChainInputsFromJson,
+	ctx, cancel := logAPITime()
+	defer cancel()
+
+	return prepareInputs(ctx, c_polygonid.AtomicQuerySigV2OnChainInputsFromJson,
 		jsonResponse, in, cfg, status)
 }
 
@@ -733,12 +769,18 @@ func PLGNAtomicQuerySigV2OnChainInputs(jsonResponse **C.char, in *C.char,
 func PLGNAtomicQueryMtpV2OnChainInputs(jsonResponse **C.char, in *C.char,
 	cfg *C.char, status **C.PLGNStatus) bool {
 
-	return prepareInputs(c_polygonid.AtomicQueryMtpV2OnChainInputsFromJson,
+	ctx, cancel := logAPITime()
+	defer cancel()
+
+	return prepareInputs(ctx, c_polygonid.AtomicQueryMtpV2OnChainInputsFromJson,
 		jsonResponse, in, cfg, status)
 }
 
 //export PLGNFreeStatus
 func PLGNFreeStatus(status *C.PLGNStatus) {
+	_, cancel := logAPITime()
+	defer cancel()
+
 	if status == nil {
 		return
 	}
@@ -764,7 +806,7 @@ func createEnvConfig(cfgJson *C.char) (c_polygonid.EnvConfig, error) {
 type atomicQueryInputsFn func(ctx context.Context, cfg c_polygonid.EnvConfig,
 	in []byte) (c_polygonid.AtomicQueryInputsResponse, error)
 
-func prepareInputs(fn atomicQueryInputsFn,
+func prepareInputs(ctx context.Context, fn atomicQueryInputsFn,
 	jsonResponse **C.char, in *C.char, cfg *C.char,
 	status **C.PLGNStatus) bool {
 	if jsonResponse == nil {
@@ -773,7 +815,8 @@ func prepareInputs(fn atomicQueryInputsFn,
 		return false
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	var cancel func()
+	ctx, cancel = context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	inData := C.GoBytes(unsafe.Pointer(in), C.int(C.strlen(in)))
@@ -799,6 +842,52 @@ func prepareInputs(fn atomicQueryInputsFn,
 
 	*jsonResponse = C.CString(resp)
 	return true
+}
+
+const debug = false
+const tracing = false
+
+func getFuncName(skip int) string {
+	pc, _, _, ok := runtime.Caller(skip)
+	if !ok {
+		fmt.Println("Failed to get the caller information")
+		return ""
+	}
+
+	funcName := runtime.FuncForPC(pc).Name()
+	parts := strings.Split(funcName, ".")
+	return parts[len(parts)-1]
+}
+
+func logAPITime() (context.Context, func()) {
+	ctx := context.Background()
+
+	if !debug && !tracing {
+		return ctx, func() {}
+	}
+
+	var taskCanceler interface{ End() }
+	funcName := getFuncName(2)
+
+	if tracing {
+		ctx, taskCanceler = trace.NewTask(ctx, funcName)
+	}
+
+	var start time.Time
+	if debug {
+		start = time.Now()
+	}
+
+	return ctx, func() {
+		if taskCanceler != nil {
+			taskCanceler.End()
+		}
+
+		if start.IsZero() {
+			fmt.Printf("[%v] API call took %v\n", funcName,
+				time.Since(start))
+		}
+	}
 }
 
 func main() {}

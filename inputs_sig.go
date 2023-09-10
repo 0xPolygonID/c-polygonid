@@ -10,8 +10,10 @@ import (
 	"math/big"
 	"net/http"
 	"net/url"
+	"runtime/trace"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -390,6 +392,9 @@ type AtomicQueryInputsResponse struct {
 func AtomicQueryMtpV2InputsFromJson(ctx context.Context, cfg EnvConfig,
 	in []byte) (AtomicQueryInputsResponse, error) {
 
+	ctx, task := trace.NewTask(ctx, "AtomicQueryMtpV2InputsFromJson")
+	defer task.End()
+
 	var out AtomicQueryInputsResponse
 	var inpMarsh circuits.AtomicQueryMTPV2Inputs
 
@@ -449,7 +454,8 @@ func verifiablePresentationFromCred(ctx context.Context,
 	mzValue merklize.Value, datatype string, hasher merklize.Hasher,
 	err error) {
 
-	mz, err := w3cCred.Merklize(ctx,
+	var mz *merklize.Merklizer
+	mz, err = wrapMerklizeWithRegion(ctx, w3cCred,
 		merklize.WithDocumentLoader(documentLoader))
 	if err != nil {
 		return nil, nil, datatype, hasher, err
@@ -813,10 +819,24 @@ func queryFromObj(ctx context.Context, w3cCred verifiable.W3CCredential,
 	return queryFromObjMerklized(ctx, w3cCred, requestObj, documentLoader)
 }
 
+func wrapMerklizeWithRegion(ctx context.Context, w3cCred verifiable.W3CCredential,
+	opts ...merklize.MerklizeOption) (*merklize.Merklizer, error) {
+
+	var mz *merklize.Merklizer
+	var err error
+	trace.WithRegion(ctx, "merklize", func() {
+		mz, err = w3cCred.Merklize(ctx, opts...)
+	})
+	return mz, err
+}
+
 func queryFromObjNonMerklized(ctx context.Context,
 	w3cCred verifiable.W3CCredential, requestObj jsonObj,
 	documentLoader ld.DocumentLoader) (out circuits.Query,
 	verifiablePresentation jsonObj, err error) {
+
+	region := trace.StartRegion(ctx, "queryFromObjNonMerklized")
+	defer region.End()
 
 	pr := processor.InitProcessorOptions(&processor.Processor{
 		DocumentLoader: documentLoader,
@@ -904,7 +924,10 @@ func queryFromObjMerklized(ctx context.Context,
 	documentLoader ld.DocumentLoader) (out circuits.Query,
 	verifiablePresentation jsonObj, err error) {
 
-	mz, err := w3cCred.Merklize(ctx,
+	region := trace.StartRegion(ctx, "queryFromObjMerklized")
+	defer region.End()
+
+	mz, err := wrapMerklizeWithRegion(ctx, w3cCred,
 		merklize.WithDocumentLoader(documentLoader))
 	if err != nil {
 		return out, nil, err
@@ -1094,6 +1117,9 @@ func (h *hexHash) UnmarshalJSON(i []byte) error {
 func claimWithMtpProofFromObj(ctx context.Context, cfg EnvConfig,
 	w3cCred verifiable.W3CCredential,
 	skipClaimRevocationCheck bool) (circuits.ClaimWithMTPProof, error) {
+
+	region := trace.StartRegion(ctx, "claimWithMtpProofFromObj")
+	defer region.End()
 
 	var out circuits.ClaimWithMTPProof
 	var err error
@@ -1465,12 +1491,36 @@ type EnvConfig struct {
 	IPFSNodeURL           string
 }
 
+var documentLoaderCache map[string]ld.DocumentLoader
+var documentLoaderCacheMutex sync.RWMutex
+
 func (cfg EnvConfig) documentLoader() ld.DocumentLoader {
+	documentLoaderCacheMutex.RLock()
+	dl, ok := documentLoaderCache[cfg.IPFSNodeURL]
+	documentLoaderCacheMutex.RUnlock()
+	if ok {
+		return dl
+	}
+
+	documentLoaderCacheMutex.Lock()
+	dl, ok = documentLoaderCache[cfg.IPFSNodeURL]
+	if ok {
+		documentLoaderCacheMutex.Unlock()
+		return dl
+	}
+
+	if documentLoaderCache == nil {
+		documentLoaderCache = make(map[string]ld.DocumentLoader)
+	}
+
 	var ipfsNode *shell.Shell
 	if cfg.IPFSNodeURL != "" {
 		ipfsNode = shell.NewShell(cfg.IPFSNodeURL)
 	}
-	return loaders.NewDocumentLoader(ipfsNode, "")
+	dl = loaders.NewDocumentLoader(ipfsNode, "")
+	documentLoaderCache[cfg.IPFSNodeURL] = dl
+	documentLoaderCacheMutex.Unlock()
+	return dl
 }
 
 type ChainID uint64
