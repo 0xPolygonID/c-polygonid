@@ -40,8 +40,6 @@ import (
 
 type jsonObj = map[string]any
 
-var httpClient = &http.Client{}
-
 func stringByPath(obj jsonObj, path string) (string, error) {
 	v, err := getByPath(obj, path)
 	if err != nil {
@@ -141,7 +139,7 @@ func resolveRevocationStatusFromIssuerService(ctx context.Context,
 	if err != nil {
 		return out, err
 	}
-	httpResp, err := httpClient.Do(httpReq)
+	httpResp, err := http.DefaultClient.Do(httpReq)
 	if err != nil {
 		return out, err
 	}

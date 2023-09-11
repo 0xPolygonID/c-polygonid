@@ -7,7 +7,7 @@
     "@context": [
       "https://www.w3.org/2018/credentials/v1",
       "https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld",
-      "https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld"
+      "https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3-non-merklized.json-ld"
     ],
     "type": [
       "VerifiableCredential",
@@ -61,7 +61,7 @@
     "circuitId": "credentialAtomicQuerySigV2",
     "query": {
       "allowedIssuers": "2qDNRmjPHUrtnPWfXQ4kKwZfarfsSYoiFBxB9tDkui",
-      "context": "https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld",
+      "context": "https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3-non-merklized.json-ld",
       "type": "KYCAgeCredential",
       "credentialSubject": {
         "documentType": {
