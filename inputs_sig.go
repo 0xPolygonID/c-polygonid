@@ -11,7 +11,6 @@ import (
 	"math/big"
 	"net/http"
 	"net/url"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -1697,8 +1696,6 @@ func genesisStateMatch(state *merkletree.Hash, id core.ID) (bool, error) {
 	return bytes.Equal(otherID[:], id[:]), nil
 }
 
-var hashSuffixRE = regexp.MustCompile(`^(.*)/[a-fA-F0-9]{64}$`)
-
 func rhsBaseURL(rhsURL string) (string, *merkletree.Hash, error) {
 	u, err := url.Parse(rhsURL)
 	if err != nil {
@@ -1713,27 +1710,11 @@ func rhsBaseURL(rhsURL string) (string, *merkletree.Hash, error) {
 		}
 	}
 
-	m := hashSuffixRE.FindAllStringSubmatch(u.Path, -1)
-	switch len(m) {
-	case 0:
-		if strings.HasSuffix(u.Path, "/node") {
-			u.Path = strings.TrimSuffix(u.Path, "node")
-		}
-		if strings.HasSuffix(u.Path, "/node/") {
-			u.Path = strings.TrimSuffix(u.Path, "node/")
-		}
-	case 1:
-		if strings.HasSuffix(m[0][1], "/node") {
-			u.Path = strings.TrimSuffix(m[0][1], "node")
-		} else {
-			return "", nil, errors.New(
-				"error on parsing the RHS URL: we do not support " +
-					"RHS URLs without /node in the path yet")
-		}
-	default:
-		return "", nil, errors.New(
-			"error on looking for the state in the RHS URL: " +
-				"multiple matches found")
+	if strings.HasSuffix(u.Path, "/node") {
+		u.Path = strings.TrimSuffix(u.Path, "node")
+	}
+	if strings.HasSuffix(u.Path, "/node/") {
+		u.Path = strings.TrimSuffix(u.Path, "node/")
 	}
 
 	u.RawQuery = ""

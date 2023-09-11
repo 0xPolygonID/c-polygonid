@@ -908,32 +908,18 @@ func TestRHSBaseURL(t *testing.T) {
 			wantErr: "",
 		},
 		{
-			title:   "full format",
-			in:      "http://localhost:8003/node/7e1415c74c9dacbd81786ab93f3bf50425f10566f96d1bf1a47d7d6218020c2d",
-			baseURL: "http://localhost:8003/",
-			hash:    nil,
-			wantErr: "",
-		},
-		{
-			title:   "full format with state",
-			in:      "http://localhost:8003/node/7e1415c74c9dacbd81786ab93f3bf50425f10566f96d1bf1a47d7d6218020c2d?state=46a119b1184b2f4256c13633d1f36dc2f489523e14ca4058e1c53324f16a4506",
+			title:   "with state",
+			in:      "http://localhost:8003/node/?state=46a119b1184b2f4256c13633d1f36dc2f489523e14ca4058e1c53324f16a4506",
 			baseURL: "http://localhost:8003/",
 			hash:    mkHash(t, "46a119b1184b2f4256c13633d1f36dc2f489523e14ca4058e1c53324f16a4506"),
 			wantErr: "",
 		},
 		{
-			title:   "error parsing genesis state",
-			in:      "http://localhost:8003/node/7e1415c74c9dacbd81786ab93f3bf50425f10566f96d1bf1a47d7d6218020c2d?state=46a119b1184b2f4256c13633d1f36dc2f489523e14ca4058e1c53324f16a45",
+			title:   "error parsing state",
+			in:      "http://localhost:8003/node?state=46a119b1184b2f4256c13633d1f36dc2f489523e14ca4058e1c53324f16a45",
 			baseURL: "",
 			hash:    nil,
 			wantErr: "invalid hash length",
-		},
-		{
-			title:   "unsupported url",
-			in:      "http://localhost:8003/node1/7e1415c74c9dacbd81786ab93f3bf50425f10566f96d1bf1a47d7d6218020c2d",
-			baseURL: "",
-			hash:    nil,
-			wantErr: "error on parsing the RHS URL: we do not support RHS URLs without /node in the path yet",
 		},
 	}
 	for i := range testCases {
