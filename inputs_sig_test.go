@@ -820,18 +820,18 @@ func Test_resolverOnChainRevocationStatus(t *testing.T) {
 
 func TestNetworkCfgByID(t *testing.T) {
 	defaultChainCfg := ChainConfig{
-		EthereumURL:       "http://host2.com/default",
+		RPCUrl:            "http://host2.com/default",
 		StateContractAddr: common.BytesToAddress([]byte{1}),
 	}
 
 	cfg := EnvConfig{
 		ChainConfigs: PerChainConfig{
 			80001: ChainConfig{
-				EthereumURL:       "http://host1.com/mumbai",
+				RPCUrl:            "http://host1.com/mumbai",
 				StateContractAddr: common.BytesToAddress([]byte{2}),
 			},
 		},
-		EthereumURL:           defaultChainCfg.EthereumURL,
+		EthereumURL:           defaultChainCfg.RPCUrl,
 		StateContractAddr:     defaultChainCfg.StateContractAddr,
 		ReverseHashServiceUrl: "",
 		IPFSNodeURL:           "",
