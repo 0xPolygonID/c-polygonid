@@ -1329,7 +1329,7 @@ func resolverOnChainRevocationStatus(ctx context.Context, cfg EnvConfig, id *cor
 		return circuits.MTProof{}, err
 	}
 
-	client, err := ethclient.Dial(networkCfg.EthereumURL)
+	client, err := ethclient.Dial(networkCfg.RPCUrl)
 	if err != nil {
 		return circuits.MTProof{}, err
 	}
@@ -1445,12 +1445,12 @@ func calculateDepth(siblings []*big.Int) int {
 }
 
 type ChainConfig struct {
-	EthereumURL       string
+	RPCUrl            string
 	StateContractAddr common.Address
 }
 
 func (cc ChainConfig) validate() error {
-	if cc.EthereumURL == "" {
+	if cc.RPCUrl == "" {
 		return errors.New("ethereum url is empty")
 	}
 
@@ -1525,10 +1525,13 @@ type chainIDKey struct {
 }
 
 var knownChainIDs = map[chainIDKey]ChainID{
-	{core.Ethereum, core.Main}:   1,
-	{core.Ethereum, core.Goerli}: 5,
-	{core.Polygon, core.Main}:    137,
-	{core.Polygon, core.Mumbai}:  80001,
+	{core.Ethereum, core.Main}:    1,
+	{core.Ethereum, core.Goerli}:  5,
+	{core.Polygon, core.Main}:     137,
+	{core.ZkEVM, core.Main}:       1101,
+	{core.ZkEVM, core.Test}:       1442,
+	{core.Polygon, core.Mumbai}:   80001,
+	{core.Ethereum, core.Sepolia}: 11155111,
 }
 
 func (cfg EnvConfig) networkCfgByID(id *core.ID) (ChainConfig, error) {
@@ -1562,7 +1565,7 @@ func (cfg EnvConfig) networkCfgByChainID(chainID ChainID) (ChainConfig, error) {
 
 func (cfg EnvConfig) defaultChainCfg() ChainConfig {
 	return ChainConfig{
-		EthereumURL:       cfg.EthereumURL,
+		RPCUrl:            cfg.EthereumURL,
 		StateContractAddr: cfg.StateContractAddr,
 	}
 }
@@ -1586,7 +1589,7 @@ func lastStateFromContract(ctx context.Context, cfg EnvConfig,
 		return nil, errors.New("ID is empty")
 	}
 
-	client, err := ethclient.Dial(networkCfg.EthereumURL)
+	client, err := ethclient.Dial(networkCfg.RPCUrl)
 	if err != nil {
 		return nil, err
 	}

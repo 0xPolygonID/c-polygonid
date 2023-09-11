@@ -618,15 +618,15 @@ func TestEnvConfig_UnmarshalJSON(t *testing.T) {
   "ipfsNodeUrl": "http://localhost:5001",
   "chainConfigs": {
     "1": {
-      "ethereumUrl": "http://localhost:8545",
+      "rpcUrl": "http://localhost:8545",
       "stateContractAddr": "0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655"
     },
     "0x10": {
-      "ethereumUrl": "http://localhost:8545",
+      "rpcUrl": "http://localhost:8545",
       "stateContractAddr": "0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655"
     },
     "0X11": {
-      "ethereumUrl": "http://localhost:8545",
+      "rpcUrl": "http://localhost:8545",
       "stateContractAddr": "0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655"
     }
   }
@@ -638,15 +638,15 @@ func TestEnvConfig_UnmarshalJSON(t *testing.T) {
 				IPFSNodeURL:           "http://localhost:5001",
 				ChainConfigs: map[ChainID]ChainConfig{
 					1: {
-						EthereumURL:       "http://localhost:8545",
+						RPCUrl:            "http://localhost:8545",
 						StateContractAddr: common.HexToAddress("0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655"),
 					},
 					16: {
-						EthereumURL:       "http://localhost:8545",
+						RPCUrl:            "http://localhost:8545",
 						StateContractAddr: common.HexToAddress("0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655"),
 					},
 					17: {
-						EthereumURL:       "http://localhost:8545",
+						RPCUrl:            "http://localhost:8545",
 						StateContractAddr: common.HexToAddress("0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655"),
 					},
 				},
