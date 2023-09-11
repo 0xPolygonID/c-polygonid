@@ -1323,6 +1323,12 @@ func resolverOnChainRevocationStatus(ctx context.Context, cfg EnvConfig, id *cor
 				" {%d} {%d}", revocationNonceInt, status.RevocationNonce)
 	}
 
+	// state may be nil if params is absent in query
+	state, err := newIntFromHexQueryParam(uri, "state")
+	if err != nil {
+		return circuits.MTProof{}, err
+	}
+
 	client, err := ethclient.Dial(networkCfg.EthereumURL)
 	if err != nil {
 		return circuits.MTProof{}, err
@@ -1334,13 +1340,27 @@ func resolverOnChainRevocationStatus(ctx context.Context, cfg EnvConfig, id *cor
 		return circuits.MTProof{}, err
 	}
 
-	// TODO: it is not finial version of contract GetRevocationProof must accept issuer id as parameter
-	resp, err := contractCaller.GetRevocationStatus(
-		&bind.CallOpts{Context: ctx},
-		id.BigInt(),
-		revocationNonceInt)
-	if err != nil {
-		return circuits.MTProof{}, fmt.Errorf("GetRevocationProof smart contract call, %s", err.Error())
+	var resp onchainABI.IOnchainCredentialStatusResolverCredentialStatus
+	if state == nil {
+		// TODO: it is not finial version of contract GetRevocationProof must accept issuer id as parameter
+		resp, err = contractCaller.GetRevocationStatus(
+			&bind.CallOpts{Context: ctx},
+			id.BigInt(),
+			revocationNonceInt)
+		if err != nil {
+			return circuits.MTProof{}, fmt.Errorf(
+				"GetRevocationProof smart contract call [GetRevocationStatus]: %s",
+				err.Error())
+		}
+	} else {
+		resp, err = contractCaller.GetRevocationStatusByIdAndState(
+			&bind.CallOpts{Context: ctx}, id.BigInt(), state,
+			revocationNonceInt)
+		if err != nil {
+			return circuits.MTProof{}, fmt.Errorf(
+				"GetRevocationProof smart contract call [GetRevocationStatusByIdAndState]: %s",
+				err.Error())
+		}
 	}
 
 	return toMerkleTreeProof(resp)
@@ -1754,4 +1774,25 @@ func resolveRevStatusFromRHS(ctx context.Context, rhsURL string, cfg EnvConfig,
 	}
 
 	return p, nil
+}
+
+func newIntFromBytesLE(bs []byte) *big.Int {
+	return new(big.Int).SetBytes(utils.SwapEndianness(bs))
+}
+
+// newIntFromHexQueryParam search for query param `paramName`, parse it
+// as hex string of LE bytes of *big.Int. Return nil if param is not found.
+func newIntFromHexQueryParam(uri *url.URL, paramName string) (*big.Int, error) {
+	stateParam := uri.Query().Get(paramName)
+	if stateParam == "" {
+		return nil, nil
+	}
+
+	stateParam = strings.TrimSuffix(stateParam, "0x")
+	stateBytes, err := hex.DecodeString(stateParam)
+	if err != nil {
+		return nil, err
+	}
+
+	return newIntFromBytesLE(stateBytes), nil
 }
