@@ -621,15 +621,15 @@ func TestEnvConfig_UnmarshalJSON(t *testing.T) {
   "ipfsNodeUrl": "http://localhost:5001",
   "chainConfigs": {
     "1": {
-      "ethereumUrl": "http://localhost:8545",
+      "rpcUrl": "http://localhost:8545",
       "stateContractAddr": "0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655"
     },
     "0x10": {
-      "ethereumUrl": "http://localhost:8545",
+      "rpcUrl": "http://localhost:8545",
       "stateContractAddr": "0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655"
     },
     "0X11": {
-      "ethereumUrl": "http://localhost:8545",
+      "rpcUrl": "http://localhost:8545",
       "stateContractAddr": "0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655"
     }
   }
