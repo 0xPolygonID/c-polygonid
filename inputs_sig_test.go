@@ -189,20 +189,45 @@ func TestPrepareInputs(t *testing.T) {
 
 	t.Run("AtomicQueryMtpV2Onchain", func(t *testing.T) {
 		defer mockHttpClient(t, map[string]string{
-			`http://localhost:8545%%%{"jsonrpc":"2.0","id":1,"method":"eth_call","params":[{"data":"0x110c96a70008d1b032ae8f736f9e26cd20eab4bf44351a135e05a500000000000000120200000000000000000000000000000000000000000000000000000000291bd4dc","from":"0x0000000000000000000000000000000000000000","to":"0xa5055e131a3544bfb4ea20cd269e6f738fae32b0"},"latest"]}`: "testdata/httpresp_eth_on_chain_status_resp.json",
-			"https://www.w3.org/2018/credentials/v1": "testdata/httpresp_credentials_v1.json",
-			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/cbade52faccea8c386bab0129c0ffffa64393849/core" +
-				"/jsonld/iden3proofs.jsonld": "testdata/httpresp_iden3proofs.jsonld",
-			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v4.jsonld": "testdata/httpresp_kyc_v4.jsonld",
+			`http://localhost:8545%%%{"jsonrpc":"2.0","id":1,"method":"eth_call","params":[{"data":"0xb4bdea55000e5102b2f7a54e61db03f6c656f65062f4b11b9dd52a1702c2bfdc379d1202","from":"0x0000000000000000000000000000000000000000","to":"0x134b1be34911e39a8397ec6289782989729807a4"},"latest"]}`:                                                                 "testdata/httpresp_eth_state_2qKc2ns18nV6uDSfaR1RVd7zF1Nm9vfeNZuvuEXQ3X.json",
+			`http://localhost:8545%%%{"jsonrpc":"2.0","id":2,"method":"eth_call","params":[{"data":"0x110c96a7000e5102b2f7a54e61db03f6c656f65062f4b11b9dd52a1702c2bfdc379d12020000000000000000000000000000000000000000000000000000000026d96d5e","from":"0x0000000000000000000000000000000000000000","to":"0x49b84b9dd137de488924b18299de8bf46fd11469"},"latest"]}`: `testdata/httpresp_eth_iden3state_2qKc2ns18nV6uDSfaR1RVd7zF1Nm9vfeNZuvuEXQ3X_rev_status_651783518.json`,
+			"https://www.w3.org/2018/credentials/v1":                                                         "testdata/httpresp_credentials_v1.json",
+			"https://schema.iden3.io/core/jsonld/iden3proofs.jsonld":                                         "testdata/httpresp_iden3proofs.jsonld",
+			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld": "testdata/httpresp_kyc-v3.json-ld",
+			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v4.jsonld":  "testdata/httpresp_kyc_v4.jsonld",
 		})()
 		cfg := EnvConfig{
-			EthereumURL:       "http://localhost:8545",
-			StateContractAddr: common.HexToAddress("0xAD8148c2aB7fe91BD492783a37b9FC2d52B38903"),
+			ChainConfigs: map[ChainID]ChainConfig{
+				80001: {
+					RPCUrl:            "http://localhost:8545",
+					StateContractAddr: common.HexToAddress("0x134B1BE34911E39A8397ec6289782989729807a4"),
+				},
+			},
 		}
 
 		doTest(t, "atomic_query_mtp_v2_on_chain_status_inputs.json",
-			"atomic_query_mtp_v2_on_chain_status_output.json", AtomicQueryMtpV2InputsFromJson,
+			"atomic_query_mtp_v2_on_chain_status_output.json",
+			AtomicQueryMtpV2InputsFromJson,
 			nil, cfg, "")
+	})
+
+	t.Run("AtomicQueryMtpV2Onchain - no roots in identity tree store", func(t *testing.T) {
+		defer mockHttpClient(t, map[string]string{
+			`http://localhost:8545%%%{"jsonrpc":"2.0","id":1,"method":"eth_call","params":[{"data":"0xb4bdea55000e5102b2f7a54e61db03f6c656f65062f4b11b9dd52a1702c2bfdc379d1202","from":"0x0000000000000000000000000000000000000000","to":"0x134b1be34911e39a8397ec6289782989729807a4"},"latest"]}`:                                                                 "testdata/httpresp_eth_state_2qKc2ns18nV6uDSfaR1RVd7zF1Nm9vfeNZuvuEXQ3X.json",
+			`http://localhost:8545%%%{"jsonrpc":"2.0","id":2,"method":"eth_call","params":[{"data":"0x110c96a7000e5102b2f7a54e61db03f6c656f65062f4b11b9dd52a1702c2bfdc379d12020000000000000000000000000000000000000000000000000000000026d96d5e","from":"0x0000000000000000000000000000000000000000","to":"0x49b84b9dd137de488924b18299de8bf46fd11469"},"latest"]}`: `testdata/httpresp_eth_tree_store_2qKc2ns18nV6uDSfaR1RVd7zF1Nm9vfeNZuvuEXQ3X_no_roots.json`,
+		})()
+		cfg := EnvConfig{
+			ChainConfigs: map[ChainID]ChainConfig{
+				80001: {
+					RPCUrl:            "http://localhost:8545",
+					StateContractAddr: common.HexToAddress("0x134B1BE34911E39A8397ec6289782989729807a4"),
+				},
+			},
+		}
+
+		doTest(t, "atomic_query_mtp_v2_on_chain_status_inputs.json", "",
+			AtomicQueryMtpV2InputsFromJson, nil, cfg,
+			"GetRevocationProof smart contract call [GetRevocationStatus]: roots were not saved to identity tree store")
 	})
 
 	t.Run("AtomicQueryMtpV2InputsFromJson", func(t *testing.T) {

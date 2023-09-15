@@ -1393,7 +1393,8 @@ func checkOnchainRevStatusConsistency(id *core.ID, revStatus onchainRevStatus,
 // is rarely called. If this becomes an issue in the future, or if a Close
 // function is implemented, we will need to refactor this function to use a
 // global Ethereum client.
-func resolverOnChainRevocationStatus(ctx context.Context, cfg EnvConfig, id *core.ID,
+func resolverOnChainRevocationStatus(ctx context.Context, cfg EnvConfig,
+	id *core.ID,
 	status *verifiable.CredentialStatus) (circuits.MTProof, error) {
 
 	var zeroID core.ID
@@ -1440,9 +1441,13 @@ func resolverOnChainRevocationStatus(ctx context.Context, cfg EnvConfig, id *cor
 		resp, err = contractCaller.GetRevocationStatus(opts, id.BigInt(),
 			onchainRevStatus.revNonce)
 		if err != nil {
+			msg := err.Error()
+			if isErrInvalidRootsLength(err) {
+				msg = "roots were not saved to identity tree store"
+			}
 			return circuits.MTProof{}, fmt.Errorf(
 				"GetRevocationProof smart contract call [GetRevocationStatus]: %s",
-				err.Error())
+				msg)
 		}
 	} else {
 		if onchainRevStatus.genesisState == nil {
@@ -1735,6 +1740,15 @@ func isErrIdentityDoesNotExist(err error) bool {
 	}
 	return rpcErr.ErrorCode() == 3 &&
 		rpcErr.Error() == "execution reverted: Identity does not exist"
+}
+
+func isErrInvalidRootsLength(err error) bool {
+	rpcErr, isRPCErr := err.(rpc.Error)
+	if !isRPCErr {
+		return false
+	}
+	return rpcErr.ErrorCode() == 3 &&
+		rpcErr.Error() == "execution reverted: Invalid roots length"
 }
 
 func newRhsCli(rhsURL string) (*mp.HTTPReverseHashCli, error) {
