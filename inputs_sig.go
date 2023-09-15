@@ -1363,30 +1363,6 @@ func newOnchainRevStatusFromURI(stateID string) (onchainRevStatus, error) {
 	return s, nil
 }
 
-func checkOnchainRevStatusConsistency(id *core.ID, revStatus onchainRevStatus,
-	credStatus *verifiable.CredentialStatus) error {
-
-	idChainID, err := chainIDFromID(id)
-	if err != nil {
-		return err
-	}
-	if idChainID != revStatus.chainID {
-		return fmt.Errorf(
-			"ID's chain ID {%d} is not equal to the one in "+
-				"OnChainCredentialStatus ID {%d}",
-			idChainID, revStatus.chainID)
-	}
-
-	if revStatus.revNonce != credStatus.RevocationNonce {
-		return fmt.Errorf(
-			"revocationNonce is not equal to the one "+
-				"in OnChainCredentialStatus ID {%d} {%d}",
-			revStatus.revNonce, credStatus.RevocationNonce)
-	}
-
-	return nil
-}
-
 // Currently, our library does not have a Close function. As a result, we
 // create and destroy an Ethereum client for each usage of this function.
 // Although this approach may be inefficient, it is acceptable if the function
@@ -1407,9 +1383,11 @@ func resolverOnChainRevocationStatus(ctx context.Context, cfg EnvConfig,
 		return circuits.MTProof{}, err
 	}
 
-	err = checkOnchainRevStatusConsistency(id, onchainRevStatus, status)
-	if err != nil {
-		return circuits.MTProof{}, err
+	if onchainRevStatus.revNonce != status.RevocationNonce {
+		return circuits.MTProof{}, fmt.Errorf(
+			"revocationNonce is not equal to the one "+
+				"in OnChainCredentialStatus ID {%d} {%d}",
+			onchainRevStatus.revNonce, status.RevocationNonce)
 	}
 
 	networkCfg, err := cfg.networkCfgByChainID(onchainRevStatus.chainID)
