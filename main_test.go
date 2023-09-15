@@ -4,6 +4,8 @@ import (
 	"flag"
 	"os"
 	"testing"
+
+	httpmock "github.com/0xPolygonID/c-polygonid/testing"
 )
 
 var catchUnusedHttpresp = flag.Bool("find-unused-httpresp", false,
@@ -14,8 +16,8 @@ func TestMain(m *testing.M) {
 	flag.Parse()
 
 	if *catchUnusedHttpresp {
-		if errCode := checkForRedundantHttpresps(); errCode != 0 {
-			os.Exit(errCode)
+		if !httpmock.CheckForRedundantHttpresps("testdata", "httpresp_") {
+			os.Exit(1)
 		}
 	}
 
