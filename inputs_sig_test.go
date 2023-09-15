@@ -71,15 +71,31 @@ func TestPrepareInputs(t *testing.T) {
 		}
 	}
 
+	removeIdFromEthBody := func(body []byte) []byte {
+		var ethBody map[string]any
+		err := json.Unmarshal(body, &ethBody)
+		require.NoError(t, err)
+		if stringFromJsonObj(ethBody, "jsonrpc") == "2.0" &&
+			stringFromJsonObj(ethBody, "method") == "eth_call" {
+
+			delete(ethBody, "id")
+		}
+		body, err = json.Marshal(ethBody)
+		require.NoError(t, err)
+		return body
+	}
+
 	t.Run("AtomicQueryMtpV2Onchain", func(t *testing.T) {
 		defer httpmock.MockHTTPClient(t, map[string]string{
-			`http://localhost:8545%%%{"jsonrpc":"2.0","id":1,"method":"eth_call","params":[{"data":"0xb4bdea55000e5102b2f7a54e61db03f6c656f65062f4b11b9dd52a1702c2bfdc379d1202","from":"0x0000000000000000000000000000000000000000","to":"0x134b1be34911e39a8397ec6289782989729807a4"},"latest"]}`:                                                                 "testdata/httpresp_eth_state_2qKc2ns18nV6uDSfaR1RVd7zF1Nm9vfeNZuvuEXQ3X.json",
-			`http://localhost:8545%%%{"jsonrpc":"2.0","id":2,"method":"eth_call","params":[{"data":"0x110c96a7000e5102b2f7a54e61db03f6c656f65062f4b11b9dd52a1702c2bfdc379d12020000000000000000000000000000000000000000000000000000000026d96d5e","from":"0x0000000000000000000000000000000000000000","to":"0x49b84b9dd137de488924b18299de8bf46fd11469"},"latest"]}`: `testdata/httpresp_eth_iden3state_2qKc2ns18nV6uDSfaR1RVd7zF1Nm9vfeNZuvuEXQ3X_rev_status_651783518.json`,
+			`http://localhost:8545%%%{"jsonrpc":"2.0","method":"eth_call","params":[{"data":"0xb4bdea55000e5102b2f7a54e61db03f6c656f65062f4b11b9dd52a1702c2bfdc379d1202","from":"0x0000000000000000000000000000000000000000","to":"0x134b1be34911e39a8397ec6289782989729807a4"},"latest"]}`:                                                                 "testdata/httpresp_eth_state_2qKc2ns18nV6uDSfaR1RVd7zF1Nm9vfeNZuvuEXQ3X.json",
+			`http://localhost:8545%%%{"jsonrpc":"2.0","method":"eth_call","params":[{"data":"0x110c96a7000e5102b2f7a54e61db03f6c656f65062f4b11b9dd52a1702c2bfdc379d12020000000000000000000000000000000000000000000000000000000026d96d5e","from":"0x0000000000000000000000000000000000000000","to":"0x49b84b9dd137de488924b18299de8bf46fd11469"},"latest"]}`: `testdata/httpresp_eth_iden3state_2qKc2ns18nV6uDSfaR1RVd7zF1Nm9vfeNZuvuEXQ3X_rev_status_651783518.json`,
 			"https://www.w3.org/2018/credentials/v1":                                                         "testdata/httpresp_credentials_v1.json",
 			"https://schema.iden3.io/core/jsonld/iden3proofs.jsonld":                                         "testdata/httpresp_iden3proofs.jsonld",
 			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld": "testdata/httpresp_kyc-v3.json-ld",
 			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v4.jsonld":  "testdata/httpresp_kyc_v4.jsonld",
-		}, httpmock.IgnoreUntouchedURLs())()
+		},
+			httpmock.IgnoreUntouchedURLs(),
+			httpmock.WithPostRequestBodyProcessor(removeIdFromEthBody))()
 		cfg := EnvConfig{
 			ChainConfigs: map[ChainID]ChainConfig{
 				80001: {
@@ -97,9 +113,11 @@ func TestPrepareInputs(t *testing.T) {
 
 	t.Run("AtomicQueryMtpV2Onchain - no roots in identity tree store", func(t *testing.T) {
 		defer httpmock.MockHTTPClient(t, map[string]string{
-			`http://localhost:8545%%%{"jsonrpc":"2.0","id":1,"method":"eth_call","params":[{"data":"0xb4bdea55000e5102b2f7a54e61db03f6c656f65062f4b11b9dd52a1702c2bfdc379d1202","from":"0x0000000000000000000000000000000000000000","to":"0x134b1be34911e39a8397ec6289782989729807a4"},"latest"]}`:                                                                 "testdata/httpresp_eth_state_2qKc2ns18nV6uDSfaR1RVd7zF1Nm9vfeNZuvuEXQ3X.json",
-			`http://localhost:8545%%%{"jsonrpc":"2.0","id":2,"method":"eth_call","params":[{"data":"0x110c96a7000e5102b2f7a54e61db03f6c656f65062f4b11b9dd52a1702c2bfdc379d12020000000000000000000000000000000000000000000000000000000026d96d5e","from":"0x0000000000000000000000000000000000000000","to":"0x49b84b9dd137de488924b18299de8bf46fd11469"},"latest"]}`: `testdata/httpresp_eth_tree_store_2qKc2ns18nV6uDSfaR1RVd7zF1Nm9vfeNZuvuEXQ3X_no_roots.json`,
-		}, httpmock.IgnoreUntouchedURLs())()
+			`http://localhost:8545%%%{"jsonrpc":"2.0","method":"eth_call","params":[{"data":"0xb4bdea55000e5102b2f7a54e61db03f6c656f65062f4b11b9dd52a1702c2bfdc379d1202","from":"0x0000000000000000000000000000000000000000","to":"0x134b1be34911e39a8397ec6289782989729807a4"},"latest"]}`:                                                                 "testdata/httpresp_eth_state_2qKc2ns18nV6uDSfaR1RVd7zF1Nm9vfeNZuvuEXQ3X.json",
+			`http://localhost:8545%%%{"jsonrpc":"2.0","method":"eth_call","params":[{"data":"0x110c96a7000e5102b2f7a54e61db03f6c656f65062f4b11b9dd52a1702c2bfdc379d12020000000000000000000000000000000000000000000000000000000026d96d5e","from":"0x0000000000000000000000000000000000000000","to":"0x49b84b9dd137de488924b18299de8bf46fd11469"},"latest"]}`: `testdata/httpresp_eth_tree_store_2qKc2ns18nV6uDSfaR1RVd7zF1Nm9vfeNZuvuEXQ3X_no_roots.json`,
+		},
+			httpmock.IgnoreUntouchedURLs(),
+			httpmock.WithPostRequestBodyProcessor(removeIdFromEthBody))()
 		cfg := EnvConfig{
 			ChainConfigs: map[ChainID]ChainConfig{
 				80001: {
@@ -844,4 +862,12 @@ func TestRHSBaseURL(t *testing.T) {
 			}
 		})
 	}
+}
+
+func stringFromJsonObj(obj map[string]any, key string) string {
+	v, ok := obj[key].(string)
+	if ok {
+		return v
+	}
+	return ""
 }
