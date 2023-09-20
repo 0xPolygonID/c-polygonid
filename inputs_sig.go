@@ -1,6 +1,7 @@
 package c_polygonid
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"encoding/json"
@@ -12,11 +13,13 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/rpc"
 	onchainABI "github.com/iden3/contracts-abi/onchain-credential-status-resolver/go/abi"
 	"github.com/iden3/contracts-abi/state/go/abi"
 	"github.com/iden3/go-circuits/v2"
@@ -1204,60 +1207,160 @@ func circuitsTreeStateFromSchemaState(
 	return
 }
 
-func resolveRevStatus(ctx context.Context,
-	cfg EnvConfig, credStatus interface{},
-	issuerID *core.ID) (circuits.MTProof, error) {
+var supportedCredentialStatusTypes = map[verifiable.CredentialStatusType]bool{
+	verifiable.Iden3ReverseSparseMerkleTreeProof:     true,
+	verifiable.SparseMerkleTreeProof:                 true,
+	verifiable.Iden3OnchainSparseMerkleTreeProof2023: true,
+}
+
+func resolveRevStatus(ctx context.Context, cfg EnvConfig,
+	credStatus interface{}, issuerID *core.ID) (circuits.MTProof, error) {
 
 	switch status := credStatus.(type) {
-	case *verifiable.RHSCredentialStatus:
-		revNonce := new(big.Int).SetUint64(status.RevocationNonce)
-		if cfg.ReverseHashServiceUrl == "" {
-			cfg.ReverseHashServiceUrl = credStatus.(*verifiable.RHSCredentialStatus).ID
-		}
-		return resolveRevStatusFromRHS(ctx, cfg, issuerID, revNonce)
 	case *verifiable.CredentialStatus:
+		if status.Type == verifiable.Iden3ReverseSparseMerkleTreeProof {
+			revNonce := new(big.Int).SetUint64(status.RevocationNonce)
+			return resolveRevStatusFromRHS(ctx, status.ID, cfg, issuerID,
+				revNonce)
+		}
 		if status.Type == verifiable.Iden3OnchainSparseMerkleTreeProof2023 {
 			return resolverOnChainRevocationStatus(ctx, cfg, issuerID, status)
 		}
 		return resolveRevocationStatusFromIssuerService(ctx, status.ID)
-	case verifiable.RHSCredentialStatus:
-		return resolveRevStatus(ctx, cfg, &status, issuerID)
+
 	case verifiable.CredentialStatus:
 		return resolveRevStatus(ctx, cfg, &status, issuerID)
-	case map[string]interface{}:
+
+	case jsonObj:
 		credStatusType, ok := status["type"].(string)
 		if !ok {
 			return circuits.MTProof{},
 				errors.New("credential status doesn't contain type")
 		}
-		marshaledStatus, err := json.Marshal(status)
-		if err != nil {
-			return circuits.MTProof{}, err
-		}
-		var s interface{}
-		switch verifiable.CredentialStatusType(credStatusType) {
-		case verifiable.Iden3ReverseSparseMerkleTreeProof:
-			s = &verifiable.RHSCredentialStatus{}
-		case verifiable.SparseMerkleTreeProof:
-			s = &verifiable.CredentialStatus{}
-		case verifiable.Iden3OnchainSparseMerkleTreeProof2023:
-			s = &verifiable.CredentialStatus{}
-		default:
+		credentialStatusType := verifiable.CredentialStatusType(credStatusType)
+		if !supportedCredentialStatusTypes[credentialStatusType] {
 			return circuits.MTProof{}, fmt.Errorf(
 				"credential status type %s id not supported",
 				credStatusType)
 		}
 
-		err = json.Unmarshal(marshaledStatus, s)
+		var typedCredentialStatus verifiable.CredentialStatus
+		err := remarshalObj(&typedCredentialStatus, status)
 		if err != nil {
 			return circuits.MTProof{}, err
 		}
-		return resolveRevStatus(ctx, cfg, s, issuerID)
+		return resolveRevStatus(ctx, cfg, &typedCredentialStatus, issuerID)
 
 	default:
 		return circuits.MTProof{},
 			errors.New("unknown credential status format")
 	}
+}
+
+// marshal/unmarshal object from one type to ther
+func remarshalObj(dst, src any) error {
+	objBytes, err := json.Marshal(src)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(objBytes, dst)
+}
+
+type stateContractIDKey struct {
+	contractAddr common.Address
+	id           core.ID
+}
+
+var idsInStateContract = map[stateContractIDKey]bool{}
+var idsInStateContractLock sync.RWMutex
+
+func stateContractHasID(ctx context.Context, id *core.ID, cfg ChainConfig,
+	cli bind.ContractCaller) (bool, error) {
+	key := stateContractIDKey{
+		contractAddr: cfg.StateContractAddr,
+		id:           *id,
+	}
+
+	idsInStateContractLock.RLock()
+	ok := idsInStateContract[key]
+	idsInStateContractLock.RUnlock()
+	if ok {
+		return ok, nil
+	}
+
+	idsInStateContractLock.Lock()
+	defer idsInStateContractLock.Unlock()
+
+	ok = idsInStateContract[key]
+	if ok {
+		return ok, nil
+	}
+
+	_, err := lastStateFromContractWithClient(ctx, cfg, id, cli)
+	if errors.Is(err, errIdentityDoesNotExist) {
+		return false, nil
+	} else if err != nil {
+		return false, err
+	}
+
+	idsInStateContract[key] = true
+	return true, err
+}
+
+type onchainRevStatus struct {
+	chainID         ChainID
+	contractAddress common.Address
+	revNonce        uint64
+	genesisState    *big.Int
+}
+
+func newOnchainRevStatusFromURI(stateID string) (onchainRevStatus, error) {
+	var s onchainRevStatus
+
+	uri, err := url.Parse(stateID)
+	if err != nil {
+		return s, errors.New("OnChainCredentialStatus ID is not a valid URI")
+	}
+
+	contract := uri.Query().Get("contractAddress")
+	if contract == "" {
+		return s, errors.New("OnChainCredentialStatus contract address is empty")
+	}
+
+	contractParts := strings.Split(contract, ":")
+	if len(contractParts) != 2 {
+		return s, errors.New(
+			"OnChainCredentialStatus contract address is not valid")
+	}
+
+	s.chainID, err = newChainIDFromString(contractParts[0])
+	if err != nil {
+		return s, err
+	}
+
+	if !common.IsHexAddress(contractParts[1]) {
+		return s, errors.New(
+			"OnChainCredentialStatus incorrect contract address")
+	}
+	s.contractAddress = common.HexToAddress(contractParts[1])
+
+	revocationNonce := uri.Query().Get("revocationNonce")
+	if revocationNonce == "" {
+		return s, errors.New("revocationNonce is empty in OnChainCredentialStatus ID")
+	}
+
+	s.revNonce, err = strconv.ParseUint(revocationNonce, 10, 64)
+	if err != nil {
+		return s, errors.New("revocationNonce is not a number in OnChainCredentialStatus ID")
+	}
+
+	// state may be nil if params is absent in query
+	s.genesisState, err = newIntFromHexQueryParam(uri, "state")
+	if err != nil {
+		return s, err
+	}
+
+	return s, nil
 }
 
 // Currently, our library does not have a Close function. As a result, we
@@ -1266,55 +1369,30 @@ func resolveRevStatus(ctx context.Context,
 // is rarely called. If this becomes an issue in the future, or if a Close
 // function is implemented, we will need to refactor this function to use a
 // global Ethereum client.
-func resolverOnChainRevocationStatus(ctx context.Context, cfg EnvConfig, id *core.ID,
+func resolverOnChainRevocationStatus(ctx context.Context, cfg EnvConfig,
+	id *core.ID,
 	status *verifiable.CredentialStatus) (circuits.MTProof, error) {
-
-	if cfg.EthereumURL == "" {
-		return circuits.MTProof{}, errors.New("ethereum url is empty")
-	}
 
 	var zeroID core.ID
 	if id == nil || *id == zeroID {
 		return circuits.MTProof{}, errors.New("issuer ID is empty")
 	}
 
-	uri, err := url.Parse(status.ID)
-	if err != nil {
-		return circuits.MTProof{}, errors.New("OnChainCredentialStatus ID is not a valid URI")
-	}
-	contract := uri.Query().Get("contractAddress")
-	if contract == "" {
-		return circuits.MTProof{}, errors.New("OnChainCredentialStatus contract address is empty")
-	}
-	contractParts := strings.Split(contract, ":")
-	if len(contractParts) != 2 {
-		return circuits.MTProof{}, errors.New(
-			"OnChainCredentialStatus contract address is not valid")
-	}
-	chainID, err := newChainIDFromString(contractParts[0])
-	if err != nil {
-		return circuits.MTProof{}, err
-	}
-	contractAddress := common.HexToAddress(contractParts[1])
-	networkCfg, err := cfg.networkCfgByChainID(chainID)
+	onchainRevStatus, err := newOnchainRevStatusFromURI(status.ID)
 	if err != nil {
 		return circuits.MTProof{}, err
 	}
 
-	revocationNonce := uri.Query().Get("revocationNonce")
-	if revocationNonce == "" {
-		return circuits.MTProof{}, errors.New("revocationNonce is empty in OnChainCredentialStatus ID")
+	if onchainRevStatus.revNonce != status.RevocationNonce {
+		return circuits.MTProof{}, fmt.Errorf(
+			"revocationNonce is not equal to the one "+
+				"in OnChainCredentialStatus ID {%d} {%d}",
+			onchainRevStatus.revNonce, status.RevocationNonce)
 	}
 
-	revocationNonceInt, err := strconv.ParseUint(revocationNonce, 10, 64)
+	networkCfg, err := cfg.networkCfgByChainID(onchainRevStatus.chainID)
 	if err != nil {
-		return circuits.MTProof{}, errors.New("revocationNonce is not a number in OnChainCredentialStatus ID")
-	}
-
-	if revocationNonceInt != status.RevocationNonce {
-		return circuits.MTProof{},
-			fmt.Errorf("revocation revocationNonce is not equal to the one in OnChainCredentialStatus ID"+
-				" {%d} {%d}", revocationNonceInt, status.RevocationNonce)
+		return circuits.MTProof{}, err
 	}
 
 	client, err := ethclient.Dial(networkCfg.RPCUrl)
@@ -1323,18 +1401,45 @@ func resolverOnChainRevocationStatus(ctx context.Context, cfg EnvConfig, id *cor
 	}
 	defer client.Close()
 
-	contractCaller, err := onchainABI.NewOnchainCredentialStatusResolverCaller(contractAddress, client)
+	contractCaller, err := onchainABI.NewOnchainCredentialStatusResolverCaller(
+		onchainRevStatus.contractAddress, client)
 	if err != nil {
 		return circuits.MTProof{}, err
 	}
 
-	// TODO: it is not finial version of contract GetRevocationProof must accept issuer id as parameter
-	resp, err := contractCaller.GetRevocationStatus(
-		&bind.CallOpts{Context: ctx},
-		id.BigInt(),
-		revocationNonceInt)
+	isStateContractHasID, err := stateContractHasID(ctx, id, networkCfg, client)
 	if err != nil {
-		return circuits.MTProof{}, fmt.Errorf("GetRevocationProof smart contract call, %s", err.Error())
+		return circuits.MTProof{}, err
+	}
+
+	opts := &bind.CallOpts{Context: ctx}
+	var resp onchainABI.IOnchainCredentialStatusResolverCredentialStatus
+	if isStateContractHasID {
+		// TODO: it is not finial version of contract GetRevocationProof must accept issuer id as parameter
+		resp, err = contractCaller.GetRevocationStatus(opts, id.BigInt(),
+			onchainRevStatus.revNonce)
+		if err != nil {
+			msg := err.Error()
+			if isErrInvalidRootsLength(err) {
+				msg = "roots were not saved to identity tree store"
+			}
+			return circuits.MTProof{}, fmt.Errorf(
+				"GetRevocationProof smart contract call [GetRevocationStatus]: %s",
+				msg)
+		}
+	} else {
+		if onchainRevStatus.genesisState == nil {
+			return circuits.MTProof{}, errors.New(
+				"genesis state is not specified in OnChainCredentialStatus ID")
+		}
+		resp, err = contractCaller.GetRevocationStatusByIdAndState(opts,
+			id.BigInt(), onchainRevStatus.genesisState,
+			onchainRevStatus.revNonce)
+		if err != nil {
+			return circuits.MTProof{}, fmt.Errorf(
+				"GetRevocationProof smart contract call [GetRevocationStatusByIdAndState]: %s",
+				err.Error())
+		}
 	}
 
 	return toMerkleTreeProof(resp)
@@ -1509,20 +1614,9 @@ var knownChainIDs = map[chainIDKey]ChainID{
 }
 
 func (cfg EnvConfig) networkCfgByID(id *core.ID) (ChainConfig, error) {
-	blockchain, err := core.BlockchainFromID(*id)
+	chainID, err := chainIDFromID(id)
 	if err != nil {
 		return ChainConfig{}, err
-	}
-
-	networkID, err := core.NetworkIDFromID(*id)
-	if err != nil {
-		return ChainConfig{}, err
-	}
-
-	key := chainIDKey{blockchain, networkID}
-	chainID, ok := knownChainIDs[key]
-	if !ok {
-		return ChainConfig{}, fmt.Errorf("unknown chain: %s", id.String())
 	}
 
 	return cfg.networkCfgByChainID(chainID)
@@ -1544,14 +1638,34 @@ func (cfg EnvConfig) defaultChainCfg() ChainConfig {
 	}
 }
 
+func chainIDFromID(id *core.ID) (ChainID, error) {
+	blockchain, err := core.BlockchainFromID(*id)
+	if err != nil {
+		return 0, err
+	}
+
+	networkID, err := core.NetworkIDFromID(*id)
+	if err != nil {
+		return 0, err
+	}
+
+	key := chainIDKey{blockchain, networkID}
+	chainID, ok := knownChainIDs[key]
+	if !ok {
+		return 0, fmt.Errorf("unknown chain: %s", id.String())
+	}
+
+	return chainID, nil
+}
+
 // Currently, our library does not have a Close function. As a result, we
 // create and destroy an Ethereum client for each usage of this function.
 // Although this approach may be inefficient, it is acceptable if the function
 // is rarely called. If this becomes an issue in the future, or if a Close
 // function is implemented, we will need to refactor this function to use a
 // global Ethereum client.
-func lastStateFromContract(ctx context.Context,
-	cfg EnvConfig, id *core.ID) (*merkletree.Hash, error) {
+func lastStateFromContract(ctx context.Context, cfg EnvConfig,
+	id *core.ID) (*merkletree.Hash, error) {
 
 	networkCfg, err := cfg.networkCfgByID(id)
 	if err != nil {
@@ -1569,16 +1683,22 @@ func lastStateFromContract(ctx context.Context,
 	}
 	defer client.Close()
 
-	contractCaller, err := abi.NewStateCaller(networkCfg.StateContractAddr,
-		client)
+	return lastStateFromContractWithClient(ctx, networkCfg, id, client)
+}
+
+func lastStateFromContractWithClient(ctx context.Context, cfg ChainConfig,
+	id *core.ID, cli bind.ContractCaller) (*merkletree.Hash, error) {
+
+	contractCaller, err := abi.NewStateCaller(cfg.StateContractAddr, cli)
 	if err != nil {
 		return nil, err
 	}
 
-	resp, err := contractCaller.GetStateInfoById(
-		&bind.CallOpts{Context: ctx},
-		id.BigInt())
-	if err != nil {
+	opts := &bind.CallOpts{Context: ctx}
+	resp, err := contractCaller.GetStateInfoById(opts, id.BigInt())
+	if isErrIdentityDoesNotExist(err) {
+		return nil, errIdentityDoesNotExist
+	} else if err != nil {
 		return nil, err
 	}
 
@@ -1587,6 +1707,26 @@ func lastStateFromContract(ctx context.Context,
 	}
 
 	return merkletree.NewHashFromBigInt(resp.State)
+}
+
+var errIdentityDoesNotExist = errors.New("identity does not exist")
+
+func isErrIdentityDoesNotExist(err error) bool {
+	rpcErr, isRPCErr := err.(rpc.Error)
+	if !isRPCErr {
+		return false
+	}
+	return rpcErr.ErrorCode() == 3 &&
+		rpcErr.Error() == "execution reverted: Identity does not exist"
+}
+
+func isErrInvalidRootsLength(err error) bool {
+	rpcErr, isRPCErr := err.(rpc.Error)
+	if !isRPCErr {
+		return false
+	}
+	return rpcErr.ErrorCode() == 3 &&
+		rpcErr.Error() == "execution reverted: Invalid roots length"
 }
 
 func newRhsCli(rhsURL string) (*mp.HTTPReverseHashCli, error) {
@@ -1623,18 +1763,82 @@ func treeStateFromRHS(ctx context.Context, rhsCli *mp.HTTPReverseHashCli,
 	return treeState, err
 }
 
-func resolveRevStatusFromRHS(ctx context.Context, cfg EnvConfig,
+func identityStateForRHS(ctx context.Context, cfg EnvConfig, issuerID *core.ID,
+	genesisState *merkletree.Hash) (*merkletree.Hash, error) {
+
+	state, err := lastStateFromContract(ctx, cfg, issuerID)
+	if !errors.Is(err, errIdentityDoesNotExist) {
+		return state, err
+	}
+
+	if genesisState == nil {
+		return nil, errors.New("current state is not found for the identity")
+	}
+
+	stateIsGenesis, err := genesisStateMatch(state, *issuerID)
+	if err != nil {
+		return nil, err
+	}
+
+	if !stateIsGenesis {
+		return nil, errors.New("state is not genesis for the identity")
+	}
+
+	return genesisState, nil
+}
+
+// check if genesis state matches the state from the ID
+func genesisStateMatch(state *merkletree.Hash, id core.ID) (bool, error) {
+	var tp [2]byte
+	copy(tp[:], id[:2])
+	otherID, err := core.NewIDFromIdenState(tp, state.BigInt())
+	if err != nil {
+		return false, err
+	}
+	return bytes.Equal(otherID[:], id[:]), nil
+}
+
+func rhsBaseURL(rhsURL string) (string, *merkletree.Hash, error) {
+	u, err := url.Parse(rhsURL)
+	if err != nil {
+		return "", nil, err
+	}
+	var state *merkletree.Hash
+	stateStr := u.Query().Get("state")
+	if stateStr != "" {
+		state, err = merkletree.NewHashFromHex(stateStr)
+		if err != nil {
+			return "", nil, err
+		}
+	}
+
+	if strings.HasSuffix(u.Path, "/node") {
+		u.Path = strings.TrimSuffix(u.Path, "node")
+	}
+	if strings.HasSuffix(u.Path, "/node/") {
+		u.Path = strings.TrimSuffix(u.Path, "node/")
+	}
+
+	u.RawQuery = ""
+	return u.String(), state, nil
+}
+
+func resolveRevStatusFromRHS(ctx context.Context, rhsURL string, cfg EnvConfig,
 	issuerID *core.ID, revNonce *big.Int) (circuits.MTProof, error) {
 
 	var p circuits.MTProof
 
-	state, err := lastStateFromContract(ctx, cfg, issuerID)
+	baseRHSURL, genesisState, err := rhsBaseURL(rhsURL)
 	if err != nil {
 		return p, err
 	}
 
-	//
-	rhsCli, err := newRhsCli(cfg.ReverseHashServiceUrl)
+	state, err := identityStateForRHS(ctx, cfg, issuerID, genesisState)
+	if err != nil {
+		return p, err
+	}
+
+	rhsCli, err := newRhsCli(baseRHSURL)
 	if err != nil {
 		return p, err
 	}
@@ -1656,4 +1860,25 @@ func resolveRevStatusFromRHS(ctx context.Context, cfg EnvConfig,
 	}
 
 	return p, nil
+}
+
+func newIntFromBytesLE(bs []byte) *big.Int {
+	return new(big.Int).SetBytes(utils.SwapEndianness(bs))
+}
+
+// newIntFromHexQueryParam search for query param `paramName`, parse it
+// as hex string of LE bytes of *big.Int. Return nil if param is not found.
+func newIntFromHexQueryParam(uri *url.URL, paramName string) (*big.Int, error) {
+	stateParam := uri.Query().Get(paramName)
+	if stateParam == "" {
+		return nil, nil
+	}
+
+	stateParam = strings.TrimSuffix(stateParam, "0x")
+	stateBytes, err := hex.DecodeString(stateParam)
+	if err != nil {
+		return nil, err
+	}
+
+	return newIntFromBytesLE(stateBytes), nil
 }
