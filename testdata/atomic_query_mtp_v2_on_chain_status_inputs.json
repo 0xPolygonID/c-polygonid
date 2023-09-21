@@ -3,95 +3,55 @@
   "profileNonce": "0",
   "claimSubjectProfileNonce": "0",
   "verifiableCredentials": {
-    "id": "https://onchainissuer.polygonid.me/api/v1/identities/did:polygonid:polygon:mumbai:2qCU58EJgrEM9Lvkv6vTqkybetLHDL4yfpRNS32eas/claims/ff091024-0d2b-42ca-a057-0fb4ba952a7c",
+    "id": "https://dd25-62-87-103-47.ngrok-free.app/api/v1/identities/did:polygonid:polygon:mumbai:2qKc2ns18nV6uDSfaR1RVd7zF1Nm9vfeNZuvuEXQ3X/claims/f4263c2a-53ae-11ee-a53c-3ec1cb517438",
     "@context": [
       "https://www.w3.org/2018/credentials/v1",
-      "https://raw.githubusercontent.com/iden3/claim-schema-vocab/cbade52faccea8c386bab0129c0ffffa64393849/core/jsonld/iden3proofs.jsonld",
-      "https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v4.jsonld"
+      "https://schema.iden3.io/core/jsonld/iden3proofs.jsonld",
+      "https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld"
     ],
     "type": [
       "VerifiableCredential",
       "KYCAgeCredential"
     ],
-    "expirationDate": "2030-01-01T00:00:00Z",
-    "issuanceDate": "2023-06-22T14:23:33.086955224Z",
+    "expirationDate": "2361-03-21T21:14:48+02:00",
+    "issuanceDate": "2023-09-15T13:02:18.062527+03:00",
     "credentialSubject": {
       "birthday": 19960424,
-      "documentType": 111,
-      "id": "did:polygonid:polygon:mumbai:2qGZYEUNasixXnN67ZDV7DZGrXNnP7sEwKjcKPcmEK",
+      "documentType": 2,
+      "id": "did:polygonid:polygon:mumbai:2qFgtCjKV3cDjWJapSLMZGfzw7CrodjCcQzLQABByv",
       "type": "KYCAgeCredential"
     },
     "credentialStatus": {
-      "id": "did:polygonid:polygon:mumbai:2qCU58EJgrEM9Lvkv6vTqkybetLHDL4yfpRNS32eas/credentialStatus?revocationNonce=689689820&contractAddress=80001:0xA5055e131A3544BfB4eA20CD269e6f738fAE32B0",
-      "type": "Iden3OnchainSparseMerkleTreeProof2023",
-      "revocationNonce": 689689820
+      "id": "did:polygonid:polygon:mumbai:2qKc2ns18nV6uDSfaR1RVd7zF1Nm9vfeNZuvuEXQ3X/credentialStatus?revocationNonce=651783518&contractAddress=80001:0x49b84b9Dd137de488924b18299De8bf46fD11469",
+      "revocationNonce": 651783518,
+      "type": "Iden3OnchainSparseMerkleTreeProof2023"
     },
-    "issuer": "did:polygonid:polygon:mumbai:2qCU58EJgrEM9Lvkv6vTqkybetLHDL4yfpRNS32eas",
+    "issuer": "did:polygonid:polygon:mumbai:2qKc2ns18nV6uDSfaR1RVd7zF1Nm9vfeNZuvuEXQ3X",
     "credentialSchema": {
-      "id": "https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json/KYCAgeCredential-v4.json",
-      "type": "JsonSchemaValidator2018"
+      "id": "https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json/KYCAgeCredential-v3.json",
+      "type": "JsonSchema2023"
     },
     "proof": [
       {
         "type": "Iden3SparseMerkleTreeProof",
         "issuerData": {
-          "id": "did:polygonid:polygon:mumbai:2qCU58EJgrEM9Lvkv6vTqkybetLHDL4yfpRNS32eas",
+          "id": "did:polygonid:polygon:mumbai:2qKc2ns18nV6uDSfaR1RVd7zF1Nm9vfeNZuvuEXQ3X",
           "state": {
-            "rootOfRoots": "1660eca86dfa1dcf92f05f4ac71a3b194004503fed5d8a1754bb0c45bccabb01",
-            "claimsTreeRoot": "c7ded8b5ce277ef07eeb707a24848c939201798d1fc2f6b4242efbe17526f722",
-            "revocationTreeRoot": "3256d581d5b52a6d8d59b83a580321854eaa91528603a5655462874e6476721a",
-            "value": "c6f1e159a19322a77e232b70dfb6738f83408cc8a04cdfbbec900226b64df82d"
+            "txId": "0x824d08f68e6c5f8ed2fd1e1a7719c3027e5474c27524f33656796056b360237b",
+            "blockTimestamp": 1694772169,
+            "blockNumber": 40137103,
+            "rootOfRoots": "f3b209de35e59081d119334c9aba3b87474f28971b61dca7aeadff5a14e64524",
+            "claimsTreeRoot": "5bf08eb140df36ca00d1ca24eb2dd0f1b4b117e92904279020c8bf51e590f920",
+            "revocationTreeRoot": "0000000000000000000000000000000000000000000000000000000000000000",
+            "value": "5a166f339f23fb53ae7433909eaf7eee27431f4e3ac038c329416e38a48a5818"
           }
         },
-        "coreClaim": "508991bcf0336ba99935ef498d797ec92a00000000000000000000000000000002125a301fa7b64e3a75935d312628abdfd907f22a3139e501b4d6f588630c00a6135c8b0e7f1a4c1dc28f755605b2393cc96b11e40179c7579f0b902b8cb4220000000000000000000000000000000000000000000000000000000000000000dcd41b290000000080d8db700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "coreClaim": "c9b2370371b7fa8b3dab2a5ba81b68382a000000000000000000000000000000021246f30c37a622bfbba26de552d3c9d71d189a58d8c7520c24feaf0b8b0d00b914ea81a5d3a7c2655cc5cc79787cf9b2c10a24cd236fa627252b06b2e7ca1b00000000000000000000000000000000000000000000000000000000000000005e6dd92600000000281cdcdf0200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
         "mtp": {
           "existence": true,
           "siblings": [
-            "10660818590108639428871982872591489586183290725077275050593284687717172079964",
-            "19004583404027319386260877934866626052185781987882873664881072886791630045709",
-            "7688551737818240300462500951153481472047294955944044944287841608520632560800",
-            "17769487165855930261808351867030953601566316638365313132919095596635885953664",
-            "5161693871597286563237588861621057258574279578037312916501715191991470717054",
-            "0",
-            "0",
-            "13324322751273822110620689916704453645987815620794505188533106956429795192902",
-            "0",
-            "0",
-            "0",
-            "0",
-            "0",
-            "0",
-            "0",
-            "0",
-            "0",
-            "0",
-            "0",
-            "0",
-            "0",
-            "0",
-            "0",
-            "0",
-            "0",
-            "0",
-            "0",
-            "0",
-            "0",
-            "0",
-            "0",
-            "0",
-            "0",
-            "0",
-            "0",
-            "0",
-            "0",
-            "0",
-            "0",
-            "0"
-          ],
-          "node_aux": {
-            "key": "0",
-            "value": "0"
-          }
+            "10474921236147713942078552079582531417664737388924733946611980668334294816825"
+          ]
         }
       }
     ]
@@ -113,7 +73,3 @@
     }
   }
 }
-
-
-
-

@@ -71,23 +71,66 @@ func TestPrepareInputs(t *testing.T) {
 		}
 	}
 
+	removeIdFromEthBody := func(body []byte) []byte {
+		var ethBody map[string]any
+		err := json.Unmarshal(body, &ethBody)
+		require.NoError(t, err)
+		if stringFromJsonObj(ethBody, "jsonrpc") == "2.0" &&
+			stringFromJsonObj(ethBody, "method") == "eth_call" {
+
+			delete(ethBody, "id")
+		}
+		body, err = json.Marshal(ethBody)
+		require.NoError(t, err)
+		return body
+	}
+
 	t.Run("AtomicQueryMtpV2Onchain", func(t *testing.T) {
-		defer httpmock.MockHTTPClient(t, map[string]string{
-			`http://localhost:8545%%%{"jsonrpc":"2.0","id":1,"method":"eth_call","params":[{"data":"0x110c96a70008d1b032ae8f736f9e26cd20eab4bf44351a135e05a500000000000000120200000000000000000000000000000000000000000000000000000000291bd4dc","from":"0x0000000000000000000000000000000000000000","to":"0xa5055e131a3544bfb4ea20cd269e6f738fae32b0"},"latest"]}`: "testdata/httpresp_eth_on_chain_status_resp.json",
-			"https://www.w3.org/2018/credentials/v1": "testdata/httpresp_credentials_v1.json",
-			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/cbade52faccea8c386bab0129c0ffffa64393849/core" +
-				"/jsonld/iden3proofs.jsonld": "testdata/httpresp_iden3proofs.jsonld",
-			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v4.jsonld": "testdata/httpresp_kyc_v4.jsonld",
-		},
-			httpmock.IgnoreUntouchedURLs())()
+		defer httpmock.MockHTTPClient(t,
+			map[string]string{
+				`http://localhost:8545%%%{"jsonrpc":"2.0","method":"eth_call","params":[{"data":"0xb4bdea55000e5102b2f7a54e61db03f6c656f65062f4b11b9dd52a1702c2bfdc379d1202","from":"0x0000000000000000000000000000000000000000","to":"0x134b1be34911e39a8397ec6289782989729807a4"},"latest"]}`:                                                                 "testdata/httpresp_eth_state_2qKc2ns18nV6uDSfaR1RVd7zF1Nm9vfeNZuvuEXQ3X.json",
+				`http://localhost:8545%%%{"jsonrpc":"2.0","method":"eth_call","params":[{"data":"0x110c96a7000e5102b2f7a54e61db03f6c656f65062f4b11b9dd52a1702c2bfdc379d12020000000000000000000000000000000000000000000000000000000026d96d5e","from":"0x0000000000000000000000000000000000000000","to":"0x49b84b9dd137de488924b18299de8bf46fd11469"},"latest"]}`: `testdata/httpresp_eth_iden3state_2qKc2ns18nV6uDSfaR1RVd7zF1Nm9vfeNZuvuEXQ3X_rev_status_651783518.json`,
+				"https://www.w3.org/2018/credentials/v1":                                                         "testdata/httpresp_credentials_v1.json",
+				"https://schema.iden3.io/core/jsonld/iden3proofs.jsonld":                                         "testdata/httpresp_iden3proofs.jsonld",
+				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld": "testdata/httpresp_kyc-v3.json-ld",
+				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v4.jsonld":  "testdata/httpresp_kyc_v4.jsonld",
+			},
+			httpmock.IgnoreUntouchedURLs(),
+			httpmock.WithPostRequestBodyProcessor(removeIdFromEthBody))()
 		cfg := EnvConfig{
-			EthereumURL:       "http://localhost:8545",
-			StateContractAddr: common.HexToAddress("0xAD8148c2aB7fe91BD492783a37b9FC2d52B38903"),
+			ChainConfigs: map[ChainID]ChainConfig{
+				80001: {
+					RPCUrl:            "http://localhost:8545",
+					StateContractAddr: common.HexToAddress("0x134B1BE34911E39A8397ec6289782989729807a4"),
+				},
+			},
 		}
 
 		doTest(t, "atomic_query_mtp_v2_on_chain_status_inputs.json",
-			"atomic_query_mtp_v2_on_chain_status_output.json", AtomicQueryMtpV2InputsFromJson,
+			"atomic_query_mtp_v2_on_chain_status_output.json",
+			AtomicQueryMtpV2InputsFromJson,
 			nil, cfg, "")
+	})
+
+	t.Run("AtomicQueryMtpV2Onchain - no roots in identity tree store", func(t *testing.T) {
+		defer httpmock.MockHTTPClient(t, map[string]string{
+			`http://localhost:8545%%%{"jsonrpc":"2.0","method":"eth_call","params":[{"data":"0xb4bdea55000e5102b2f7a54e61db03f6c656f65062f4b11b9dd52a1702c2bfdc379d1202","from":"0x0000000000000000000000000000000000000000","to":"0x134b1be34911e39a8397ec6289782989729807a4"},"latest"]}`:                                                                 "testdata/httpresp_eth_state_2qKc2ns18nV6uDSfaR1RVd7zF1Nm9vfeNZuvuEXQ3X.json",
+			`http://localhost:8545%%%{"jsonrpc":"2.0","method":"eth_call","params":[{"data":"0x110c96a7000e5102b2f7a54e61db03f6c656f65062f4b11b9dd52a1702c2bfdc379d12020000000000000000000000000000000000000000000000000000000026d96d5e","from":"0x0000000000000000000000000000000000000000","to":"0x49b84b9dd137de488924b18299de8bf46fd11469"},"latest"]}`: `testdata/httpresp_eth_tree_store_2qKc2ns18nV6uDSfaR1RVd7zF1Nm9vfeNZuvuEXQ3X_no_roots.json`,
+		},
+			httpmock.IgnoreUntouchedURLs(),
+			httpmock.WithPostRequestBodyProcessor(removeIdFromEthBody))()
+		cfg := EnvConfig{
+			ChainConfigs: map[ChainID]ChainConfig{
+				80001: {
+					RPCUrl:            "http://localhost:8545",
+					StateContractAddr: common.HexToAddress("0x134B1BE34911E39A8397ec6289782989729807a4"),
+				},
+			},
+		}
+
+		doTest(t, "atomic_query_mtp_v2_on_chain_status_inputs.json", "",
+			AtomicQueryMtpV2InputsFromJson, nil, cfg,
+			"GetRevocationProof smart contract call [GetRevocationStatus]: roots were not saved to identity tree store")
 	})
 
 	t.Run("AtomicQueryMtpV2InputsFromJson", func(t *testing.T) {
@@ -96,8 +139,7 @@ func TestPrepareInputs(t *testing.T) {
 			"https://www.w3.org/2018/credentials/v1": "testdata/httpresp_credentials_v1.json",
 			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld": "testdata/httpresp_iden3credential_v2.json",
 			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld":             "testdata/httpresp_kyc-v3.json-ld",
-		},
-			httpmock.IgnoreUntouchedURLs())()
+		}, httpmock.IgnoreUntouchedURLs())()
 
 		doTest(t, "atomic_query_mtp_v2_inputs.json",
 			"atomic_query_mtp_v2_output.json", AtomicQueryMtpV2InputsFromJson,
@@ -110,8 +152,7 @@ func TestPrepareInputs(t *testing.T) {
 			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld":                                                 "testdata/httpresp_iden3credential_v2.json",
 			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3-non-merklized.json-ld":                                               "testdata/httpresp_kyc-v3-non-merklized.json-ld",
 			"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qFuKxq6iPem5w2U6T6druwGFjqTinE1kqNkSN7oo9/claims/revocation/status/118023115": "testdata/httpresp_rev_status_118023115.json",
-		},
-			httpmock.IgnoreUntouchedURLs())()
+		}, httpmock.IgnoreUntouchedURLs())()
 
 		doTest(t, "atomic_query_mtp_v2_non_merklized_inputs.json",
 			"atomic_query_mtp_v2_non_merklized_output.json",
@@ -125,8 +166,7 @@ func TestPrepareInputs(t *testing.T) {
 				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld":                                                 "testdata/httpresp_iden3credential_v2.json",
 				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3-non-merklized.json-ld":                                               "testdata/httpresp_kyc-v3-non-merklized.json-ld",
 				"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qFuKxq6iPem5w2U6T6druwGFjqTinE1kqNkSN7oo9/claims/revocation/status/118023115": "testdata/httpresp_rev_status_118023115.json",
-			},
-				httpmock.IgnoreUntouchedURLs())()
+			}, httpmock.IgnoreUntouchedURLs())()
 
 			wantVerifiablePresentation := map[string]any{
 				"@context": []any{"https://www.w3.org/2018/credentials/v1"},
@@ -158,8 +198,7 @@ func TestPrepareInputs(t *testing.T) {
 			"https://www.w3.org/2018/credentials/v1": "testdata/httpresp_credentials_v1.json",
 			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/2376431481": "testdata/httpresp_rev_status_2376431481.json",
 			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/0":          "testdata/httpresp_rev_status_wuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU_0.json",
-		},
-			httpmock.IgnoreUntouchedURLs())()
+		}, httpmock.IgnoreUntouchedURLs())()
 
 		wantVerifiablePresentation := map[string]any{
 			"@context": []any{"https://www.w3.org/2018/credentials/v1"},
@@ -190,8 +229,7 @@ func TestPrepareInputs(t *testing.T) {
 			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld":                                             "testdata/httpresp_iden3credential_v2.json",
 			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/2376431481": "testdata/httpresp_rev_status_2376431481.json",
 			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/0":          "testdata/httpresp_rev_status_wuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU_0.json",
-		},
-			httpmock.IgnoreUntouchedURLs())()
+		}, httpmock.IgnoreUntouchedURLs())()
 
 		doTest(t, "atomic_query_sig_v2_merklized_inputs.json",
 			"atomic_query_sig_v2_merklized_output.json",
@@ -214,8 +252,7 @@ func TestPrepareInputs(t *testing.T) {
 			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld":                                             "testdata/httpresp_iden3credential_v2.json",
 			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/2376431481": "testdata/httpresp_rev_status_2376431481.json",
 			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/0":          "testdata/httpresp_rev_status_wuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU_0.json",
-		},
-			httpmock.IgnoreUntouchedURLs())()
+		}, httpmock.IgnoreUntouchedURLs())()
 
 		doTest(t, "atomic_query_sig_v2_merklized_ipfs_inputs.json",
 			"atomic_query_sig_v2_merklized_output.json",
@@ -230,8 +267,7 @@ func TestPrepareInputs(t *testing.T) {
 			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld":                                             "testdata/httpresp_iden3credential_v2.json",
 			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/2376431481": "testdata/httpresp_rev_status_2376431481.json",
 			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/0":          "testdata/httpresp_rev_status_wuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU_0.json",
-		},
-			httpmock.IgnoreUntouchedURLs())()
+		}, httpmock.IgnoreUntouchedURLs())()
 
 		doTest(t, "atomic_query_sig_v2_merklized_noop_inputs.json",
 			"atomic_query_sig_v2_merklized_noop_output.json",
@@ -241,8 +277,7 @@ func TestPrepareInputs(t *testing.T) {
 	t.Run("AtomicQuerySigV2InputsFromJson - revoked", func(t *testing.T) {
 		defer httpmock.MockHTTPClient(t, map[string]string{
 			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/105": "testdata/httpresp_rev_status_105.json",
-		},
-			httpmock.IgnoreUntouchedURLs())()
+		}, httpmock.IgnoreUntouchedURLs())()
 
 		doTest(t, "atomic_query_sig_v2_merklized_revoked_inputs.json", "",
 			AtomicQuerySigV2InputsFromJson, nil, EnvConfig{},
@@ -257,8 +292,7 @@ func TestPrepareInputs(t *testing.T) {
 				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld":                                      "testdata/httpresp_iden3credential_v2.json",
 				"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/0":   "testdata/httpresp_rev_status_wuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU_0.json",
 				"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/105": "testdata/httpresp_rev_status_105.json",
-			},
-				httpmock.IgnoreUntouchedURLs())()
+			}, httpmock.IgnoreUntouchedURLs())()
 
 			doTest(t,
 				"atomic_query_sig_v2_merklized_skip_revocation_check_inputs.json",
@@ -274,8 +308,7 @@ func TestPrepareInputs(t *testing.T) {
 			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3-non-merklized.json-ld":                                                "testdata/httpresp_kyc-v3-non-merklized.json-ld",
 			"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qDNRmjPHUrtnPWfXQ4kKwZfarfsSYoiFBxB9tDkui/claims/revocation/status/3878863870": "testdata/httpresp_rev_status_3878863870.json",
 			"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qDNRmjPHUrtnPWfXQ4kKwZfarfsSYoiFBxB9tDkui/claims/revocation/status/0":          "testdata/httpresp_rev_status_2qDNRmjPHUrtnPWfXQ4kKwZfarfsSYoiFBxB9tDkui_0.json",
-		},
-			httpmock.IgnoreUntouchedURLs())()
+		}, httpmock.IgnoreUntouchedURLs())()
 
 		doTest(t, "atomic_query_sig_v2_non_merklized_inputs.json",
 			"atomic_query_sig_v2_non_merklized_output.json",
@@ -287,8 +320,7 @@ func TestPrepareInputs(t *testing.T) {
 			defer httpmock.MockHTTPClient(t, map[string]string{
 				"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qDNRmjPHUrtnPWfXQ4kKwZfarfsSYoiFBxB9tDkui/claims/revocation/status/3878863870": "testdata/httpresp_rev_status_3878863870.json",
 				"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qDNRmjPHUrtnPWfXQ4kKwZfarfsSYoiFBxB9tDkui/claims/revocation/status/0":          "testdata/httpresp_rev_status_2qDNRmjPHUrtnPWfXQ4kKwZfarfsSYoiFBxB9tDkui_0.json",
-			},
-				httpmock.IgnoreUntouchedURLs())()
+			}, httpmock.IgnoreUntouchedURLs())()
 
 			doTest(t, "atomic_query_sig_v2_non_merklized_noop_inputs.json",
 				"atomic_query_sig_v2_non_merklized_noop_output.json",
@@ -303,8 +335,7 @@ func TestPrepareInputs(t *testing.T) {
 				"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qDNRmjPHUrtnPWfXQ4kKwZfarfsSYoiFBxB9tDkui/claims/revocation/status/3878863870": "testdata/httpresp_rev_status_3878863870.json",
 				"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qDNRmjPHUrtnPWfXQ4kKwZfarfsSYoiFBxB9tDkui/claims/revocation/status/0":          "testdata/httpresp_rev_status_2qDNRmjPHUrtnPWfXQ4kKwZfarfsSYoiFBxB9tDkui_0.json",
 				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3-non-merklized.json-ld":                                                "testdata/httpresp_kyc-v3-non-merklized.json-ld",
-			},
-				httpmock.IgnoreUntouchedURLs())()
+			}, httpmock.IgnoreUntouchedURLs())()
 
 			wantVerifiablePresentation := map[string]any{
 				"@context": []any{"https://www.w3.org/2018/credentials/v1"},
@@ -337,8 +368,7 @@ func TestPrepareInputs(t *testing.T) {
 				"https://www.w3.org/2018/credentials/v1": "testdata/httpresp_credentials_v1.json",
 				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld": "testdata/httpresp_iden3credential_v2.json",
 				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld":             "testdata/httpresp_kyc-v3.json-ld",
-			},
-				httpmock.IgnoreUntouchedURLs())()
+			}, httpmock.IgnoreUntouchedURLs())()
 
 			doTest(t,
 				"atomic_query_sig_v2_on_chain_input.json",
@@ -353,8 +383,7 @@ func TestPrepareInputs(t *testing.T) {
 				"https://www.w3.org/2018/credentials/v1": "testdata/httpresp_credentials_v1.json",
 				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld": "testdata/httpresp_iden3credential_v2.json",
 				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld":             "testdata/httpresp_kyc-v3.json-ld",
-			},
-				httpmock.IgnoreUntouchedURLs())()
+			}, httpmock.IgnoreUntouchedURLs())()
 
 			doTest(t,
 				"atomic_query_mtp_v2_on_chain_input.json",
@@ -370,14 +399,12 @@ func TestPrepareInputs(t *testing.T) {
 				"https://www.w3.org/2018/credentials/v1":                                                                     "testdata/httpresp_credentials_v1.json",
 				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld":             "testdata/httpresp_kyc-v3.json-ld",
 				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld": "testdata/httpresp_iden3credential_v2.json",
-			},
-				httpmock.IgnoreUntouchedURLs())()
+			}, httpmock.IgnoreUntouchedURLs())()
 
 			cfg := EnvConfig{
 				EthereumURL: "http://localhost:8545",
 				StateContractAddr: common.HexToAddress(
 					"0x6F0a444Df4d231D85F66e4836f836034F0feFE24"),
-				ReverseHashServiceUrl: "http://localhost:8003",
 			}
 			doTest(t, "atomic_query_sig_v2_merklized_rhs_inputs.json",
 				"atomic_query_sig_v2_merklized_rhs_output.json",
@@ -398,14 +425,12 @@ func TestPrepareInputs(t *testing.T) {
 				"https://www.w3.org/2018/credentials/v1":                                                                     "testdata/httpresp_credentials_v1.json",
 				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld":             "testdata/httpresp_kyc-v3.json-ld",
 				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld": "testdata/httpresp_iden3credential_v2.json",
-			},
-				httpmock.IgnoreUntouchedURLs())()
+			}, httpmock.IgnoreUntouchedURLs())()
 
 			cfg := EnvConfig{
 				EthereumURL: "http://localhost:8545",
 				StateContractAddr: common.HexToAddress(
 					"0x6F0a444Df4d231D85F66e4836f836034F0feFE24"),
-				ReverseHashServiceUrl: "http://localhost:8003",
 			}
 			doTest(t, "atomic_query_sig_v2_merklized_rhs_inputs.json",
 				"atomic_query_sig_v2_merklized_rhs_nonempty_output.json",
@@ -421,14 +446,12 @@ func TestPrepareInputs(t *testing.T) {
 				"http://localhost:8003/node/a75cc7f84f279f758427e8f1ec26d2d7dcac0fd545098ef668dde0d2f90ca809": "testdata/httpresp_rhs_a75cc7f84f279f758427e8f1ec26d2d7dcac0fd545098ef668dde0d2f90ca809.json",
 				"http://localhost:8003/node/ce051a956948154312d91a406b52120fd689376c1b675699053cc1d7cafa4f04": "testdata/httpresp_rhs_ce051a956948154312d91a406b52120fd689376c1b675699053cc1d7cafa4f04.json",
 				"http://localhost:8003/node/3ecaca31559a389adb870fa1347b8487dee24406a7c9959334d3f36b65c3ba1d": "testdata/httpresp_rhs_3ecaca31559a389adb870fa1347b8487dee24406a7c9959334d3f36b65c3ba1d.json",
-			},
-				httpmock.IgnoreUntouchedURLs())()
+			}, httpmock.IgnoreUntouchedURLs())()
 
 			cfg := EnvConfig{
 				EthereumURL: "http://localhost:8545",
 				StateContractAddr: common.HexToAddress(
 					"0x6F0a444Df4d231D85F66e4836f836034F0feFE24"),
-				ReverseHashServiceUrl: "http://localhost:8003",
 			}
 			doTest(t, "atomic_query_sig_v2_merklized_rhs_revoked_inputs.json",
 				"", AtomicQuerySigV2InputsFromJson, nil, cfg,
@@ -451,8 +474,7 @@ func TestPrepareInputs(t *testing.T) {
 			"https://dev.polygonid.me/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qLPqvayNQz9TA2r5VPxUugoF18teGU583zJ859wfy/claims/revocation/status/214490175":  "testdata/httpresp_rev_status_214490175.json",
 			"https://dev.polygonid.me/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qLPqvayNQz9TA2r5VPxUugoF18teGU583zJ859wfy/claims/revocation/status/2575161389": "testdata/httpresp_rev_status_2575161389.json",
 			"https://schema.iden3.io/core/jsonld/iden3proofs.jsonld": "testdata/httpresp_iden3proofs.jsonld",
-		},
-			httpmock.IgnoreUntouchedURLs())()
+		}, httpmock.IgnoreUntouchedURLs())()
 
 		wantVerifiablePresentation := map[string]any{
 			"@context": []any{"https://www.w3.org/2018/credentials/v1"},
@@ -524,15 +546,15 @@ func TestEnvConfig_UnmarshalJSON(t *testing.T) {
   "ipfsNodeUrl": "http://localhost:5001",
   "chainConfigs": {
     "1": {
-      "ethereumUrl": "http://localhost:8545",
+      "rpcUrl": "http://localhost:8545",
       "stateContractAddr": "0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655"
     },
     "0x10": {
-      "ethereumUrl": "http://localhost:8545",
+      "rpcUrl": "http://localhost:8545",
       "stateContractAddr": "0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655"
     },
     "0X11": {
-      "ethereumUrl": "http://localhost:8545",
+      "rpcUrl": "http://localhost:8545",
       "stateContractAddr": "0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655"
     }
   }
@@ -544,15 +566,15 @@ func TestEnvConfig_UnmarshalJSON(t *testing.T) {
 				IPFSNodeURL:           "http://localhost:5001",
 				ChainConfigs: map[ChainID]ChainConfig{
 					1: {
-						EthereumURL:       "http://localhost:8545",
+						RPCUrl:            "http://localhost:8545",
 						StateContractAddr: common.HexToAddress("0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655"),
 					},
 					16: {
-						EthereumURL:       "http://localhost:8545",
+						RPCUrl:            "http://localhost:8545",
 						StateContractAddr: common.HexToAddress("0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655"),
 					},
 					17: {
-						EthereumURL:       "http://localhost:8545",
+						RPCUrl:            "http://localhost:8545",
 						StateContractAddr: common.HexToAddress("0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655"),
 					},
 				},
@@ -722,4 +744,131 @@ func Test_resolverOnChainRevocationStatus(t *testing.T) {
 
 	fmt.Println("State : ", state)
 	require.Equal(t, state, got.TreeState.State.BigInt())
+}
+
+func TestNetworkCfgByID(t *testing.T) {
+	defaultChainCfg := ChainConfig{
+		RPCUrl:            "http://host2.com/default",
+		StateContractAddr: common.BytesToAddress([]byte{1}),
+	}
+
+	cfg := EnvConfig{
+		ChainConfigs: PerChainConfig{
+			80001: ChainConfig{
+				RPCUrl:            "http://host1.com/mumbai",
+				StateContractAddr: common.BytesToAddress([]byte{2}),
+			},
+		},
+		EthereumURL:           defaultChainCfg.RPCUrl,
+		StateContractAddr:     defaultChainCfg.StateContractAddr,
+		ReverseHashServiceUrl: "",
+		IPFSNodeURL:           "",
+	}
+
+	emptyCfg := EnvConfig{}
+
+	mkID := func(t testing.TB, method core.DIDMethod,
+		blockchain core.Blockchain, network core.NetworkID) *core.ID {
+
+		tp, err := core.BuildDIDType(method, blockchain, network)
+		require.NoError(t, err)
+		id, err := core.NewIDFromIdenState(tp, big.NewInt(1))
+		require.NoError(t, err)
+		return id
+	}
+
+	t.Run("chain config found", func(t *testing.T) {
+		polygonMumbaiID := mkID(t, core.DIDMethodPolygonID, core.Polygon,
+			core.Mumbai)
+		chainCfg, err := cfg.networkCfgByID(polygonMumbaiID)
+		require.NoError(t, err)
+		require.Equal(t, cfg.ChainConfigs[80001], chainCfg)
+	})
+
+	t.Run("default chain config", func(t *testing.T) {
+		ethMainID := mkID(t, core.DIDMethodIden3, core.Ethereum, core.Main)
+		chainCfg, err := cfg.networkCfgByID(ethMainID)
+		require.NoError(t, err)
+		require.Equal(t, defaultChainCfg, chainCfg)
+	})
+
+	t.Run("config is empty", func(t *testing.T) {
+		ethMainID := mkID(t, core.DIDMethodIden3, core.Ethereum, core.Main)
+		_, err := emptyCfg.networkCfgByID(ethMainID)
+		require.EqualError(t, err, "ethereum url is empty")
+	})
+
+}
+
+func TestRHSBaseURL(t *testing.T) {
+	mkHash := func(t testing.TB, hexStr string) *merkletree.Hash {
+		h, err := merkletree.NewHashFromHex(hexStr)
+		require.NoError(t, err)
+		return h
+	}
+
+	testCases := []struct {
+		title   string
+		in      string
+		baseURL string
+		hash    *merkletree.Hash
+		wantErr string
+	}{
+		{
+			title:   "old format 1",
+			in:      "http://localhost:8003/node/",
+			baseURL: "http://localhost:8003/",
+			hash:    nil,
+			wantErr: "",
+		},
+		{
+			title:   "old format 2",
+			in:      "http://localhost:8003/node/",
+			baseURL: "http://localhost:8003/",
+			hash:    nil,
+			wantErr: "",
+		},
+		{
+			title:   "without node suffix",
+			in:      "http://localhost:8003/",
+			baseURL: "http://localhost:8003/",
+			hash:    nil,
+			wantErr: "",
+		},
+		{
+			title:   "with state",
+			in:      "http://localhost:8003/node/?state=46a119b1184b2f4256c13633d1f36dc2f489523e14ca4058e1c53324f16a4506",
+			baseURL: "http://localhost:8003/",
+			hash:    mkHash(t, "46a119b1184b2f4256c13633d1f36dc2f489523e14ca4058e1c53324f16a4506"),
+			wantErr: "",
+		},
+		{
+			title:   "error parsing state",
+			in:      "http://localhost:8003/node?state=46a119b1184b2f4256c13633d1f36dc2f489523e14ca4058e1c53324f16a45",
+			baseURL: "",
+			hash:    nil,
+			wantErr: "invalid hash length",
+		},
+	}
+	for i := range testCases {
+		tc := testCases[i]
+		t.Run(tc.title, func(t *testing.T) {
+			baseURL, hash, err := rhsBaseURL(tc.in)
+			if tc.wantErr != "" {
+				require.EqualError(t, err, tc.wantErr)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.baseURL, baseURL)
+				require.Equal(t, tc.hash, hash)
+			}
+		})
+	}
+}
+
+func stringFromJsonObj(obj map[string]any, key string) string {
+	v, ok := obj[key].(string)
+	if ok {
+		return v
+	}
+	return ""
 }

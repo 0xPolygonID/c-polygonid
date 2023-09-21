@@ -18,6 +18,7 @@ type mockedRouterTripper struct {
 	routes    map[string]string
 	seenURLsM sync.Mutex
 	seenURLs  map[string]struct{}
+	opts      mockHTTPClientOptions
 }
 
 func (m *mockedRouterTripper) RoundTrip(
@@ -27,6 +28,7 @@ func (m *mockedRouterTripper) RoundTrip(
 	routerKey := urlStr
 	rr := httptest.NewRecorder()
 	var postData []byte
+	var postDataProcessed []byte
 	if request.Method == http.MethodPost {
 		var err error
 		postData, err = io.ReadAll(request.Body)
@@ -38,18 +40,29 @@ func (m *mockedRouterTripper) RoundTrip(
 			return httpResp, nil
 		}
 		if len(postData) > 0 {
-			routerKey += "%%%" + string(postData)
+			postDataProcessed = postData
+			if m.opts.postRequestBodyProcessor != nil {
+				postDataProcessed =
+					m.opts.postRequestBodyProcessor(postDataProcessed)
+			}
+
+			routerKey += "%%%" + string(postDataProcessed)
 		}
 	}
 
 	respFile, ok := m.routes[routerKey]
 	if !ok {
 		var requestBodyStr = string(postData)
+		var processedBody = string(postDataProcessed)
 		if requestBodyStr == "" {
 			m.t.Errorf("unexpected http request: %v", urlStr)
-		} else {
+		} else if requestBodyStr == processedBody {
 			m.t.Errorf("unexpected http request: %v\nBody: %v",
 				urlStr, requestBodyStr)
+		} else {
+			m.t.Errorf(
+				"unexpected http request: %v\nBody: %v\nProcessed body: %v",
+				urlStr, requestBodyStr, processedBody)
 		}
 		rr2 := httptest.NewRecorder()
 		rr2.WriteHeader(http.StatusNotFound)
@@ -77,7 +90,8 @@ func (m *mockedRouterTripper) RoundTrip(
 }
 
 type mockHTTPClientOptions struct {
-	ignoreUntouchedURLs bool
+	ignoreUntouchedURLs      bool
+	postRequestBodyProcessor func([]byte) []byte
 }
 
 type MockHTTPClientOption func(*mockHTTPClientOptions)
@@ -85,6 +99,12 @@ type MockHTTPClientOption func(*mockHTTPClientOptions)
 func IgnoreUntouchedURLs() MockHTTPClientOption {
 	return func(opts *mockHTTPClientOptions) {
 		opts.ignoreUntouchedURLs = true
+	}
+}
+
+func WithPostRequestBodyProcessor(fn func([]byte) []byte) MockHTTPClientOption {
+	return func(opts *mockHTTPClientOptions) {
+		opts.postRequestBodyProcessor = fn
 	}
 }
 
@@ -97,7 +117,7 @@ func MockHTTPClient(t testing.TB, routes map[string]string,
 	}
 
 	oldRoundTripper := http.DefaultTransport
-	transport := &mockedRouterTripper{t: t, routes: routes}
+	transport := &mockedRouterTripper{t: t, routes: routes, opts: op}
 	http.DefaultTransport = transport
 	return func() {
 		http.DefaultTransport = oldRoundTripper
