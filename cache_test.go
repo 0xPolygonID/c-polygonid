@@ -8,22 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func withBadger(t testing.TB, disableLogger bool) (*badger.DB, func()) {
-	badgerPath, err := getBadgerPath()
-	require.NoError(t, err)
-	opts := badger.DefaultOptions(badgerPath)
-	if disableLogger {
-		opts.Logger = nil
-	}
-	db, err := badger.Open(opts)
-	require.NoError(t, err)
-
-	return db, func() {
-		err = db.Close()
-		require.NoError(t, err)
-	}
-}
-
 func doWithBadger(t testing.TB, db *badger.DB) {
 	err := db.View(func(txn *badger.Txn) error {
 		i, err := txn.Get([]byte("key1"))
@@ -51,7 +35,8 @@ func doWithBadger(t testing.TB, db *badger.DB) {
 func BenchmarkBadgerWithOpening(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		func() {
-			db, cleanup := withBadger(b, true)
+			db, cleanup, err := getCacheDB()
+			require.NoError(b, err)
 			defer cleanup()
 			doWithBadger(b, db)
 		}()
@@ -59,8 +44,9 @@ func BenchmarkBadgerWithOpening(b *testing.B) {
 }
 
 func BenchmarkBadgerWithoutOpening(b *testing.B) {
-	db, cleanup := withBadger(b, true)
-	defer cleanup()
+	db, cleanup, err := getCacheDB()
+	require.NoError(b, err)
+	b.Cleanup(cleanup)
 
 	for i := 0; i < b.N; i++ {
 		doWithBadger(b, db)
@@ -75,7 +61,8 @@ func TestBadger(t *testing.T) {
 
 	t.Log(dbPath)
 
-	db, cleanup := withBadger(t, false)
+	db, cleanup, err := getCacheDB()
+	require.NoError(t, err)
 	defer cleanup()
 
 	doWithBadger(t, db)
