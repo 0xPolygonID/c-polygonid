@@ -2,23 +2,15 @@ package c_polygonid
 
 import (
 	"errors"
-	"os"
-	"path"
 	"testing"
 
 	"github.com/dgraph-io/badger"
 	"github.com/stretchr/testify/require"
 )
 
-func getBadgerPath(t testing.TB) string {
-	cachePath, err := os.UserCacheDir()
-	require.NoError(t, err)
-	cachePath = path.Join(cachePath, "c-polygonid-cache")
-	return cachePath
-}
-
 func withBadger(t testing.TB, disableLogger bool) (*badger.DB, func()) {
-	badgerPath := getBadgerPath(t)
+	badgerPath, err := getBadgerPath()
+	require.NoError(t, err)
 	opts := badger.DefaultOptions(badgerPath)
 	if disableLogger {
 		opts.Logger = nil
@@ -75,4 +67,50 @@ func BenchmarkBadgerWithoutOpening(b *testing.B) {
 		err := db.Sync()
 		require.NoError(b, err)
 	}
+}
+
+func TestBadger(t *testing.T) {
+	dbPath, err := getBadgerPath()
+	require.NoError(t, err)
+
+	t.Log(dbPath)
+
+	db, cleanup := withBadger(t, false)
+	defer cleanup()
+
+	doWithBadger(t, db)
+}
+
+func TestGetCacheDB(t *testing.T) {
+	db1, close1, err := getCacheDB()
+	require.NoError(t, err)
+	db2, close2, err := getCacheDB()
+	require.NoError(t, err)
+
+	require.Equal(t, db1, db2)
+
+	func() {
+		dbM.Lock()
+		defer dbM.Unlock()
+		require.Equal(t, 2, dbCnt)
+		require.NotNil(t, db)
+	}()
+
+	close1()
+
+	func() {
+		dbM.Lock()
+		defer dbM.Unlock()
+		require.Equal(t, 1, dbCnt)
+		require.NotNil(t, db)
+	}()
+
+	close2()
+
+	func() {
+		dbM.Lock()
+		defer dbM.Unlock()
+		require.Equal(t, 0, dbCnt)
+		require.Nil(t, db)
+	}()
 }

@@ -1,6 +1,6 @@
 module github.com/0xPolygonID/c-polygonid
 
-go 1.19
+go 1.21
 
 require (
 	github.com/dgraph-io/badger v1.6.2
