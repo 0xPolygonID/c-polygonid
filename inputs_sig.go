@@ -40,6 +40,8 @@ import (
 	"github.com/piprate/json-gold/ld"
 )
 
+const mtLevels = 40
+
 type jsonObj = map[string]any
 
 func stringByPath(obj jsonObj, path string) (string, error) {
@@ -455,8 +457,7 @@ func verifiablePresentationFromCred(ctx context.Context,
 	err error) {
 
 	var mz *merklize.Merklizer
-	mz, err = wrapMerklizeWithRegion(ctx, w3cCred,
-		merklize.WithDocumentLoader(documentLoader))
+	mz, err = wrapMerklizeWithRegion(ctx, w3cCred, documentLoader)
 	if err != nil {
 		return nil, nil, datatype, hasher, err
 	}
@@ -819,13 +820,22 @@ func queryFromObj(ctx context.Context, w3cCred verifiable.W3CCredential,
 	return queryFromObjMerklized(ctx, w3cCred, requestObj, documentLoader)
 }
 
-func wrapMerklizeWithRegion(ctx context.Context, w3cCred verifiable.W3CCredential,
-	opts ...merklize.MerklizeOption) (*merklize.Merklizer, error) {
+func wrapMerklizeWithRegion(ctx context.Context,
+	w3cCred verifiable.W3CCredential,
+	documentLoader ld.DocumentLoader) (*merklize.Merklizer, error) {
 
 	var mz *merklize.Merklizer
 	var err error
 	trace.WithRegion(ctx, "merklize", func() {
-		mz, err = w3cCred.Merklize(ctx, opts...)
+		mtStorage := newInMemoryStorage()
+		var mt *merkletree.MerkleTree
+		mt, err = merkletree.NewMerkleTree(ctx, mtStorage, mtLevels)
+		if err != nil {
+			return
+		}
+		mz, err = w3cCred.Merklize(ctx,
+			merklize.WithDocumentLoader(documentLoader),
+			merklize.WithMerkleTree(merklize.MerkleTreeSQLAdapter(mt)))
 	})
 	return mz, err
 }
@@ -927,8 +937,7 @@ func queryFromObjMerklized(ctx context.Context,
 	region := trace.StartRegion(ctx, "queryFromObjMerklized")
 	defer region.End()
 
-	mz, err := wrapMerklizeWithRegion(ctx, w3cCred,
-		merklize.WithDocumentLoader(documentLoader))
+	mz, err := wrapMerklizeWithRegion(ctx, w3cCred, documentLoader)
 	if err != nil {
 		return out, nil, err
 	}
