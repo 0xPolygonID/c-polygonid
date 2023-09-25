@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/big"
 	"os"
+	"sync"
 	"testing"
 
 	httpmock "github.com/0xPolygonID/c-polygonid/testing"
@@ -17,6 +18,7 @@ import (
 	"github.com/iden3/go-merkletree-sql/v2"
 	"github.com/iden3/go-schema-processor/v2/verifiable"
 	shell "github.com/ipfs/go-ipfs-api"
+	"github.com/piprate/json-gold/ld"
 	"github.com/stretchr/testify/require"
 )
 
@@ -871,4 +873,77 @@ func stringFromJsonObj(obj map[string]any, key string) string {
 		return v
 	}
 	return ""
+}
+
+func flushCacheDB() {
+	db, cleanup, err := getCacheDB()
+	if err != nil {
+		panic(err)
+	}
+	defer cleanup()
+	err = db.DropAll()
+	if err != nil {
+		panic(err)
+	}
+}
+
+type countingDocumentLoader struct {
+	documentLoader ld.DocumentLoader
+	m              sync.Mutex
+	cnt            int
+}
+
+func (c *countingDocumentLoader) LoadDocument(u string) (*ld.RemoteDocument, error) {
+	c.m.Lock()
+	c.cnt++
+	c.m.Unlock()
+	return c.documentLoader.LoadDocument(u)
+}
+func (c *countingDocumentLoader) counter() int {
+	var cnt int
+	c.m.Lock()
+	cnt = c.cnt
+	c.m.Unlock()
+	return cnt
+}
+
+func (c *countingDocumentLoader) reset() {
+	c.m.Lock()
+	c.cnt = 0
+	c.m.Unlock()
+}
+
+func TestMerklizeCred(t *testing.T) {
+	flushCacheDB()
+
+	defer httpmock.MockHTTPClient(t, map[string]string{
+		"https://www.w3.org/2018/credentials/v1":                                                         "testdata/httpresp_credentials_v1.json",
+		"https://schema.iden3.io/core/jsonld/iden3proofs.jsonld":                                         "testdata/httpresp_iden3proofs.jsonld",
+		"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld": "testdata/httpresp_kyc-v3.json-ld",
+	}, httpmock.IgnoreUntouchedURLs())()
+
+	w3cCred := makeW3CCred(w3cCredDoc)
+	wantRoot := "12570949121759664123302463886702240329232804599356712520248381722472565314745"
+
+	documentLoader := &countingDocumentLoader{
+		documentLoader: EnvConfig{}.documentLoader(),
+	}
+	ctx := context.Background()
+
+	mz, err := merklizeCred(ctx, w3cCred, documentLoader)
+	require.NoError(t, err)
+	require.Equal(t, wantRoot, mz.Root().BigInt().String())
+
+	// 2 calls per URL scheme: first for normalization, last for compaction
+	require.Equal(t, 6, documentLoader.counter())
+
+	// test that following call to merklizeCred does not make any HTTP calls
+	documentLoader.reset()
+
+	mz, err = merklizeCred(ctx, w3cCred, documentLoader)
+	require.NoError(t, err)
+	require.Equal(t, wantRoot, mz.Root().BigInt().String())
+	require.Equal(t, 0, documentLoader.counter())
+
+	flushCacheDB()
 }

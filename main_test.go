@@ -2,6 +2,7 @@ package c_polygonid
 
 import (
 	"flag"
+	"log/slog"
 	"os"
 	"testing"
 
@@ -12,6 +13,12 @@ var catchUnusedHttpresp = flag.Bool("find-unused-httpresp", false,
 	"fail if there are unused httpresp_* files")
 
 func TestMain(m *testing.M) {
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+		AddSource:   true,
+		Level:       slog.LevelDebug,
+		ReplaceAttr: nil,
+	})))
+
 	retCode := m.Run()
 	flag.Parse()
 

@@ -6,7 +6,7 @@ import (
 	"path"
 	"sync"
 
-	"github.com/dgraph-io/badger"
+	"github.com/dgraph-io/badger/v4"
 )
 
 var db *badger.DB

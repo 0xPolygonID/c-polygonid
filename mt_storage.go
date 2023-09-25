@@ -65,8 +65,9 @@ func (m *inMemoryStorage) SetRoot(_ context.Context, hash *merkletree.Hash) erro
 	return nil
 }
 
-var storageMarshalingVersion = int(1)
-var nodeMarshalingVersion = int(1)
+const storageMarshalingVersion = "mem_storage_v1"
+
+const nodeMarshalingVersion = "node_v1"
 
 func (m *inMemoryStorage) MarshalBinary() ([]byte, error) {
 	m.m.RLock()
@@ -126,7 +127,7 @@ func (m *inMemoryStorage) UnmarshalBinary(data []byte) error {
 
 	dec := gob.NewDecoder(bytes.NewReader(data))
 
-	var version int
+	var version string
 	err := dec.Decode(&version)
 	if err != nil {
 		return err
@@ -232,7 +233,7 @@ func encodeNode(enc *gob.Encoder, n merkletree.Node) error {
 func decodeNode(dec *gob.Decoder) (merkletree.Node, error) {
 	var n merkletree.Node
 
-	var version int
+	var version string
 	err := dec.Decode(&version)
 	if err != nil {
 		return n, err

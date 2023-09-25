@@ -3,7 +3,7 @@ module github.com/0xPolygonID/c-polygonid
 go 1.21
 
 require (
-	github.com/dgraph-io/badger v1.6.2
+	github.com/dgraph-io/badger/v4 v4.2.0
 	github.com/ethereum/go-ethereum v1.13.1
 	github.com/iden3/contracts-abi/onchain-credential-status-resolver/go/abi v0.0.0-20230911113809-c58b7e7a69b0
 	github.com/iden3/contracts-abi/state/go/abi v0.0.0-20230405152923-4a25f6f1f0f4
@@ -19,7 +19,6 @@ require (
 )
 
 require (
-	github.com/AndreasBriese/bbloom v0.0.0-20190825152654-46b345b51c96 // indirect
 	github.com/Microsoft/go-winio v0.6.1 // indirect
 	github.com/benbjohnson/clock v1.3.5 // indirect
 	github.com/bits-and-blooms/bitset v1.5.0 // indirect
@@ -40,13 +39,18 @@ require (
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/go-stack/stack v1.8.1 // indirect
+	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/glog v1.0.0 // indirect
+	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
+	github.com/golang/snappy v0.0.5-0.20220116011046-fa5810519dcb // indirect
+	github.com/google/flatbuffers v1.12.1 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/holiman/uint256 v1.2.3 // indirect
 	github.com/ipfs/boxo v0.8.0 // indirect
 	github.com/ipfs/go-cid v0.4.1 // indirect
+	github.com/klauspost/compress v1.16.5 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.5 // indirect
 	github.com/libp2p/go-buffer-pool v0.1.0 // indirect
 	github.com/libp2p/go-flow-metrics v0.1.0 // indirect
@@ -74,6 +78,7 @@ require (
 	github.com/tklauser/numcpus v0.6.1 // indirect
 	github.com/whyrusleeping/tar-utils v0.0.0-20201201191210-20a61371de5b // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
+	go.opencensus.io v0.24.0 // indirect
 	golang.org/x/crypto v0.12.0 // indirect
 	golang.org/x/exp v0.0.0-20230810033253-352e893a4cad // indirect
 	golang.org/x/mod v0.11.0 // indirect

@@ -3,11 +3,13 @@ package c_polygonid
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"math/big"
 	"net/http"
 	"net/url"
@@ -17,6 +19,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/dgraph-io/badger/v4"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -1937,4 +1940,178 @@ func newIntFromHexQueryParam(uri *url.URL, paramName string) (*big.Int, error) {
 	}
 
 	return newIntFromBytesLE(stateBytes), nil
+}
+
+func merklizeCred(ctx context.Context, w3cCred verifiable.W3CCredential,
+	documentLoader ld.DocumentLoader) (*merklize.Merklizer, error) {
+
+	w3cCred.Proof = nil
+	credentialBytes, err := json.Marshal(w3cCred)
+	if err != nil {
+		return nil, err
+	}
+
+	cacheKey := sha256.Sum256(credentialBytes)
+
+	db, cleanup, err := getCacheDB()
+	if err != nil {
+		slog.ErrorContext(ctx, "failed to get cache db", "err", err)
+		db = nil
+		cleanup = nil
+	} else {
+		defer cleanup()
+	}
+
+	var mz *merklize.Merklizer
+	var storage *inMemoryStorage
+
+	if db != nil {
+		mz, storage = getMzCache(ctx, db, cacheKey[:], documentLoader)
+	}
+
+	if mz == nil || storage == nil {
+		storage = newInMemoryStorage()
+
+		var mt *merkletree.MerkleTree
+		mt, err = merkletree.NewMerkleTree(ctx, storage, mtLevels)
+		if err != nil {
+			return nil, err
+		}
+
+		mz, err = merklize.MerklizeJSONLD(ctx, bytes.NewReader(credentialBytes),
+			merklize.WithDocumentLoader(documentLoader),
+			merklize.WithMerkleTree(merklize.MerkleTreeSQLAdapter(mt)))
+		if err != nil {
+			return nil, err
+		}
+
+		saveMzCache(db, cacheKey[:], mz, storage)
+	}
+
+	return mz, nil
+}
+
+func mzCacheKey(vcChecksum []byte) []byte {
+	return appendSuffix("_mz", vcChecksum)
+}
+
+func storageCacheKey(vcChecksum []byte) []byte {
+	return appendSuffix("_mt", vcChecksum)
+}
+
+func appendSuffix(suffix string, val []byte) []byte {
+	newVal := make([]byte, len(val)+len(suffix))
+	copy(newVal, val)
+	copy(newVal[len(val):], suffix)
+	return newVal
+}
+
+func saveMzCache(db *badger.DB, vcChecksum []byte,
+	mz *merklize.Merklizer, storage *inMemoryStorage) {
+
+	expireAt := time.Now().Add(30 * 24 * time.Hour).Unix()
+
+	var storageEntry = badger.Entry{
+		Key:       storageCacheKey(vcChecksum),
+		ExpiresAt: uint64(expireAt)}
+	var mzEntry = badger.Entry{
+		Key:       mzCacheKey(vcChecksum),
+		ExpiresAt: uint64(expireAt)}
+
+	var err error
+	storageEntry.Value, err = storage.MarshalBinary()
+	if err != nil {
+		slog.Error("failed to marshal storage", "err", err)
+		return
+	}
+
+	mzEntry.Value, err = mz.MarshalBinary()
+	if err != nil {
+		slog.Error("failed to marshal merklizer", "err", err)
+		return
+	}
+
+	err = db.Update(func(txn *badger.Txn) error {
+		if err := txn.SetEntry(&storageEntry); err != nil {
+			return err
+		}
+		return txn.SetEntry(&mzEntry)
+	})
+	if err != nil {
+		slog.Error("failed to save value to cache db", "err", err)
+	}
+}
+
+//func logWhatWasPutInCache(msg string, key []byte, value []byte) {
+//	valueHex := hex.EncodeToString(value)
+//	checksum := md5.Sum(value)
+//	checksumHex := hex.EncodeToString(checksum[:])
+//	keyHex := hex.EncodeToString(key)
+//	slog.Debug(msg, "key", keyHex, "len", len(value),
+//		"md5", checksumHex, "value", valueHex)
+//}
+
+func getMzCache(ctx context.Context, db *badger.DB, vcChecksum []byte,
+	documentLoader ld.DocumentLoader) (*merklize.Merklizer, *inMemoryStorage) {
+
+	var mz *merklize.Merklizer
+	var storage *inMemoryStorage
+
+	err := db.View(func(txn *badger.Txn) error {
+		mtKey := storageCacheKey(vcChecksum)
+		v, err := txn.Get(mtKey)
+		if errors.Is(err, badger.ErrKeyNotFound) {
+			return nil
+		} else if err != nil {
+			return err
+		}
+
+		storage = newInMemoryStorage()
+		err = v.Value(func(val []byte) error {
+			err = storage.UnmarshalBinary(val)
+			if err != nil {
+				return err
+			}
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+
+		mzKey := mzCacheKey(vcChecksum)
+		v, err = txn.Get(mzKey)
+		if errors.Is(err, badger.ErrKeyNotFound) {
+			return nil
+		} else if err != nil {
+			return err
+		}
+
+		var mt *merkletree.MerkleTree
+		mt, err = merkletree.NewMerkleTree(ctx, storage, mtLevels)
+		if err != nil {
+			return err
+		}
+
+		err = v.Value(func(val []byte) error {
+			mz, err = merklize.MerklizerFromBytes(val,
+				merklize.WithDocumentLoader(documentLoader),
+				merklize.WithMerkleTree(merklize.MerkleTreeSQLAdapter(mt)))
+			return err
+		})
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		slog.ErrorContext(ctx,
+			"failed to read value from cache db",
+			"err", err)
+		mz = nil
+		storage = nil
+	}
+
+	return mz, storage
 }
