@@ -830,15 +830,7 @@ func wrapMerklizeWithRegion(ctx context.Context,
 	var mz *merklize.Merklizer
 	var err error
 	trace.WithRegion(ctx, "merklize", func() {
-		mtStorage := newInMemoryStorage()
-		var mt *merkletree.MerkleTree
-		mt, err = merkletree.NewMerkleTree(ctx, mtStorage, mtLevels)
-		if err != nil {
-			return
-		}
-		mz, err = w3cCred.Merklize(ctx,
-			merklize.WithDocumentLoader(documentLoader),
-			merklize.WithMerkleTree(merklize.MerkleTreeSQLAdapter(mt)))
+		mz, err = merklizeCred(ctx, w3cCred, documentLoader)
 	})
 	return mz, err
 }

@@ -165,8 +165,8 @@ github.com/iden3/go-iden3-crypto v0.0.15 h1:4MJYlrot1l31Fzlo2sF56u7EVFeHHJkxGXXZ
 github.com/iden3/go-iden3-crypto v0.0.15/go.mod h1:dLpM4vEPJ3nDHzhWFXDjzkn1qHoBeOT/3UEhXsEsP3E=
 github.com/iden3/go-merkletree-sql/v2 v2.0.6 h1:vsVDImnvnHf7Ggr45ptFOXJyWNA/8IwVQO1jzRLUlY8=
 github.com/iden3/go-merkletree-sql/v2 v2.0.6/go.mod h1:kRhHKYpui5DUsry5RpveP6IC4XMe6iApdV9VChRYuEk=
-github.com/iden3/go-schema-processor/v2 v2.0.2-0.20230921201827-26587b077747 h1:BqtFbWOk0NMaEpUn+xrEcpmqXrZoLuo373NGDbeNb3E=
-github.com/iden3/go-schema-processor/v2 v2.0.2-0.20230921201827-26587b077747/go.mod h1:eWRQDbxixZ/9k/uPlciKIy6TUYlKX/6hdqyTuAQi3wE=
+github.com/iden3/go-schema-processor/v2 v2.0.2-0.20230925112934-27d81f859b12 h1:Ibk7D1xiHYSXVh0WTnksagERjN4pCTNzwW+gUrlhbrA=
+github.com/iden3/go-schema-processor/v2 v2.0.2-0.20230925112934-27d81f859b12/go.mod h1:eWRQDbxixZ/9k/uPlciKIy6TUYlKX/6hdqyTuAQi3wE=
 github.com/iden3/merkletree-proof v0.0.2 h1:a6At2Mm/fEnC8MjsgAmTSrgVsTsKuWGNwdsDU0otJC4=
 github.com/iden3/merkletree-proof v0.0.2/go.mod h1:viUqFXdonLL6isznj1ts0CID77CJ11AlXi9vTC8ZD8A=
 github.com/ipfs/boxo v0.8.0 h1:UdjAJmHzQHo/j3g3b1bAcAXCj/GM6iTwvSlBDvPBNBs=
