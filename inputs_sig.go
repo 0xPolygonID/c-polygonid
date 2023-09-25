@@ -1957,7 +1957,6 @@ func merklizeCred(ctx context.Context, w3cCred verifiable.W3CCredential,
 	if err != nil {
 		slog.ErrorContext(ctx, "failed to get cache db", "err", err)
 		db = nil
-		cleanup = nil
 	} else {
 		defer cleanup()
 	}
