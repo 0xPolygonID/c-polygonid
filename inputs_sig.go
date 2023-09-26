@@ -434,16 +434,38 @@ func AtomicQueryMtpV2InputsFromJson(ctx context.Context, cfg EnvConfig,
 	if err != nil {
 		return out, err
 	}
-	inpMarsh.Claim, err = claimWithMtpProofFromObj(ctx, cfg, w3cCred,
-		inpMarsh.SkipClaimRevocationCheck)
-	if err != nil {
-		return out, err
+
+	var wg sync.WaitGroup
+
+	var queryErr error
+	var proofErr error
+
+	onClaimReady := func(claim *core.Claim) {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			start := time.Now()
+			inpMarsh.Query, out.VerifiablePresentation, queryErr = queryFromObj(
+				ctx, w3cCred, obj.Request, claim, cfg.documentLoader())
+			slog.Debug("query done in", "time", time.Since(start))
+		}()
 	}
 
-	inpMarsh.Query, out.VerifiablePresentation, err = queryFromObj(ctx, w3cCred,
-		obj.Request, inpMarsh.Claim.Claim, cfg.documentLoader())
-	if err != nil {
-		return out, err
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		start := time.Now()
+		inpMarsh.Claim, proofErr = claimWithMtpProofFromObj(ctx, cfg, w3cCred,
+			inpMarsh.SkipClaimRevocationCheck, onClaimReady)
+		slog.Debug("rev proof done in", "time", time.Since(start))
+	}()
+
+	wg.Wait()
+	if proofErr != nil {
+		return out, proofErr
+	}
+	if queryErr != nil {
+		return out, queryErr
 	}
 
 	inpMarsh.CurrentTimeStamp = time.Now().Unix()
@@ -665,16 +687,34 @@ func AtomicQueryMtpV2OnChainInputsFromJson(ctx context.Context, cfg EnvConfig,
 	if err != nil {
 		return out, err
 	}
-	inpMarsh.Claim, err = claimWithMtpProofFromObj(ctx, cfg, w3cCred,
-		inpMarsh.SkipClaimRevocationCheck)
-	if err != nil {
-		return out, err
+
+	var wg sync.WaitGroup
+
+	var queryErr error
+	var proofErr error
+
+	onClaimReady := func(claim *core.Claim) {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			inpMarsh.Query, out.VerifiablePresentation, queryErr = queryFromObj(
+				ctx, w3cCred, obj.Request, claim, cfg.documentLoader())
+		}()
 	}
 
-	inpMarsh.Query, out.VerifiablePresentation, err = queryFromObj(ctx, w3cCred,
-		obj.Request, inpMarsh.Claim.Claim, cfg.documentLoader())
-	if err != nil {
-		return out, err
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		inpMarsh.Claim, proofErr = claimWithMtpProofFromObj(ctx, cfg, w3cCred,
+			inpMarsh.SkipClaimRevocationCheck, onClaimReady)
+	}()
+
+	wg.Wait()
+	if proofErr != nil {
+		return out, proofErr
+	}
+	if queryErr != nil {
+		return out, queryErr
 	}
 
 	inpMarsh.CurrentTimeStamp = time.Now().Unix()
@@ -1120,7 +1160,8 @@ func (h *hexHash) UnmarshalJSON(i []byte) error {
 
 func claimWithMtpProofFromObj(ctx context.Context, cfg EnvConfig,
 	w3cCred verifiable.W3CCredential,
-	skipClaimRevocationCheck bool) (circuits.ClaimWithMTPProof, error) {
+	skipClaimRevocationCheck bool,
+	claimProcessFn func(claim *core.Claim)) (circuits.ClaimWithMTPProof, error) {
 
 	region := trace.StartRegion(ctx, "claimWithMtpProofFromObj")
 	defer region.End()
@@ -1181,6 +1222,10 @@ func claimWithMtpProofFromObj(ctx context.Context, cfg EnvConfig,
 	out.Claim, err = proofI.GetCoreClaim()
 	if err != nil {
 		return out, err
+	}
+
+	if claimProcessFn != nil {
+		claimProcessFn(out.Claim)
 	}
 
 	credStatus, ok := w3cCred.CredentialStatus.(jsonObj)
@@ -1961,6 +2006,7 @@ func merklizeCred(ctx context.Context, w3cCred verifiable.W3CCredential,
 	}
 
 	if mz == nil || storage == nil {
+		slog.Debug("merklizeCred: cache miss")
 		storage = newInMemoryStorage()
 
 		var mt *merkletree.MerkleTree
@@ -1977,6 +2023,8 @@ func merklizeCred(ctx context.Context, w3cCred verifiable.W3CCredential,
 		}
 
 		saveMzCache(db, cacheKey[:], mz, storage)
+	} else {
+		slog.Debug("merklizeCred: cache hit")
 	}
 
 	return mz, nil
