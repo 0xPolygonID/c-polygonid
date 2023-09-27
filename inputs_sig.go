@@ -2015,6 +2015,8 @@ func merklizeCred(ctx context.Context, w3cCred verifiable.W3CCredential,
 			return nil, err
 		}
 
+		warmUpSchemaLoader(w3cCred.Context, documentLoader)
+
 		mz, err = merklize.MerklizeJSONLD(ctx, bytes.NewReader(credentialBytes),
 			merklize.WithDocumentLoader(documentLoader),
 			merklize.WithMerkleTree(merklize.MerkleTreeSQLAdapter(mt)))
@@ -2022,7 +2024,9 @@ func merklizeCred(ctx context.Context, w3cCred verifiable.W3CCredential,
 			return nil, err
 		}
 
-		saveMzCache(db, cacheKey[:], mz, storage)
+		if db != nil {
+			saveMzCache(db, cacheKey[:], mz, storage)
+		}
 	} else {
 		slog.Debug("merklizeCred: cache hit")
 	}
@@ -2153,4 +2157,20 @@ func getMzCache(ctx context.Context, db *badger.DB, vcChecksum []byte,
 	}
 
 	return mz, storage
+}
+
+func warmUpSchemaLoader(schemaURLs []string, docLoader ld.DocumentLoader) {
+	var wg sync.WaitGroup
+	start := time.Now()
+	for _, schemaURL := range schemaURLs {
+		wg.Add(1)
+		go func(schemaURL string) {
+			defer wg.Done()
+			_, _ = docLoader.LoadDocument(schemaURL)
+		}(schemaURL)
+	}
+	wg.Wait()
+	slog.Debug("pre download schemas",
+		"time", time.Since(start),
+		"docsNum", len(schemaURLs))
 }
