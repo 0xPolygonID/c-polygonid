@@ -934,8 +934,9 @@ func TestMerklizeCred(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, wantRoot, mz.Root().BigInt().String())
 
-	// 2 calls per URL scheme: first for normalization, last for compaction
-	require.Equal(t, 6, documentLoader.counter())
+	// 3 calls per URL scheme: first for concurrent pre-download schema to put
+	// it in cache, second for normalization, and last for compaction
+	require.Equal(t, 9, documentLoader.counter())
 
 	// test that following call to merklizeCred does not make any HTTP calls
 	documentLoader.reset()

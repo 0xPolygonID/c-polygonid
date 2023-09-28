@@ -1,6 +1,7 @@
 package c_polygonid
 
 import (
+	"encoding/json"
 	"log/slog"
 	"os"
 	"path"
@@ -9,7 +10,7 @@ import (
 	"github.com/dgraph-io/badger/v4"
 )
 
-var db *badger.DB
+var globalDB *badger.DB
 var dbM sync.Mutex
 var dbCnt int
 
@@ -23,17 +24,17 @@ func getCacheDB() (*badger.DB, func(), error) {
 
 		dbCnt--
 		if dbCnt == 0 {
-			err := db.Close()
+			err := globalDB.Close()
 			if err != nil {
 				slog.Error("failed to close db", "err", err)
 			}
-			db = nil
+			globalDB = nil
 		}
 	}
 
-	if db != nil {
+	if globalDB != nil {
 		dbCnt++
-		return db, releaseDB, nil
+		return globalDB, releaseDB, nil
 	}
 
 	badgerPath, err := getBadgerPath()
@@ -41,13 +42,13 @@ func getCacheDB() (*badger.DB, func(), error) {
 		return nil, nil, err
 	}
 	opts := badger.DefaultOptions(badgerPath)
-	db, err = badger.Open(opts)
+	globalDB, err = badger.Open(opts)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	dbCnt = 1
-	return db, releaseDB, nil
+	return globalDB, releaseDB, nil
 }
 
 func getBadgerPath() (string, error) {
@@ -57,4 +58,38 @@ func getBadgerPath() (string, error) {
 	}
 	cachePath = path.Join(cachePath, "c-polygonid-cache")
 	return cachePath, nil
+}
+
+func getRemoteDocumentFromCache(db *badger.DB,
+	key []byte) (cachedRemoteDocument, error) {
+
+	var doc cachedRemoteDocument
+	var value []byte
+
+	err := db.View(func(txn *badger.Txn) error {
+		entry, err := txn.Get(key)
+		if err != nil {
+			return err
+		}
+		value, err = entry.ValueCopy(nil)
+		return err
+	})
+	if err != nil {
+		return doc, err
+	}
+
+	return doc, json.Unmarshal(value, &doc)
+}
+
+func putRemoteDocumentToCache(db *badger.DB, key []byte,
+	doc cachedRemoteDocument) error {
+
+	value, err := json.Marshal(doc)
+	if err != nil {
+		return err
+	}
+
+	return db.Update(func(txn *badger.Txn) error {
+		return txn.Set(key, value)
+	})
 }

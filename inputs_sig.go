@@ -34,7 +34,6 @@ import (
 	"github.com/iden3/go-iden3-crypto/utils"
 	"github.com/iden3/go-merkletree-sql/v2"
 	json2 "github.com/iden3/go-schema-processor/v2/json"
-	"github.com/iden3/go-schema-processor/v2/loaders"
 	"github.com/iden3/go-schema-processor/v2/merklize"
 	"github.com/iden3/go-schema-processor/v2/processor"
 	"github.com/iden3/go-schema-processor/v2/verifiable"
@@ -1642,36 +1641,12 @@ type EnvConfig struct {
 	IPFSNodeURL           string
 }
 
-var documentLoaderCache map[string]ld.DocumentLoader
-var documentLoaderCacheMutex sync.RWMutex
-
 func (cfg EnvConfig) documentLoader() ld.DocumentLoader {
-	documentLoaderCacheMutex.RLock()
-	dl, ok := documentLoaderCache[cfg.IPFSNodeURL]
-	documentLoaderCacheMutex.RUnlock()
-	if ok {
-		return dl
-	}
-
-	documentLoaderCacheMutex.Lock()
-	dl, ok = documentLoaderCache[cfg.IPFSNodeURL]
-	if ok {
-		documentLoaderCacheMutex.Unlock()
-		return dl
-	}
-
-	if documentLoaderCache == nil {
-		documentLoaderCache = make(map[string]ld.DocumentLoader)
-	}
-
 	var ipfsNode *shell.Shell
 	if cfg.IPFSNodeURL != "" {
 		ipfsNode = shell.NewShell(cfg.IPFSNodeURL)
 	}
-	dl = loaders.NewDocumentLoader(ipfsNode, "")
-	documentLoaderCache[cfg.IPFSNodeURL] = dl
-	documentLoaderCacheMutex.Unlock()
-	return dl
+	return newDocumentLoader(ipfsNode, "")
 }
 
 type ChainID uint64
