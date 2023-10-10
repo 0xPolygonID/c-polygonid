@@ -1654,8 +1654,8 @@ func (cfg EnvConfig) documentLoader() ld.DocumentLoader {
 
 	var opts []loaders.DocumentLoaderOption
 
-	cacheEngine, err := loaders.NewMemoryCacheEngine(
-		loaders.WithEmbeddedDocumentBytes(
+	cacheEngine, err := newBadgerCacheEngine(
+		withEmbeddedDocumentBytes(
 			"https://www.w3.org/2018/credentials/v1",
 			credentialsV1JsonLDBytes))
 	if err == nil {

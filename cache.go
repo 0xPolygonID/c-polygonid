@@ -1,7 +1,6 @@
 package c_polygonid
 
 import (
-	"encoding/json"
 	"log/slog"
 	"os"
 	"path"
@@ -58,38 +57,4 @@ func getBadgerPath() (string, error) {
 	}
 	cachePath = path.Join(cachePath, "c-polygonid-cache")
 	return cachePath, nil
-}
-
-func getRemoteDocumentFromCache(db *badger.DB,
-	key []byte) (cachedRemoteDocument, error) {
-
-	var doc cachedRemoteDocument
-	var value []byte
-
-	err := db.View(func(txn *badger.Txn) error {
-		entry, err := txn.Get(key)
-		if err != nil {
-			return err
-		}
-		value, err = entry.ValueCopy(nil)
-		return err
-	})
-	if err != nil {
-		return doc, err
-	}
-
-	return doc, json.Unmarshal(value, &doc)
-}
-
-func putRemoteDocumentToCache(db *badger.DB, key []byte,
-	doc cachedRemoteDocument) error {
-
-	value, err := json.Marshal(doc)
-	if err != nil {
-		return err
-	}
-
-	return db.Update(func(txn *badger.Txn) error {
-		return txn.Set(key, value)
-	})
 }

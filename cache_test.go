@@ -3,10 +3,8 @@ package c_polygonid
 import (
 	"errors"
 	"testing"
-	"time"
 
 	"github.com/dgraph-io/badger/v4"
-	"github.com/piprate/json-gold/ld"
 	"github.com/stretchr/testify/require"
 )
 
@@ -102,30 +100,4 @@ func TestGetCacheDB(t *testing.T) {
 		require.Equal(t, 0, dbCnt)
 		require.Nil(t, globalDB)
 	}()
-}
-
-func TestGetPubRemoteDocument(t *testing.T) {
-	flushCacheDB()
-
-	db, closeDB, err := getCacheDB()
-	require.NoError(t, err)
-	defer closeDB()
-
-	remoteDoc := cachedRemoteDocument{
-		RemoteDocument: &ld.RemoteDocument{
-			DocumentURL: "123",
-			Document:    map[string]any{"one": float64(1)},
-			ContextURL:  "456",
-		},
-		ExpireTime: time.Now(),
-	}
-
-	key := []byte("123")
-	err = putRemoteDocumentToCache(db, key, remoteDoc)
-	require.NoError(t, err)
-
-	remoteDoc2, err := getRemoteDocumentFromCache(db, key)
-	require.NoError(t, err)
-	require.Equal(t, remoteDoc.RemoteDocument, remoteDoc2.RemoteDocument)
-	require.True(t, remoteDoc.ExpireTime.Equal(remoteDoc2.ExpireTime))
 }
