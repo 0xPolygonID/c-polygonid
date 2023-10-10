@@ -3,6 +3,7 @@ package c_polygonid
 import (
 	"bytes"
 	"context"
+	_ "embed"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -42,6 +43,9 @@ import (
 type jsonObj = map[string]any
 
 var httpClient = &http.Client{}
+
+//go:embed schemas/credentials-v1.json-ld
+var credentialsV1JsonLDBytes []byte
 
 func stringByPath(obj jsonObj, path string) (string, error) {
 	v, err := getByPath(obj, path)
@@ -1575,7 +1579,18 @@ func (cfg EnvConfig) documentLoader() ld.DocumentLoader {
 	if cfg.IPFSNodeURL != "" {
 		ipfsNode = shell.NewShell(cfg.IPFSNodeURL)
 	}
-	return loaders.NewDocumentLoader(ipfsNode, "")
+
+	var opts []loaders.DocumentLoaderOption
+
+	cacheEngine, err := loaders.NewMemoryCacheEngine(
+		loaders.WithEmbeddedDocumentBytes(
+			"https://www.w3.org/2018/credentials/v1",
+			credentialsV1JsonLDBytes))
+	if err == nil {
+		opts = append(opts, loaders.WithCacheEngine(cacheEngine))
+	}
+
+	return loaders.NewDocumentLoader(ipfsNode, "", opts...)
 }
 
 type ChainID uint64
