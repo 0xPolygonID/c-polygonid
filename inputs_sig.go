@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	_ "embed"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -34,6 +35,7 @@ import (
 	"github.com/iden3/go-iden3-crypto/utils"
 	"github.com/iden3/go-merkletree-sql/v2"
 	json2 "github.com/iden3/go-schema-processor/v2/json"
+	"github.com/iden3/go-schema-processor/v2/loaders"
 	"github.com/iden3/go-schema-processor/v2/merklize"
 	"github.com/iden3/go-schema-processor/v2/processor"
 	"github.com/iden3/go-schema-processor/v2/verifiable"
@@ -45,6 +47,9 @@ import (
 const mtLevels = 40
 
 type jsonObj = map[string]any
+
+//go:embed schemas/credentials-v1.json-ld
+var credentialsV1JsonLDBytes []byte
 
 func stringByPath(obj jsonObj, path string) (string, error) {
 	v, err := getByPath(obj, path)
@@ -1646,7 +1651,18 @@ func (cfg EnvConfig) documentLoader() ld.DocumentLoader {
 	if cfg.IPFSNodeURL != "" {
 		ipfsNode = shell.NewShell(cfg.IPFSNodeURL)
 	}
-	return newDocumentLoader(ipfsNode, "")
+
+	var opts []loaders.DocumentLoaderOption
+
+	cacheEngine, err := loaders.NewMemoryCacheEngine(
+		loaders.WithEmbeddedDocumentBytes(
+			"https://www.w3.org/2018/credentials/v1",
+			credentialsV1JsonLDBytes))
+	if err == nil {
+		opts = append(opts, loaders.WithCacheEngine(cacheEngine))
+	}
+
+	return loaders.NewDocumentLoader(ipfsNode, "", opts...)
 }
 
 type ChainID uint64

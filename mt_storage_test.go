@@ -26,7 +26,6 @@ var w3cCredDoc = `{"id":"https://dd25-62-87-103-47.ngrok-free.app/api/v1/identit
 
 func TestInMemoryStorage_MarshalBinary(t *testing.T) {
 	defer httpmock.MockHTTPClient(t, map[string]string{
-		"https://www.w3.org/2018/credentials/v1":                                                         "testdata/httpresp_credentials_v1.json",
 		"https://schema.iden3.io/core/jsonld/iden3proofs.jsonld":                                         "testdata/httpresp_iden3proofs.jsonld",
 		"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld": "testdata/httpresp_kyc-v3.json-ld",
 	})()
@@ -42,7 +41,8 @@ func TestInMemoryStorage_MarshalBinary(t *testing.T) {
 	}
 
 	_, err = w3cCred.Merklize(ctx,
-		merklize.WithMerkleTree(merklize.MerkleTreeSQLAdapter(mt)))
+		merklize.WithMerkleTree(merklize.MerkleTreeSQLAdapter(mt)),
+		merklize.WithDocumentLoader(EnvConfig{}.documentLoader()))
 	require.NoError(t, err)
 
 	storageBytes, err := mtStorage.MarshalBinary()
