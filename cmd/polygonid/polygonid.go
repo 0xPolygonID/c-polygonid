@@ -792,6 +792,20 @@ func PLGNFreeStatus(status *C.PLGNStatus) {
 	C.free(unsafe.Pointer(status))
 }
 
+//export PLGNCleanCache
+func PLGNCleanCache(status **C.PLGNStatus) bool {
+	_, cancel := logAPITime()
+	defer cancel()
+
+	err := c_polygonid.CleanCache()
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		return false
+	}
+
+	return true
+}
+
 // createEnvConfig returns empty config if input json is nil.
 func createEnvConfig(cfgJson *C.char) (c_polygonid.EnvConfig, error) {
 	var cfg c_polygonid.EnvConfig
