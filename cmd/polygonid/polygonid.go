@@ -808,7 +808,7 @@ func PLGNCleanCache(status **C.PLGNStatus) bool {
 	return true
 }
 
-//export PLGNCleanCache
+//export PLGNCacheCredentials
 func PLGNCacheCredentials(in *C.char, cfg *C.char, status **C.PLGNStatus) bool {
 	ctx, cancel := logAPITime()
 	defer cancel()
