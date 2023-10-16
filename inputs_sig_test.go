@@ -2,6 +2,7 @@ package c_polygonid
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -43,6 +44,14 @@ func uploadIPFSFile(t testing.TB, ipfsURL string, fName string) string {
 	return cid
 }
 
+func readFixtureFile(name string) []byte {
+	fileBytes, err := os.ReadFile("testdata/" + name)
+	if err != nil {
+		panic(err)
+	}
+	return fileBytes
+}
+
 func TestPrepareInputs(t *testing.T) {
 
 	type PrepareInputsFn func(
@@ -53,11 +62,8 @@ func TestPrepareInputs(t *testing.T) {
 		fn PrepareInputsFn, wantVR map[string]any, cfg EnvConfig,
 		wantErr string) {
 
-		jsonIn, err := os.ReadFile("testdata/" + inFile)
-		require.NoError(t, err)
-
 		ctx := context.Background()
-		out, err := fn(ctx, cfg, jsonIn)
+		out, err := fn(ctx, cfg, readFixtureFile(inFile))
 		if wantErr != "" {
 			require.EqualError(t, err, wantErr)
 			return
@@ -916,7 +922,7 @@ func TestMerklizeCred(t *testing.T) {
 	}
 	ctx := context.Background()
 
-	mz, err := merklizeCred(ctx, w3cCred, documentLoader)
+	mz, err := merklizeCred(ctx, w3cCred, documentLoader, true)
 	require.NoError(t, err)
 	require.Equal(t, wantRoot, mz.Root().BigInt().String())
 
@@ -927,10 +933,64 @@ func TestMerklizeCred(t *testing.T) {
 	// test that following call to merklizeCred does not make any HTTP calls
 	documentLoader.reset()
 
-	mz, err = merklizeCred(ctx, w3cCred, documentLoader)
+	mz, err = merklizeCred(ctx, w3cCred, documentLoader, true)
 	require.NoError(t, err)
 	require.Equal(t, wantRoot, mz.Root().BigInt().String())
 	require.Equal(t, 0, documentLoader.counter())
 
 	flushCacheDB()
+}
+
+func vcCredChecksum(in []byte) []byte {
+	var obj struct {
+		VerifiableCredentials json.RawMessage `json:"verifiableCredentials"`
+	}
+	err := json.Unmarshal(in, &obj)
+	if err != nil {
+		panic(err)
+	}
+
+	var w3cCred verifiable.W3CCredential
+	err = json.Unmarshal(obj.VerifiableCredentials, &w3cCred)
+	if err != nil {
+		panic(err)
+	}
+
+	w3cCred.Proof = nil
+	credentialBytes, err := json.Marshal(w3cCred)
+	if err != nil {
+		panic(err)
+	}
+
+	cacheKey := sha256.Sum256(credentialBytes)
+	return cacheKey[:]
+}
+
+func TestPreCacheVC(t *testing.T) {
+	flushCacheDB()
+
+	defer httpmock.MockHTTPClient(t, map[string]string{
+		"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld": "testdata/httpresp_iden3credential_v2.json",
+		"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld":             "testdata/httpresp_kyc-v3.json-ld",
+	}, httpmock.IgnoreUntouchedURLs())()
+
+	in := readFixtureFile("atomic_query_mtp_v2_inputs.json")
+	cfg := EnvConfig{}
+	err := PreCacheVC(context.Background(), cfg, in)
+	require.NoError(t, err)
+
+	db, closeCache, err := getCacheDB()
+	require.NoError(t, err)
+	t.Cleanup(closeCache)
+
+	cacheKey := vcCredChecksum(in)
+	mz, _, err :=
+		getMzCache(context.Background(), db, cacheKey, cfg.documentLoader())
+	require.NoError(t, err)
+	require.Equal(t,
+		"3785566424189219886048259268949130722637888661451289758794190101230031697297",
+		mz.Root().BigInt().String())
+
+	err = db.DropAll()
+	require.NoError(t, err)
 }

@@ -874,7 +874,7 @@ func wrapMerklizeWithRegion(ctx context.Context,
 	var mz *merklize.Merklizer
 	var err error
 	trace.WithRegion(ctx, "merklize", func() {
-		mz, err = merklizeCred(ctx, w3cCred, documentLoader)
+		mz, err = merklizeCred(ctx, w3cCred, documentLoader, true)
 	})
 	return mz, err
 }
@@ -1971,7 +1971,8 @@ func newIntFromHexQueryParam(uri *url.URL, paramName string) (*big.Int, error) {
 }
 
 func merklizeCred(ctx context.Context, w3cCred verifiable.W3CCredential,
-	documentLoader ld.DocumentLoader) (*merklize.Merklizer, error) {
+	documentLoader ld.DocumentLoader,
+	ignoreCacheErrors bool) (*merklize.Merklizer, error) {
 
 	w3cCred.Proof = nil
 	credentialBytes, err := json.Marshal(w3cCred)
@@ -1983,6 +1984,9 @@ func merklizeCred(ctx context.Context, w3cCred verifiable.W3CCredential,
 
 	db, cleanup, err := getCacheDB()
 	if err != nil {
+		if !ignoreCacheErrors {
+			return nil, err
+		}
 		slog.ErrorContext(ctx, "failed to get cache db", "err", err)
 		db = nil
 	} else {
@@ -1993,7 +1997,16 @@ func merklizeCred(ctx context.Context, w3cCred verifiable.W3CCredential,
 	var storage *inMemoryStorage
 
 	if db != nil {
-		mz, storage = getMzCache(ctx, db, cacheKey[:], documentLoader)
+		mz, storage, err = getMzCache(ctx, db, cacheKey[:], documentLoader)
+		if err != nil {
+			if !ignoreCacheErrors {
+				return nil, err
+			}
+			slog.ErrorContext(ctx, "failed to read value from cache db",
+				"err", err)
+			mz = nil
+			storage = nil
+		}
 	}
 
 	if mz == nil || storage == nil {
@@ -2016,7 +2029,14 @@ func merklizeCred(ctx context.Context, w3cCred verifiable.W3CCredential,
 		}
 
 		if db != nil {
-			saveMzCache(db, cacheKey[:], mz, storage)
+			err = saveMzCache(db, cacheKey[:], mz, storage)
+			if err != nil {
+				if !ignoreCacheErrors {
+					return nil, err
+				}
+				slog.ErrorContext(ctx, "failed to save to the cache db",
+					"err", err)
+			}
 		}
 	} else {
 		slog.Debug("merklizeCred: cache hit")
@@ -2040,8 +2060,8 @@ func appendSuffix(suffix string, val []byte) []byte {
 	return newVal
 }
 
-func saveMzCache(db *badger.DB, vcChecksum []byte,
-	mz *merklize.Merklizer, storage *inMemoryStorage) {
+func saveMzCache(db *badger.DB, vcChecksum []byte, mz *merklize.Merklizer,
+	storage *inMemoryStorage) error {
 
 	expireAt := time.Now().Add(30 * 24 * time.Hour).Unix()
 
@@ -2055,14 +2075,12 @@ func saveMzCache(db *badger.DB, vcChecksum []byte,
 	var err error
 	storageEntry.Value, err = storage.MarshalBinary()
 	if err != nil {
-		slog.Error("failed to marshal storage", "err", err)
-		return
+		return fmt.Errorf("failed to marshal storage: %w", err)
 	}
 
 	mzEntry.Value, err = mz.MarshalBinary()
 	if err != nil {
-		slog.Error("failed to marshal merklizer", "err", err)
-		return
+		return fmt.Errorf("failed to marshal merklizer: %w", err)
 	}
 
 	err = db.Update(func(txn *badger.Txn) error {
@@ -2072,8 +2090,9 @@ func saveMzCache(db *badger.DB, vcChecksum []byte,
 		return txn.SetEntry(&mzEntry)
 	})
 	if err != nil {
-		slog.Error("failed to save value to cache db", "err", err)
+		return fmt.Errorf("failed to save value to cache db: %w", err)
 	}
+	return nil
 }
 
 //func logWhatWasPutInCache(msg string, key []byte, value []byte) {
@@ -2086,7 +2105,8 @@ func saveMzCache(db *badger.DB, vcChecksum []byte,
 //}
 
 func getMzCache(ctx context.Context, db *badger.DB, vcChecksum []byte,
-	documentLoader ld.DocumentLoader) (*merklize.Merklizer, *inMemoryStorage) {
+	documentLoader ld.DocumentLoader) (*merklize.Merklizer, *inMemoryStorage,
+	error) {
 
 	var mz *merklize.Merklizer
 	var storage *inMemoryStorage
@@ -2115,7 +2135,7 @@ func getMzCache(ctx context.Context, db *badger.DB, vcChecksum []byte,
 		mzKey := mzCacheKey(vcChecksum)
 		v, err = txn.Get(mzKey)
 		if errors.Is(err, badger.ErrKeyNotFound) {
-			return nil
+			return errors.New("merklized data not found in cache db")
 		} else if err != nil {
 			return err
 		}
@@ -2126,28 +2146,15 @@ func getMzCache(ctx context.Context, db *badger.DB, vcChecksum []byte,
 			return err
 		}
 
-		err = v.Value(func(val []byte) error {
+		return v.Value(func(val []byte) error {
 			mz, err = merklize.MerklizerFromBytes(val,
 				merklize.WithDocumentLoader(documentLoader),
 				merklize.WithMerkleTree(merklize.MerkleTreeSQLAdapter(mt)))
 			return err
 		})
-		if err != nil {
-			return err
-		}
-
-		return nil
 	})
 
-	if err != nil {
-		slog.ErrorContext(ctx,
-			"failed to read value from cache db",
-			"err", err)
-		mz = nil
-		storage = nil
-	}
-
-	return mz, storage
+	return mz, storage, err
 }
 
 func warmUpSchemaLoader(schemaURLs []string, docLoader ld.DocumentLoader) {
@@ -2164,4 +2171,23 @@ func warmUpSchemaLoader(schemaURLs []string, docLoader ld.DocumentLoader) {
 	slog.Debug("pre download schemas",
 		"time", time.Since(start),
 		"docsNum", len(schemaURLs))
+}
+
+func PreCacheVC(ctx context.Context, cfg EnvConfig, in []byte) error {
+	var obj struct {
+		VerifiableCredentials json.RawMessage `json:"verifiableCredentials"`
+	}
+	err := json.Unmarshal(in, &obj)
+	if err != nil {
+		return err
+	}
+
+	var w3cCred verifiable.W3CCredential
+	err = json.Unmarshal(obj.VerifiableCredentials, &w3cCred)
+	if err != nil {
+		return err
+	}
+
+	_, err = merklizeCred(ctx, w3cCred, cfg.documentLoader(), false)
+	return err
 }
