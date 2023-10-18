@@ -584,7 +584,7 @@ func PLGNSigV2Inputs(jsonResponse **C.char, in *C.char,
 		return false
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	inData := C.GoBytes(unsafe.Pointer(in), C.int(C.strlen(in)))
@@ -664,7 +664,7 @@ func PLGNAtomicQueryMtpV2Inputs(jsonResponse **C.char, in *C.char, cfg *C.char,
 func PLGNMtpV2Inputs(jsonResponse **C.char, in *C.char,
 	status **C.PLGNStatus) bool {
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	if jsonResponse == nil {
@@ -773,7 +773,7 @@ func prepareInputs(fn atomicQueryInputsFn,
 		return false
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	inData := C.GoBytes(unsafe.Pointer(in), C.int(C.strlen(in)))
