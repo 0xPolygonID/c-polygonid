@@ -3,11 +3,14 @@ package c_polygonid
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	_ "embed"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"math/big"
 	"net/http"
 	"net/url"
@@ -17,6 +20,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/dgraph-io/badger/v4"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -40,7 +44,12 @@ import (
 	"github.com/piprate/json-gold/ld"
 )
 
+const mtLevels = 40
+
 type jsonObj = map[string]any
+
+//go:embed schemas/credentials-v1.json-ld
+var credentialsV1JsonLDBytes []byte
 
 func stringByPath(obj jsonObj, path string) (string, error) {
 	v, err := getByPath(obj, path)
@@ -429,16 +438,38 @@ func AtomicQueryMtpV2InputsFromJson(ctx context.Context, cfg EnvConfig,
 	if err != nil {
 		return out, err
 	}
-	inpMarsh.Claim, err = claimWithMtpProofFromObj(ctx, cfg, w3cCred,
-		inpMarsh.SkipClaimRevocationCheck)
-	if err != nil {
-		return out, err
+
+	var wg sync.WaitGroup
+
+	var queryErr error
+	var proofErr error
+
+	onClaimReady := func(claim *core.Claim) {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			start := time.Now()
+			inpMarsh.Query, out.VerifiablePresentation, queryErr = queryFromObj(
+				ctx, w3cCred, obj.Request, claim, cfg.documentLoader())
+			slog.Debug("query done in", "time", time.Since(start))
+		}()
 	}
 
-	inpMarsh.Query, out.VerifiablePresentation, err = queryFromObj(ctx, w3cCred,
-		obj.Request, inpMarsh.Claim.Claim, cfg.documentLoader())
-	if err != nil {
-		return out, err
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		start := time.Now()
+		inpMarsh.Claim, proofErr = claimWithMtpProofFromObj(ctx, cfg, w3cCred,
+			inpMarsh.SkipClaimRevocationCheck, onClaimReady)
+		slog.Debug("rev proof done in", "time", time.Since(start))
+	}()
+
+	wg.Wait()
+	if proofErr != nil {
+		return out, proofErr
+	}
+	if queryErr != nil {
+		return out, queryErr
 	}
 
 	inpMarsh.CurrentTimeStamp = time.Now().Unix()
@@ -455,8 +486,7 @@ func verifiablePresentationFromCred(ctx context.Context,
 	err error) {
 
 	var mz *merklize.Merklizer
-	mz, err = wrapMerklizeWithRegion(ctx, w3cCred,
-		merklize.WithDocumentLoader(documentLoader))
+	mz, err = wrapMerklizeWithRegion(ctx, w3cCred, documentLoader)
 	if err != nil {
 		return nil, nil, datatype, hasher, err
 	}
@@ -661,16 +691,34 @@ func AtomicQueryMtpV2OnChainInputsFromJson(ctx context.Context, cfg EnvConfig,
 	if err != nil {
 		return out, err
 	}
-	inpMarsh.Claim, err = claimWithMtpProofFromObj(ctx, cfg, w3cCred,
-		inpMarsh.SkipClaimRevocationCheck)
-	if err != nil {
-		return out, err
+
+	var wg sync.WaitGroup
+
+	var queryErr error
+	var proofErr error
+
+	onClaimReady := func(claim *core.Claim) {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			inpMarsh.Query, out.VerifiablePresentation, queryErr = queryFromObj(
+				ctx, w3cCred, obj.Request, claim, cfg.documentLoader())
+		}()
 	}
 
-	inpMarsh.Query, out.VerifiablePresentation, err = queryFromObj(ctx, w3cCred,
-		obj.Request, inpMarsh.Claim.Claim, cfg.documentLoader())
-	if err != nil {
-		return out, err
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		inpMarsh.Claim, proofErr = claimWithMtpProofFromObj(ctx, cfg, w3cCred,
+			inpMarsh.SkipClaimRevocationCheck, onClaimReady)
+	}()
+
+	wg.Wait()
+	if proofErr != nil {
+		return out, proofErr
+	}
+	if queryErr != nil {
+		return out, queryErr
 	}
 
 	inpMarsh.CurrentTimeStamp = time.Now().Unix()
@@ -819,13 +867,14 @@ func queryFromObj(ctx context.Context, w3cCred verifiable.W3CCredential,
 	return queryFromObjMerklized(ctx, w3cCred, requestObj, documentLoader)
 }
 
-func wrapMerklizeWithRegion(ctx context.Context, w3cCred verifiable.W3CCredential,
-	opts ...merklize.MerklizeOption) (*merklize.Merklizer, error) {
+func wrapMerklizeWithRegion(ctx context.Context,
+	w3cCred verifiable.W3CCredential,
+	documentLoader ld.DocumentLoader) (*merklize.Merklizer, error) {
 
 	var mz *merklize.Merklizer
 	var err error
 	trace.WithRegion(ctx, "merklize", func() {
-		mz, err = w3cCred.Merklize(ctx, opts...)
+		mz, err = merklizeCred(ctx, w3cCred, documentLoader, true)
 	})
 	return mz, err
 }
@@ -927,8 +976,7 @@ func queryFromObjMerklized(ctx context.Context,
 	region := trace.StartRegion(ctx, "queryFromObjMerklized")
 	defer region.End()
 
-	mz, err := wrapMerklizeWithRegion(ctx, w3cCred,
-		merklize.WithDocumentLoader(documentLoader))
+	mz, err := wrapMerklizeWithRegion(ctx, w3cCred, documentLoader)
 	if err != nil {
 		return out, nil, err
 	}
@@ -1116,7 +1164,8 @@ func (h *hexHash) UnmarshalJSON(i []byte) error {
 
 func claimWithMtpProofFromObj(ctx context.Context, cfg EnvConfig,
 	w3cCred verifiable.W3CCredential,
-	skipClaimRevocationCheck bool) (circuits.ClaimWithMTPProof, error) {
+	skipClaimRevocationCheck bool,
+	claimProcessFn func(claim *core.Claim)) (circuits.ClaimWithMTPProof, error) {
 
 	region := trace.StartRegion(ctx, "claimWithMtpProofFromObj")
 	defer region.End()
@@ -1177,6 +1226,10 @@ func claimWithMtpProofFromObj(ctx context.Context, cfg EnvConfig,
 	out.Claim, err = proofI.GetCoreClaim()
 	if err != nil {
 		return out, err
+	}
+
+	if claimProcessFn != nil {
+		claimProcessFn(out.Claim)
 	}
 
 	credStatus, ok := w3cCred.CredentialStatus.(jsonObj)
@@ -1593,36 +1646,23 @@ type EnvConfig struct {
 	IPFSNodeURL           string
 }
 
-var documentLoaderCache map[string]ld.DocumentLoader
-var documentLoaderCacheMutex sync.RWMutex
-
 func (cfg EnvConfig) documentLoader() ld.DocumentLoader {
-	documentLoaderCacheMutex.RLock()
-	dl, ok := documentLoaderCache[cfg.IPFSNodeURL]
-	documentLoaderCacheMutex.RUnlock()
-	if ok {
-		return dl
-	}
-
-	documentLoaderCacheMutex.Lock()
-	dl, ok = documentLoaderCache[cfg.IPFSNodeURL]
-	if ok {
-		documentLoaderCacheMutex.Unlock()
-		return dl
-	}
-
-	if documentLoaderCache == nil {
-		documentLoaderCache = make(map[string]ld.DocumentLoader)
-	}
-
 	var ipfsNode *shell.Shell
 	if cfg.IPFSNodeURL != "" {
 		ipfsNode = shell.NewShell(cfg.IPFSNodeURL)
 	}
-	dl = loaders.NewDocumentLoader(ipfsNode, "")
-	documentLoaderCache[cfg.IPFSNodeURL] = dl
-	documentLoaderCacheMutex.Unlock()
-	return dl
+
+	var opts []loaders.DocumentLoaderOption
+
+	cacheEngine, err := newBadgerCacheEngine(
+		withEmbeddedDocumentBytes(
+			"https://www.w3.org/2018/credentials/v1",
+			credentialsV1JsonLDBytes))
+	if err == nil {
+		opts = append(opts, loaders.WithCacheEngine(cacheEngine))
+	}
+
+	return loaders.NewDocumentLoader(ipfsNode, "", opts...)
 }
 
 type ChainID uint64
@@ -1928,4 +1968,226 @@ func newIntFromHexQueryParam(uri *url.URL, paramName string) (*big.Int, error) {
 	}
 
 	return newIntFromBytesLE(stateBytes), nil
+}
+
+func merklizeCred(ctx context.Context, w3cCred verifiable.W3CCredential,
+	documentLoader ld.DocumentLoader,
+	ignoreCacheErrors bool) (*merklize.Merklizer, error) {
+
+	w3cCred.Proof = nil
+	credentialBytes, err := json.Marshal(w3cCred)
+	if err != nil {
+		return nil, err
+	}
+
+	cacheKey := sha256.Sum256(credentialBytes)
+
+	db, cleanup, err := getCacheDB()
+	if err != nil {
+		if !ignoreCacheErrors {
+			return nil, err
+		}
+		slog.ErrorContext(ctx, "failed to get cache db", "err", err)
+		db = nil
+	} else {
+		defer cleanup()
+	}
+
+	var mz *merklize.Merklizer
+	var storage *inMemoryStorage
+
+	if db != nil {
+		mz, storage, err = getMzCache(ctx, db, cacheKey[:], documentLoader)
+		if err != nil {
+			if !ignoreCacheErrors {
+				return nil, err
+			}
+			slog.ErrorContext(ctx, "failed to read value from cache db",
+				"err", err)
+			mz = nil
+			storage = nil
+		}
+	}
+
+	if mz == nil || storage == nil {
+		slog.Debug("merklizeCred: cache miss")
+		storage = newInMemoryStorage()
+
+		var mt *merkletree.MerkleTree
+		mt, err = merkletree.NewMerkleTree(ctx, storage, mtLevels)
+		if err != nil {
+			return nil, err
+		}
+
+		warmUpSchemaLoader(w3cCred.Context, documentLoader)
+
+		mz, err = merklize.MerklizeJSONLD(ctx, bytes.NewReader(credentialBytes),
+			merklize.WithDocumentLoader(documentLoader),
+			merklize.WithMerkleTree(merklize.MerkleTreeSQLAdapter(mt)))
+		if err != nil {
+			return nil, err
+		}
+
+		if db != nil {
+			err = saveMzCache(db, cacheKey[:], mz, storage)
+			if err != nil {
+				if !ignoreCacheErrors {
+					return nil, err
+				}
+				slog.ErrorContext(ctx, "failed to save to the cache db",
+					"err", err)
+			}
+		}
+	} else {
+		slog.Debug("merklizeCred: cache hit")
+	}
+
+	return mz, nil
+}
+
+func mzCacheKey(vcChecksum []byte) []byte {
+	return appendSuffix("_mz", vcChecksum)
+}
+
+func storageCacheKey(vcChecksum []byte) []byte {
+	return appendSuffix("_mt", vcChecksum)
+}
+
+func appendSuffix(suffix string, val []byte) []byte {
+	newVal := make([]byte, len(val)+len(suffix))
+	copy(newVal, val)
+	copy(newVal[len(val):], suffix)
+	return newVal
+}
+
+func saveMzCache(db *badger.DB, vcChecksum []byte, mz *merklize.Merklizer,
+	storage *inMemoryStorage) error {
+
+	expireAt := time.Now().Add(30 * 24 * time.Hour).Unix()
+
+	var storageEntry = badger.Entry{
+		Key:       storageCacheKey(vcChecksum),
+		ExpiresAt: uint64(expireAt)}
+	var mzEntry = badger.Entry{
+		Key:       mzCacheKey(vcChecksum),
+		ExpiresAt: uint64(expireAt)}
+
+	var err error
+	storageEntry.Value, err = storage.MarshalBinary()
+	if err != nil {
+		return fmt.Errorf("failed to marshal storage: %w", err)
+	}
+
+	mzEntry.Value, err = mz.MarshalBinary()
+	if err != nil {
+		return fmt.Errorf("failed to marshal merklizer: %w", err)
+	}
+
+	err = db.Update(func(txn *badger.Txn) error {
+		if err := txn.SetEntry(&storageEntry); err != nil {
+			return err
+		}
+		return txn.SetEntry(&mzEntry)
+	})
+	if err != nil {
+		return fmt.Errorf("failed to save value to cache db: %w", err)
+	}
+	return nil
+}
+
+//func logWhatWasPutInCache(msg string, key []byte, value []byte) {
+//	valueHex := hex.EncodeToString(value)
+//	checksum := md5.Sum(value)
+//	checksumHex := hex.EncodeToString(checksum[:])
+//	keyHex := hex.EncodeToString(key)
+//	slog.Debug(msg, "key", keyHex, "len", len(value),
+//		"md5", checksumHex, "value", valueHex)
+//}
+
+func getMzCache(ctx context.Context, db *badger.DB, vcChecksum []byte,
+	documentLoader ld.DocumentLoader) (*merklize.Merklizer, *inMemoryStorage,
+	error) {
+
+	var mz *merklize.Merklizer
+	var storage *inMemoryStorage
+
+	err := db.View(func(txn *badger.Txn) error {
+		mtKey := storageCacheKey(vcChecksum)
+		v, err := txn.Get(mtKey)
+		if errors.Is(err, badger.ErrKeyNotFound) {
+			return nil
+		} else if err != nil {
+			return err
+		}
+
+		storage = newInMemoryStorage()
+		err = v.Value(func(val []byte) error {
+			err = storage.UnmarshalBinary(val)
+			if err != nil {
+				return err
+			}
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+
+		mzKey := mzCacheKey(vcChecksum)
+		v, err = txn.Get(mzKey)
+		if errors.Is(err, badger.ErrKeyNotFound) {
+			return errors.New("merklized data not found in cache db")
+		} else if err != nil {
+			return err
+		}
+
+		var mt *merkletree.MerkleTree
+		mt, err = merkletree.NewMerkleTree(ctx, storage, mtLevels)
+		if err != nil {
+			return err
+		}
+
+		return v.Value(func(val []byte) error {
+			mz, err = merklize.MerklizerFromBytes(val,
+				merklize.WithDocumentLoader(documentLoader),
+				merklize.WithMerkleTree(merklize.MerkleTreeSQLAdapter(mt)))
+			return err
+		})
+	})
+
+	return mz, storage, err
+}
+
+func warmUpSchemaLoader(schemaURLs []string, docLoader ld.DocumentLoader) {
+	var wg sync.WaitGroup
+	start := time.Now()
+	for _, schemaURL := range schemaURLs {
+		wg.Add(1)
+		go func(schemaURL string) {
+			defer wg.Done()
+			_, _ = docLoader.LoadDocument(schemaURL)
+		}(schemaURL)
+	}
+	wg.Wait()
+	slog.Debug("pre download schemas",
+		"time", time.Since(start),
+		"docsNum", len(schemaURLs))
+}
+
+func PreCacheVC(ctx context.Context, cfg EnvConfig, in []byte) error {
+	var obj struct {
+		VerifiableCredentials json.RawMessage `json:"verifiableCredentials"`
+	}
+	err := json.Unmarshal(in, &obj)
+	if err != nil {
+		return err
+	}
+
+	var w3cCred verifiable.W3CCredential
+	err = json.Unmarshal(obj.VerifiableCredentials, &w3cCred)
+	if err != nil {
+		return err
+	}
+
+	_, err = merklizeCred(ctx, w3cCred, cfg.documentLoader(), false)
+	return err
 }

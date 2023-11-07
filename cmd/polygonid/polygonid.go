@@ -38,6 +38,8 @@ import (
 	"github.com/iden3/go-merkletree-sql/v2"
 )
 
+var defaultTimeout = 10 * time.Second
+
 type hexBytesStr []byte
 
 func (h *hexBytesStr) UnmarshalJSON(bytes []byte) error {
@@ -611,7 +613,7 @@ func PLGNSigV2Inputs(jsonResponse **C.char, in *C.char,
 		return false
 	}
 
-	ctx, ctxCancel := context.WithTimeout(ctx, 10*time.Second)
+	ctx, ctxCancel := context.WithTimeout(ctx, defaultTimeout)
 	defer ctxCancel()
 
 	inData := C.GoBytes(unsafe.Pointer(in), C.int(C.strlen(in)))
@@ -697,7 +699,7 @@ func PLGNMtpV2Inputs(jsonResponse **C.char, in *C.char,
 	ctx, cancel := logAPITime()
 	defer cancel()
 
-	ctx, ctxCancel := context.WithTimeout(ctx, 10*time.Second)
+	ctx, ctxCancel := context.WithTimeout(ctx, defaultTimeout)
 	defer ctxCancel()
 
 	if jsonResponse == nil {
@@ -792,6 +794,45 @@ func PLGNFreeStatus(status *C.PLGNStatus) {
 	C.free(unsafe.Pointer(status))
 }
 
+//export PLGNCleanCache
+func PLGNCleanCache(status **C.PLGNStatus) bool {
+	_, cancel := logAPITime()
+	defer cancel()
+
+	err := c_polygonid.CleanCache()
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		return false
+	}
+
+	return true
+}
+
+//export PLGNCacheCredentials
+func PLGNCacheCredentials(in *C.char, cfg *C.char, status **C.PLGNStatus) bool {
+	ctx, cancel := logAPITime()
+	defer cancel()
+
+	ctx, ctxCancel := context.WithTimeout(ctx, defaultTimeout)
+	defer ctxCancel()
+
+	inData := C.GoBytes(unsafe.Pointer(in), C.int(C.strlen(in)))
+
+	envCfg, err := createEnvConfig(cfg)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		return false
+	}
+
+	err = c_polygonid.PreCacheVC(ctx, envCfg, inData)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		return false
+	}
+
+	return true
+}
+
 // createEnvConfig returns empty config if input json is nil.
 func createEnvConfig(cfgJson *C.char) (c_polygonid.EnvConfig, error) {
 	var cfg c_polygonid.EnvConfig
@@ -816,7 +857,7 @@ func prepareInputs(ctx context.Context, fn atomicQueryInputsFn,
 	}
 
 	var cancel func()
-	ctx, cancel = context.WithTimeout(ctx, 10*time.Second)
+	ctx, cancel = context.WithTimeout(ctx, defaultTimeout)
 	defer cancel()
 
 	inData := C.GoBytes(unsafe.Pointer(in), C.int(C.strlen(in)))
