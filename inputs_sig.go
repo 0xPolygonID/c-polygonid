@@ -47,6 +47,8 @@ var httpClient = &http.Client{}
 //go:embed schemas/credentials-v1.json-ld
 var credentialsV1JsonLDBytes []byte
 
+var errCredentialsRevoked = errors.New("credential is revoked")
+
 func stringByPath(obj jsonObj, path string) (string, error) {
 	v, err := getByPath(obj, path)
 	if err != nil {
@@ -276,7 +278,7 @@ func buildAndValidateCredentialStatus(ctx context.Context, cfg EnvConfig,
 	}
 
 	if proof.Proof.Existence {
-		return proof, errors.New("credential is revoked")
+		return proof, errCredentialsRevoked
 	}
 
 	return proof, nil
