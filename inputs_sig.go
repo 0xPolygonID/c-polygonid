@@ -764,6 +764,90 @@ func AtomicQuerySigV2OnChainInputsFromJson(ctx context.Context, cfg EnvConfig,
 	return out, nil
 }
 
+func AtomicQueryV3OnChainInputsFromJson(ctx context.Context, cfg EnvConfig,
+	in []byte) (AtomicQueryInputsResponse, error) {
+
+	var out AtomicQueryInputsResponse
+	var inpMarsh circuits.AtomicQueryV3OnChainInputs
+
+	var obj onChainInputsRequest
+	err := json.Unmarshal(in, &obj)
+	if err != nil {
+		return out, err
+	}
+
+	inpMarsh.RequestID, err = bigIntByPath(obj.Request, "id", true)
+	if err != nil {
+		return out, err
+	}
+
+	if obj.ID == nil {
+		return out, errors.New(`"id" field is required`)
+	}
+
+	inpMarsh.ID = obj.ID
+	inpMarsh.ProfileNonce = obj.ProfileNonce.BigInt()
+	inpMarsh.ClaimSubjectProfileNonce = obj.ClaimSubjectProfileNonce.BigInt()
+
+	inpMarsh.AuthClaim = obj.AuthClaim
+	inpMarsh.AuthClaimIncMtp = obj.AuthClaimIncMtp
+	inpMarsh.AuthClaimNonRevMtp = obj.AuthClaimNonRevMtp
+
+	if obj.TreeState == nil {
+		return out, errors.New("treeState is required")
+	}
+	inpMarsh.TreeState = *obj.TreeState
+
+	if obj.GistProof == nil {
+		return out, errors.New("gistProof is required")
+	}
+	inpMarsh.GISTProof = *obj.GistProof
+
+	inpMarsh.Signature = (*babyjub.Signature)(obj.Signature)
+	inpMarsh.Challenge = obj.Challenge.BigInt()
+
+	circuitID, err := stringByPath(obj.Request, "circuitId")
+	if err != nil {
+		return out, err
+	}
+	if circuitID != string(circuits.AtomicQueryV3OnChainCircuitID) {
+		return out, errors.New("wrong circuit")
+	}
+	var w3cCred verifiable.W3CCredential
+	err = json.Unmarshal(obj.VerifiableCredentials, &w3cCred)
+	if err != nil {
+		return out, err
+	}
+
+	inpMarsh.SkipClaimRevocationCheck, err = querySkipRevocation(obj.Request)
+	if err != nil {
+		return out, err
+	}
+
+	reqProofType, err := queryProofType(obj.Request)
+	if err != nil {
+		return out, err
+	}
+
+	inpMarsh.Claim, inpMarsh.ProofType, err = claimWithSigAndMtpProofFromObj(
+		ctx, cfg, w3cCred, inpMarsh.SkipClaimRevocationCheck, reqProofType)
+	if err != nil {
+		return out, err
+	}
+
+	inpMarsh.Query, out.VerifiablePresentation, err = queryFromObj(ctx, w3cCred,
+		obj.Request, inpMarsh.Claim.Claim, cfg.documentLoader())
+	if err != nil {
+		return out, err
+	}
+
+	inpMarsh.CurrentTimeStamp = time.Now().Unix()
+
+	out.Inputs = inpMarsh
+
+	return out, nil
+}
+
 func AtomicQueryV3InputsFromJson(ctx context.Context, cfg EnvConfig,
 	in []byte) (AtomicQueryInputsResponse, error) {
 
