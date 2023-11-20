@@ -192,6 +192,12 @@ func resolveRevocationStatusFromIssuerService(ctx context.Context,
 	return out, nil
 }
 
+type errProofNotFound verifiable.ProofType
+
+func (e errProofNotFound) Error() string {
+	return fmt.Sprintf("proof not found: %v", string(e))
+}
+
 func claimWithSigProofFromObj(ctx context.Context, cfg EnvConfig,
 	w3cCred verifiable.W3CCredential,
 	skipClaimRevocationCheck bool) (circuits.ClaimWithSigProof, error) {
@@ -200,8 +206,7 @@ func claimWithSigProofFromObj(ctx context.Context, cfg EnvConfig,
 
 	proofI := findProofByType(w3cCred, verifiable.BJJSignatureProofType)
 	if proofI == nil {
-		return out, fmt.Errorf("no %v proofs found",
-			verifiable.BJJSignatureProofType)
+		return out, errProofNotFound(verifiable.BJJSignatureProofType)
 	}
 
 	var err error
@@ -759,6 +764,95 @@ func AtomicQuerySigV2OnChainInputsFromJson(ctx context.Context, cfg EnvConfig,
 	return out, nil
 }
 
+func AtomicQueryV3InputsFromJson(ctx context.Context, cfg EnvConfig,
+	in []byte) (AtomicQueryInputsResponse, error) {
+
+	var out AtomicQueryInputsResponse
+	var inpMarsh circuits.AtomicQueryV3Inputs
+
+	var obj inputsRequest
+	err := json.Unmarshal(in, &obj)
+	if err != nil {
+		return out, err
+	}
+
+	inpMarsh.RequestID, err = bigIntByPath(obj.Request, "id", true)
+	if err != nil {
+		return out, err
+	}
+	inpMarsh.ID = &obj.ID
+	inpMarsh.ProfileNonce = obj.ProfileNonce.BigInt()
+	inpMarsh.ClaimSubjectProfileNonce = obj.ClaimSubjectProfileNonce.BigInt()
+
+	circuitID, err := stringByPath(obj.Request, "circuitId")
+	if err != nil {
+		return out, err
+	}
+	if circuitID != string(circuits.AtomicQueryV3CircuitID) {
+		return out, errors.New("wrong circuit")
+	}
+	var w3cCred verifiable.W3CCredential
+	err = json.Unmarshal(obj.VerifiableCredentials, &w3cCred)
+	if err != nil {
+		return out, err
+	}
+
+	inpMarsh.SkipClaimRevocationCheck, err = querySkipRevocation(obj.Request)
+	if err != nil {
+		return out, err
+	}
+
+	reqProofType, err := queryProofType(obj.Request)
+	if err != nil {
+		return out, err
+	}
+
+	inpMarsh.Claim, inpMarsh.ProofType, err = claimWithSigAndMtpProofFromObj(
+		ctx, cfg, w3cCred, inpMarsh.SkipClaimRevocationCheck, reqProofType)
+	if err != nil {
+		return out, err
+	}
+
+	inpMarsh.Query, out.VerifiablePresentation, err = queryFromObj(ctx, w3cCred,
+		obj.Request, inpMarsh.Claim.Claim, cfg.documentLoader())
+	if err != nil {
+		return out, err
+	}
+
+	inpMarsh.CurrentTimeStamp = time.Now().Unix()
+
+	// TODO: what to do with LinkNonce, VerifierID, VerifierSessionID
+
+	out.Inputs = inpMarsh
+
+	return out, nil
+}
+
+// return empty circuits.ProofType if not found
+func queryProofType(requestObj jsonObj) (circuits.ProofType, error) {
+	result, err := getByPath(requestObj, "query.proofType")
+	if errors.As(err, &errPathNotFound{}) {
+		return "", nil
+	}
+	if err != nil {
+		return "", err
+	}
+
+	resS, ok := result.(string)
+	if !ok {
+		return "", errors.New("value of proofType is not string")
+	}
+
+	switch circuits.ProofType(resS) {
+	case circuits.MTPProofType:
+		return circuits.MTPProofType, nil
+	case circuits.SigProotType:
+		return circuits.SigProotType, nil
+	}
+	return "", fmt.Errorf("unknown proofType: %v", resS)
+
+}
+
 func buildQueryPath(ctx context.Context, contextURL string, contextType string,
 	field string,
 	documentLoader ld.DocumentLoader) (path merklize.Path, err error) {
@@ -1145,8 +1239,7 @@ func claimWithMtpProofFromObj(ctx context.Context, cfg EnvConfig,
 	} else if proofI = findProofByType(w3cCred, verifiable.ProofType(verifiable.Iden3OnchainSparseMerkleTreeProof2023)); proofI != nil {
 
 	} else {
-		return out, fmt.Errorf("no %v proofs found",
-			verifiable.Iden3SparseMerkleTreeProofType)
+		return out, errProofNotFound(verifiable.Iden3SparseMerkleTreeProofType)
 	}
 
 	issuerID, err := core.IDFromDID(*issuerDID)
@@ -1172,6 +1265,68 @@ func claimWithMtpProofFromObj(ctx context.Context, cfg EnvConfig,
 	}
 
 	return out, nil
+}
+
+func v3ProofFromMTP(
+	p circuits.ClaimWithMTPProof) circuits.ClaimWithSigAndMTPProof {
+	return circuits.ClaimWithSigAndMTPProof{
+		IssuerID:    p.IssuerID,
+		Claim:       p.Claim,
+		NonRevProof: p.NonRevProof,
+		IncProof:    &p.IncProof,
+	}
+}
+
+func v3ProofFromSig(p circuits.ClaimWithSigProof) circuits.ClaimWithSigAndMTPProof {
+	return circuits.ClaimWithSigAndMTPProof{
+		IssuerID:       p.IssuerID,
+		Claim:          p.Claim,
+		NonRevProof:    p.NonRevProof,
+		SignatureProof: &p.SignatureProof,
+	}
+
+}
+
+func claimWithSigAndMtpProofFromObj(ctx context.Context, cfg EnvConfig,
+	w3cCred verifiable.W3CCredential, skipClaimRevocationCheck bool,
+	proofType circuits.ProofType) (circuits.ClaimWithSigAndMTPProof, circuits.ProofType, error) {
+
+	switch proofType {
+	case circuits.MTPProofType:
+		claimWithMtpProof, err := claimWithMtpProofFromObj(ctx, cfg, w3cCred,
+			skipClaimRevocationCheck)
+		if err != nil {
+			return circuits.ClaimWithSigAndMTPProof{}, proofType, err
+		}
+		return v3ProofFromMTP(claimWithMtpProof), proofType, nil
+	case circuits.SigProotType:
+		claimWithSigProof, err := claimWithSigProofFromObj(ctx, cfg, w3cCred,
+			skipClaimRevocationCheck)
+		if err != nil {
+			return circuits.ClaimWithSigAndMTPProof{}, proofType, err
+		}
+		return v3ProofFromSig(claimWithSigProof), proofType, nil
+	case "":
+		claimWithMtpProof, err := claimWithMtpProofFromObj(ctx, cfg, w3cCred,
+			skipClaimRevocationCheck)
+		var tErr errProofNotFound
+		switch {
+		case errors.As(err, &tErr):
+			claimWithSigProof, err := claimWithSigProofFromObj(ctx, cfg,
+				w3cCred, skipClaimRevocationCheck)
+			if err != nil {
+				return circuits.ClaimWithSigAndMTPProof{}, proofType, err
+			}
+			return v3ProofFromSig(claimWithSigProof), circuits.SigProotType, nil
+		case err != nil:
+			return circuits.ClaimWithSigAndMTPProof{}, proofType, err
+		}
+
+		return v3ProofFromMTP(claimWithMtpProof), circuits.MTPProofType, nil
+	default:
+		return circuits.ClaimWithSigAndMTPProof{}, proofType,
+			fmt.Errorf("unknown proofType: %v", proofType)
+	}
 }
 
 func circuitsTreeStateFromSchemaState(
