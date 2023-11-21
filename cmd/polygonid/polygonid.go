@@ -737,6 +737,28 @@ func PLGNAtomicQueryMtpV2OnChainInputs(jsonResponse **C.char, in *C.char,
 		jsonResponse, in, cfg, status)
 }
 
+// PLGNAtomicQueryV3Inputs returns the inputs for the credentialAtomicQueryV3
+// circuit with optional selective disclosure.
+//
+//export PLGNAtomicQueryV3OInputs
+func PLGNAtomicQueryV3Inputs(jsonResponse **C.char, in *C.char,
+	cfg *C.char, status **C.PLGNStatus) bool {
+
+	return prepareInputs(c_polygonid.AtomicQueryV3InputsFromJson, jsonResponse,
+		in, cfg, status)
+}
+
+// PLGNAtomicQueryV3OnChainInputs returns the inputs for the
+// credentialAtomicQueryV3OnChain circuit with optional selective disclosure.
+//
+//export PLGNAtomicQueryV3OnChainInputs
+func PLGNAtomicQueryV3OnChainInputs(jsonResponse **C.char, in *C.char,
+	cfg *C.char, status **C.PLGNStatus) bool {
+
+	return prepareInputs(c_polygonid.AtomicQueryV3OnChainInputsFromJson,
+		jsonResponse, in, cfg, status)
+}
+
 //export PLGNFreeStatus
 func PLGNFreeStatus(status *C.PLGNStatus) {
 	if status == nil {

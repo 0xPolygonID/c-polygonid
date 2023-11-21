@@ -6,7 +6,7 @@ require (
 	github.com/ethereum/go-ethereum v1.12.0
 	github.com/iden3/contracts-abi/onchain-credential-status-resolver/go/abi v0.0.0-20230911113809-c58b7e7a69b0
 	github.com/iden3/contracts-abi/state/go/abi v0.0.0-20230405152923-4a25f6f1f0f4
-	github.com/iden3/go-circuits/v2 v2.0.1-0.20231120131017-dffd68ac9fba
+	github.com/iden3/go-circuits/v2 v2.0.1-0.20231121082343-9d0c77664cd9
 	github.com/iden3/go-iden3-core/v2 v2.0.0
 	github.com/iden3/go-iden3-crypto v0.0.15
 	github.com/iden3/go-merkletree-sql/v2 v2.0.6

@@ -928,10 +928,10 @@ func queryProofType(requestObj jsonObj) (circuits.ProofType, error) {
 	}
 
 	switch circuits.ProofType(resS) {
-	case circuits.MTPProofType:
-		return circuits.MTPProofType, nil
-	case circuits.SigProotType:
-		return circuits.SigProotType, nil
+	case circuits.Iden3SparseMerkleTreeProofType:
+		return circuits.Iden3SparseMerkleTreeProofType, nil
+	case circuits.BJJSignatureProofType:
+		return circuits.BJJSignatureProofType, nil
 	}
 	return "", fmt.Errorf("unknown proofType: %v", resS)
 
@@ -1376,14 +1376,14 @@ func claimWithSigAndMtpProofFromObj(ctx context.Context, cfg EnvConfig,
 	proofType circuits.ProofType) (circuits.ClaimWithSigAndMTPProof, circuits.ProofType, error) {
 
 	switch proofType {
-	case circuits.MTPProofType:
+	case circuits.Iden3SparseMerkleTreeProofType:
 		claimWithMtpProof, err := claimWithMtpProofFromObj(ctx, cfg, w3cCred,
 			skipClaimRevocationCheck)
 		if err != nil {
 			return circuits.ClaimWithSigAndMTPProof{}, proofType, err
 		}
 		return v3ProofFromMTP(claimWithMtpProof), proofType, nil
-	case circuits.SigProotType:
+	case circuits.BJJSignatureProofType:
 		claimWithSigProof, err := claimWithSigProofFromObj(ctx, cfg, w3cCred,
 			skipClaimRevocationCheck)
 		if err != nil {
@@ -1401,12 +1401,14 @@ func claimWithSigAndMtpProofFromObj(ctx context.Context, cfg EnvConfig,
 			if err != nil {
 				return circuits.ClaimWithSigAndMTPProof{}, proofType, err
 			}
-			return v3ProofFromSig(claimWithSigProof), circuits.SigProotType, nil
+			return v3ProofFromSig(claimWithSigProof),
+				circuits.BJJSignatureProofType, nil
 		case err != nil:
 			return circuits.ClaimWithSigAndMTPProof{}, proofType, err
 		}
 
-		return v3ProofFromMTP(claimWithMtpProof), circuits.MTPProofType, nil
+		return v3ProofFromMTP(claimWithMtpProof),
+			circuits.Iden3SparseMerkleTreeProofType, nil
 	default:
 		return circuits.ClaimWithSigAndMTPProof{}, proofType,
 			fmt.Errorf("unknown proofType: %v", proofType)
