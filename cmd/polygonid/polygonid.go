@@ -740,7 +740,7 @@ func PLGNAtomicQueryMtpV2OnChainInputs(jsonResponse **C.char, in *C.char,
 // PLGNAtomicQueryV3Inputs returns the inputs for the credentialAtomicQueryV3
 // circuit with optional selective disclosure.
 //
-//export PLGNAtomicQueryV3OInputs
+//export PLGNAtomicQueryV3Inputs
 func PLGNAtomicQueryV3Inputs(jsonResponse **C.char, in *C.char,
 	cfg *C.char, status **C.PLGNStatus) bool {
 
