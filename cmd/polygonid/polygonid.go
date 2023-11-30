@@ -38,7 +38,7 @@ import (
 	"github.com/iden3/go-merkletree-sql/v2"
 )
 
-var defaultTimeout = 10 * time.Second
+var defaultTimeout = 30 * time.Second
 
 type hexBytesStr []byte
 

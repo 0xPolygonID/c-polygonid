@@ -1862,7 +1862,7 @@ func identityStateForRHS(ctx context.Context, cfg EnvConfig, issuerID *core.ID,
 		return nil, errors.New("current state is not found for the identity")
 	}
 
-	stateIsGenesis, err := genesisStateMatch(state, *issuerID)
+	stateIsGenesis, err := genesisStateMatch(genesisState, *issuerID)
 	if err != nil {
 		return nil, err
 	}
@@ -1931,7 +1931,13 @@ func resolveRevStatusFromRHS(ctx context.Context, rhsURL string, cfg EnvConfig,
 	}
 
 	p.TreeState, err = treeStateFromRHS(ctx, rhsCli, state)
-	if err != nil {
+	if errors.Is(err, mp.ErrNodeNotFound) {
+		if genesisState != nil && state.Equals(genesisState) {
+			return p, errors.New("genesis state is not found in RHS")
+		} else {
+			return p, errors.New("current state is not found in RHS")
+		}
+	} else if err != nil {
 		return p, err
 	}
 
