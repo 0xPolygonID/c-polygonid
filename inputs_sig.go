@@ -1450,7 +1450,7 @@ func claimWithSigAndMtpProofFromObj(ctx context.Context, cfg EnvConfig,
 	switch proofType {
 	case circuits.Iden3SparseMerkleTreeProofType:
 		claimWithMtpProof, err := claimWithMtpProofFromObj(ctx, cfg, w3cCred,
-			skipClaimRevocationCheck)
+			skipClaimRevocationCheck, nil)
 		if err != nil {
 			return circuits.ClaimWithSigAndMTPProof{}, proofType, err
 		}
@@ -1464,7 +1464,7 @@ func claimWithSigAndMtpProofFromObj(ctx context.Context, cfg EnvConfig,
 		return v3ProofFromSig(claimWithSigProof), proofType, nil
 	case "":
 		claimWithMtpProof, err := claimWithMtpProofFromObj(ctx, cfg, w3cCred,
-			skipClaimRevocationCheck)
+			skipClaimRevocationCheck, nil)
 		var tErr errProofNotFound
 		switch {
 		case errors.As(err, &tErr):
