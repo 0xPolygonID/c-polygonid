@@ -785,8 +785,11 @@ func PLGNAtomicQueryMtpV2OnChainInputs(jsonResponse **C.char, in *C.char,
 func PLGNAtomicQueryV3Inputs(jsonResponse **C.char, in *C.char,
 	cfg *C.char, status **C.PLGNStatus) bool {
 
-	return prepareInputs(c_polygonid.AtomicQueryV3InputsFromJson, jsonResponse,
-		in, cfg, status)
+	ctx, cancel := logAPITime()
+	defer cancel()
+
+	return prepareInputs(ctx, c_polygonid.AtomicQueryV3InputsFromJson,
+		jsonResponse, in, cfg, status)
 }
 
 // PLGNAtomicQueryV3OnChainInputs returns the inputs for the
@@ -796,7 +799,10 @@ func PLGNAtomicQueryV3Inputs(jsonResponse **C.char, in *C.char,
 func PLGNAtomicQueryV3OnChainInputs(jsonResponse **C.char, in *C.char,
 	cfg *C.char, status **C.PLGNStatus) bool {
 
-	return prepareInputs(c_polygonid.AtomicQueryV3OnChainInputsFromJson,
+	ctx, cancel := logAPITime()
+	defer cancel()
+
+	return prepareInputs(ctx, c_polygonid.AtomicQueryV3OnChainInputsFromJson,
 		jsonResponse, in, cfg, status)
 }
 
