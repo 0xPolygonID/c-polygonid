@@ -159,8 +159,8 @@ github.com/iden3/contracts-abi/onchain-credential-status-resolver/go/abi v0.0.0-
 github.com/iden3/contracts-abi/onchain-credential-status-resolver/go/abi v0.0.0-20230911113809-c58b7e7a69b0/go.mod h1:8fkd2xyUG/V7ovpvZRyD2LyK2zZ4ALbgf5vJGyhzKdg=
 github.com/iden3/contracts-abi/state/go/abi v0.0.0-20230405152923-4a25f6f1f0f4 h1:iPvYa/AhhGo3juoUFDm/fBE2CZKy4WfQu7JY90tRf9Q=
 github.com/iden3/contracts-abi/state/go/abi v0.0.0-20230405152923-4a25f6f1f0f4/go.mod h1:TxgIrXCvxms3sbOdsy8kTvffUCIpEEifNy0fSXdkU4w=
-github.com/iden3/go-circuits/v2 v2.0.1-0.20231121174851-c7d45cd9baec h1:ORXPivdUzGKSOkunZPtv9Gm+O6II7zpb/sRDJJ4C7Yc=
-github.com/iden3/go-circuits/v2 v2.0.1-0.20231121174851-c7d45cd9baec/go.mod h1:VIFIp51+IH0hOzjnKhb84bCeyq7hq76zX/C14ua6zh4=
+github.com/iden3/go-circuits/v2 v2.0.1-0.20231205151209-17aa80af4725 h1:GfZHQSOwkqdVHy7vpEZLpbyBCYk9MBtXvdGJQa3aIB8=
+github.com/iden3/go-circuits/v2 v2.0.1-0.20231205151209-17aa80af4725/go.mod h1:VIFIp51+IH0hOzjnKhb84bCeyq7hq76zX/C14ua6zh4=
 github.com/iden3/go-iden3-core/v2 v2.0.0 h1:sQEuuq3RLfyYSY8qPiqxQ6YBpGbiAwepHJD/vjf1adA=
 github.com/iden3/go-iden3-core/v2 v2.0.0/go.mod h1:L9PxhWPvoS9qTb3inEkZBm1RpjHBt+VTwvxssdzbAdw=
 github.com/iden3/go-iden3-crypto v0.0.15 h1:4MJYlrot1l31Fzlo2sF56u7EVFeHHJkxGXXZCtESgK4=
