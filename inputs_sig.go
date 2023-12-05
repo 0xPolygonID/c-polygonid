@@ -1184,6 +1184,13 @@ func queryFromObjMerklized(ctx context.Context,
 		if err != nil {
 			return out, nil, err
 		}
+
+		if !out.ValueProof.MTP.Existence {
+			return out, nil, fmt.Errorf(
+				"value not found in verifiable credential by path %v",
+				fmtPath(path))
+		}
+
 		var val *big.Int
 		val, err = mzValue.MtEntry()
 		if err != nil {
