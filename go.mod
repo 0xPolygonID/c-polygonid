@@ -11,7 +11,7 @@ require (
 	github.com/iden3/go-iden3-core/v2 v2.0.0
 	github.com/iden3/go-iden3-crypto v0.0.15
 	github.com/iden3/go-merkletree-sql/v2 v2.0.6
-	github.com/iden3/go-schema-processor/v2 v2.0.2-0.20231010174647-ab15a289fa44
+	github.com/iden3/go-schema-processor/v2 v2.1.1-0.20231205095423-5c829bdc9b0e
 	github.com/iden3/merkletree-proof v0.0.3
 	github.com/ipfs/go-ipfs-api v0.7.0
 	github.com/piprate/json-gold v0.5.1-0.20230111113000-6ddbe6e6f19f
