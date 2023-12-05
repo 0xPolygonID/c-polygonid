@@ -1216,6 +1216,13 @@ func queryFromObjMerklized(ctx context.Context,
 	if err != nil {
 		return out, nil, err
 	}
+
+	if !out.ValueProof.MTP.Existence {
+		return out, nil, fmt.Errorf(
+			"value not found in verifiable credential by path %v",
+			fmtPath(path))
+	}
+
 	out.ValueProof.Value, err = mzValue.MtEntry()
 	if err != nil {
 		return out, nil, err
@@ -2437,4 +2444,12 @@ func PreCacheVC(ctx context.Context, cfg EnvConfig, in []byte) error {
 
 	_, err = merklizeCred(ctx, w3cCred, cfg.documentLoader(), false)
 	return err
+}
+
+func fmtPath(path merklize.Path) string {
+	var parts []string
+	for _, p := range path.Parts() {
+		parts = append(parts, fmt.Sprintf("%v", p))
+	}
+	return "[" + strings.Join(parts, ",") + "]"
 }
