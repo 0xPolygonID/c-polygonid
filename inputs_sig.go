@@ -63,6 +63,16 @@ func stringByPath(obj jsonObj, path string) (string, error) {
 	return s, nil
 }
 
+func bigIntOrZeroByPath(obj jsonObj, path string,
+	allowNumbers bool) (*big.Int, error) {
+
+	i, err := bigIntByPath(obj, path, allowNumbers)
+	if errors.As(err, &errPathNotFound{}) {
+		return big.NewInt(0), nil
+	}
+	return i, err
+}
+
 // if allowNumbers is true, then the value can also be a number, not only strings
 func bigIntByPath(obj jsonObj, path string,
 	allowNumbers bool) (*big.Int, error) {
@@ -383,6 +393,12 @@ type inputsRequest struct {
 	Request                  jsonObj         `json:"request"`
 }
 
+type v3InputsRequest struct {
+	inputsRequest
+	VerifierID *w3c.DID   `json:"verifierId"`
+	LinkNonce  JsonBigInt `json:"linkNonce"`
+}
+
 type onChainInputsRequest struct {
 	ID                       *core.ID            `json:"id"`
 	ProfileNonce             *JsonBigInt         `json:"profileNonce"`
@@ -396,6 +412,12 @@ type onChainInputsRequest struct {
 	Challenge                *JsonBigInt         `json:"challenge"`
 	VerifiableCredentials    json.RawMessage     `json:"verifiableCredentials"`
 	Request                  jsonObj             `json:"request"`
+}
+
+type v3OnChainInputsRequest struct {
+	onChainInputsRequest
+	VerifierID *w3c.DID   `json:"verifierId"`
+	LinkNonce  JsonBigInt `json:"linkNonce"`
 }
 
 type AtomicQueryInputsResponse struct {
@@ -817,7 +839,7 @@ func AtomicQueryV3OnChainInputsFromJson(ctx context.Context, cfg EnvConfig,
 	var out AtomicQueryInputsResponse
 	var inpMarsh circuits.AtomicQueryV3OnChainInputs
 
-	var obj onChainInputsRequest
+	var obj v3OnChainInputsRequest
 	err := json.Unmarshal(in, &obj)
 	if err != nil {
 		return out, err
@@ -890,6 +912,21 @@ func AtomicQueryV3OnChainInputsFromJson(ctx context.Context, cfg EnvConfig,
 
 	inpMarsh.CurrentTimeStamp = time.Now().Unix()
 
+	inpMarsh.LinkNonce = obj.LinkNonce.BigInt()
+	if obj.VerifierID != nil {
+		id, err := core.IDFromDID(*obj.VerifierID)
+		if err != nil {
+			return out, err
+		}
+		inpMarsh.VerifierID = &id
+	}
+
+	inpMarsh.VerifierSessionID, err = bigIntOrZeroByPath(obj.Request,
+		"query.verifierSessionId", true)
+	if err != nil {
+		return out, err
+	}
+
 	out.Inputs = inpMarsh
 
 	return out, nil
@@ -901,7 +938,7 @@ func AtomicQueryV3InputsFromJson(ctx context.Context, cfg EnvConfig,
 	var out AtomicQueryInputsResponse
 	var inpMarsh circuits.AtomicQueryV3Inputs
 
-	var obj inputsRequest
+	var obj v3InputsRequest
 	err := json.Unmarshal(in, &obj)
 	if err != nil {
 		return out, err
@@ -952,7 +989,21 @@ func AtomicQueryV3InputsFromJson(ctx context.Context, cfg EnvConfig,
 
 	inpMarsh.CurrentTimeStamp = time.Now().Unix()
 
-	// TODO: what to do with LinkNonce, VerifierID, VerifierSessionID
+	inpMarsh.VerifierSessionID, err = bigIntOrZeroByPath(obj.Request,
+		"query.verifierSessionId", true)
+	if err != nil {
+		return out, err
+	}
+
+	if obj.VerifierID != nil {
+		id, err := core.IDFromDID(*obj.VerifierID)
+		if err != nil {
+			return out, err
+		}
+		inpMarsh.VerifierID = &id
+	}
+
+	inpMarsh.LinkNonce = obj.LinkNonce.BigInt()
 
 	out.Inputs = inpMarsh
 
