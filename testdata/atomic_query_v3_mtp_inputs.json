@@ -95,8 +95,10 @@
           "$eq": 2
         }
       },
-      "proofType": "Iden3SparseMerkleTreeProof",
-      "verifierSessionId": "123"
+      "proofType": "Iden3SparseMerkleTreeProof"
+    },
+    "params": {
+      "nullifierSessionId": "123"
     }
   }
 }

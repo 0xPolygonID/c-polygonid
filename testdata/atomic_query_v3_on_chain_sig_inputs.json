@@ -135,8 +135,10 @@
           "$gt": 1
         }
       },
-      "proofType": "BJJSignature2021",
-      "verifierSessionId": "123"
+      "proofType": "BJJSignature2021"
+    },
+    "params": {
+      "nullifierSessionId": "123"
     }
   }
 }

@@ -921,8 +921,8 @@ func AtomicQueryV3OnChainInputsFromJson(ctx context.Context, cfg EnvConfig,
 		inpMarsh.VerifierID = &id
 	}
 
-	inpMarsh.VerifierSessionID, err = bigIntOrZeroByPath(obj.Request,
-		"query.verifierSessionId", true)
+	inpMarsh.NullifierSessionID, err = bigIntOrZeroByPath(obj.Request,
+		"params.nullifierSessionId", true)
 	if err != nil {
 		return out, err
 	}
@@ -989,8 +989,8 @@ func AtomicQueryV3InputsFromJson(ctx context.Context, cfg EnvConfig,
 
 	inpMarsh.CurrentTimeStamp = time.Now().Unix()
 
-	inpMarsh.VerifierSessionID, err = bigIntOrZeroByPath(obj.Request,
-		"query.verifierSessionId", true)
+	inpMarsh.NullifierSessionID, err = bigIntOrZeroByPath(obj.Request,
+		"params.nullifierSessionId", true)
 	if err != nil {
 		return out, err
 	}
