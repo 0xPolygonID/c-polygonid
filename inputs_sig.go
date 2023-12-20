@@ -850,6 +850,7 @@ func AtomicQueryV3OnChainInputsFromJson(ctx context.Context, cfg EnvConfig,
 
 	var out AtomicQueryInputsResponse
 	var inpMarsh circuits.AtomicQueryV3OnChainInputs
+	inpMarsh.AuthEnabled = 1
 
 	var obj v3OnChainInputsRequest
 	err := json.Unmarshal(in, &obj)
