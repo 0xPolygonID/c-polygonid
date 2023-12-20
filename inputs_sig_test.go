@@ -606,6 +606,18 @@ func TestPrepareInputs(t *testing.T) {
 			EnvConfig{}, "")
 	})
 
+	t.Run("AtomicQueryV3OnChainInputsFromJson - Transaction Data", func(t *testing.T) {
+		defer httpmock.MockHTTPClient(t, map[string]string{
+			"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qDnyCaxj4zdYmj6LbegYMjWSnkbKAyqtq31YeuyZV/claims/revocation/status/3972757": "testdata/httpresp_rev_status_3972757.json",
+			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld":                                                           "testdata/httpresp_kyc-v3.json-ld",
+			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld":                                               "testdata/httpresp_iden3credential_v2.json",
+		}, httpmock.IgnoreUntouchedURLs())()
+
+		doTest(t, "atomic_query_v3_on_chain_tx_data_inputs.json",
+			"atomic_query_v3_on_chain_tx_data_output.json",
+			AtomicQueryV3OnChainInputsFromJson, nil, EnvConfig{}, "")
+	})
+
 }
 
 func TestEnvConfig_UnmarshalJSON(t *testing.T) {
@@ -1103,4 +1115,17 @@ func TestPreCacheVC(t *testing.T) {
 
 	err = db.DropAll()
 	require.NoError(t, err)
+}
+
+func TestVerifierIDFromTxData(t *testing.T) {
+	in := txData{
+		ContractAddress: common.HexToAddress("0x199194Cb1884BF288757fac94B3349Cefef93629"),
+		ChainID:         80001,
+	}
+	id, err := verifierIDFromTxData(in)
+	require.NoError(t, err)
+	require.Equal(t, "wuL2hHjCC1L7GL9KpQZtBcFvsyqknxq6otmdWtmqs", id.String())
+	require.Equal(t,
+		"17966356888215056651324659145404695842840677593163532338422715818832826881",
+		id.BigInt().Text(10))
 }

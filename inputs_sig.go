@@ -414,10 +414,16 @@ type onChainInputsRequest struct {
 	Request                  jsonObj             `json:"request"`
 }
 
+type txData struct {
+	ContractAddress common.Address `json:"contractAddress"`
+	ChainID         ChainID        `json:"chainId"`
+}
+
 type v3OnChainInputsRequest struct {
 	onChainInputsRequest
 	VerifierID *w3c.DID   `json:"verifierId"`
 	LinkNonce  JsonBigInt `json:"linkNonce"`
+	TxData     *txData    `json:"transactionData"`
 }
 
 type AtomicQueryInputsResponse struct {
@@ -926,6 +932,11 @@ func AtomicQueryV3OnChainInputsFromJson(ctx context.Context, cfg EnvConfig,
 			return out, err
 		}
 		inpMarsh.VerifierID = &id
+	} else if obj.TxData != nil {
+		inpMarsh.VerifierID, err = verifierIDFromTxData(*obj.TxData)
+		if err != nil {
+			return out, err
+		}
 	}
 
 	inpMarsh.NullifierSessionID, err = bigIntOrZeroByPath(obj.Request,
@@ -2005,6 +2016,15 @@ func (cfg EnvConfig) documentLoader() ld.DocumentLoader {
 
 type ChainID uint64
 
+func (cid ChainID) Unpack() (core.Blockchain, core.NetworkID, error) {
+	for k, v := range knownChainIDs {
+		if v == cid {
+			return k.blockchain, k.networkID, nil
+		}
+	}
+	return core.NoChain, core.NoNetwork, fmt.Errorf("unknown chain ID")
+}
+
 func newChainIDFromString(in string) (ChainID, error) {
 	var chainID uint64
 	var err error
@@ -2542,4 +2562,18 @@ func fmtPath(path merklize.Path) string {
 		parts = append(parts, fmt.Sprintf("%v", p))
 	}
 	return "[" + strings.Join(parts, ",") + "]"
+}
+
+func verifierIDFromTxData(txData txData) (*core.ID, error) {
+	genState := core.GenesisFromEthAddress(txData.ContractAddress)
+	blockchain, networkID, err := txData.ChainID.Unpack()
+	if err != nil {
+		return nil, err
+	}
+	tp, err := core.BuildDIDType(core.DIDMethodIden3, blockchain, networkID)
+	if err != nil {
+		return nil, err
+	}
+	id := core.NewID(tp, genState)
+	return &id, nil
 }
