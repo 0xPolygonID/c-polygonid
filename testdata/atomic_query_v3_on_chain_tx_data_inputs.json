@@ -2,8 +2,6 @@
   "id": "2qNcq2LGHFyikZaWfsif1vjrpKFuTowsRV9U1oEhkB",
   "profileNonce": "0",
   "claimSubjectProfileNonce": "0",
-  "verifierId": "did:polygonid:polygon:mumbai:2qNcq2LGHFyikZaWfsif1vjrpKFuTowsRV9U1oEhkB",
-  "linkNonce": "456",
   "authClaim":[
     "80551937543569765027552589160822318028",
     "0",
@@ -135,10 +133,13 @@
           "$gt": 1
         }
       },
-      "proofType": "BJJSignature2021"
-    },
-    "params": {
-      "nullifierSessionId": "123"
+      "proofType": "Iden3SparseMerkleTreeProof"
     }
+  },
+  "transactionData": {
+    "chainId": 80001,
+    "contractAddress": "0x199194Cb1884BF288757fac94B3349Cefef93629",
+    "methodId": "b68967e2",
+    "network": "polygon-mumbai"
   }
 }

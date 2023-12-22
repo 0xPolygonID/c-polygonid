@@ -7,11 +7,11 @@ require (
 	github.com/ethereum/go-ethereum v1.13.2
 	github.com/iden3/contracts-abi/onchain-credential-status-resolver/go/abi v0.0.0-20230911113809-c58b7e7a69b0
 	github.com/iden3/contracts-abi/state/go/abi v0.0.0-20230405152923-4a25f6f1f0f4
-	github.com/iden3/go-circuits/v2 v2.0.1-0.20231121174851-c7d45cd9baec
+	github.com/iden3/go-circuits/v2 v2.0.1-0.20231206170636-08f762edb388
 	github.com/iden3/go-iden3-core/v2 v2.0.0
 	github.com/iden3/go-iden3-crypto v0.0.15
 	github.com/iden3/go-merkletree-sql/v2 v2.0.6
-	github.com/iden3/go-schema-processor/v2 v2.0.2-0.20231010174647-ab15a289fa44
+	github.com/iden3/go-schema-processor/v2 v2.1.1-0.20231213064039-68c1fb2962ff
 	github.com/iden3/merkletree-proof v0.0.3
 	github.com/ipfs/go-ipfs-api v0.7.0
 	github.com/piprate/json-gold v0.5.1-0.20230111113000-6ddbe6e6f19f

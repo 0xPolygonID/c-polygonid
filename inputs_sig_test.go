@@ -574,6 +574,50 @@ func TestPrepareInputs(t *testing.T) {
 			"atomic_query_v3_on_chain_sig_output.json",
 			AtomicQueryV3OnChainInputsFromJson, nil, EnvConfig{}, "")
 	})
+
+	t.Run("AtomicQueryV3InputsFromJson - Sig - Selective Disclosure", func(t *testing.T) {
+
+		defer httpmock.MockHTTPClient(t, map[string]string{
+			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld":                                                         "testdata/httpresp_kyc-v3.json-ld",
+			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld":                                             "testdata/httpresp_iden3credential_v2.json",
+			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/2376431481": "testdata/httpresp_rev_status_2376431481.json",
+			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/0":          "testdata/httpresp_rev_status_wuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU_0.json",
+		}, httpmock.IgnoreUntouchedURLs())()
+
+		wantVerifiablePresentation := map[string]any{
+			"@context": []any{"https://www.w3.org/2018/credentials/v1"},
+			"@type":    "VerifiablePresentation",
+			"verifiableCredential": map[string]any{
+				"@context": []any{
+					"https://www.w3.org/2018/credentials/v1",
+					"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld",
+				},
+				"@type": []any{"VerifiableCredential", "KYCAgeCredential"},
+				"credentialSubject": map[string]any{
+					"@type":        "KYCAgeCredential",
+					"documentType": float64(2),
+				},
+			},
+		}
+
+		doTest(t, "atomic_query_v3_sig_selective_disclosure_inputs.json",
+			"atomic_query_v3_sig_selective_disclosure_output.json",
+			AtomicQueryV3InputsFromJson, wantVerifiablePresentation,
+			EnvConfig{}, "")
+	})
+
+	t.Run("AtomicQueryV3OnChainInputsFromJson - Transaction Data", func(t *testing.T) {
+		defer httpmock.MockHTTPClient(t, map[string]string{
+			"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qDnyCaxj4zdYmj6LbegYMjWSnkbKAyqtq31YeuyZV/claims/revocation/status/3972757": "testdata/httpresp_rev_status_3972757.json",
+			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld":                                                           "testdata/httpresp_kyc-v3.json-ld",
+			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld":                                               "testdata/httpresp_iden3credential_v2.json",
+		}, httpmock.IgnoreUntouchedURLs())()
+
+		doTest(t, "atomic_query_v3_on_chain_tx_data_inputs.json",
+			"atomic_query_v3_on_chain_tx_data_output.json",
+			AtomicQueryV3OnChainInputsFromJson, nil, EnvConfig{}, "")
+	})
+
 }
 
 func TestEnvConfig_UnmarshalJSON(t *testing.T) {
@@ -1071,4 +1115,17 @@ func TestPreCacheVC(t *testing.T) {
 
 	err = db.DropAll()
 	require.NoError(t, err)
+}
+
+func TestVerifierIDFromTxData(t *testing.T) {
+	in := txData{
+		ContractAddress: common.HexToAddress("0x199194Cb1884BF288757fac94B3349Cefef93629"),
+		ChainID:         80001,
+	}
+	id, err := verifierIDFromTxData(in)
+	require.NoError(t, err)
+	require.Equal(t, "wuL2hHjCC1L7GL9KpQZtBcFvsyqknxq6otmdWtmqs", id.String())
+	require.Equal(t,
+		"17966356888215056651324659145404695842840677593163532338422715818832826881",
+		id.BigInt().Text(10))
 }

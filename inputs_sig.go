@@ -63,6 +63,16 @@ func stringByPath(obj jsonObj, path string) (string, error) {
 	return s, nil
 }
 
+func bigIntOrZeroByPath(obj jsonObj, path string,
+	allowNumbers bool) (*big.Int, error) {
+
+	i, err := bigIntByPath(obj, path, allowNumbers)
+	if errors.As(err, &errPathNotFound{}) {
+		return big.NewInt(0), nil
+	}
+	return i, err
+}
+
 // if allowNumbers is true, then the value can also be a number, not only strings
 func bigIntByPath(obj jsonObj, path string,
 	allowNumbers bool) (*big.Int, error) {
@@ -383,6 +393,12 @@ type inputsRequest struct {
 	Request                  jsonObj         `json:"request"`
 }
 
+type v3InputsRequest struct {
+	inputsRequest
+	VerifierID *w3c.DID   `json:"verifierId"`
+	LinkNonce  JsonBigInt `json:"linkNonce"`
+}
+
 type onChainInputsRequest struct {
 	ID                       *core.ID            `json:"id"`
 	ProfileNonce             *JsonBigInt         `json:"profileNonce"`
@@ -396,6 +412,18 @@ type onChainInputsRequest struct {
 	Challenge                *JsonBigInt         `json:"challenge"`
 	VerifiableCredentials    json.RawMessage     `json:"verifiableCredentials"`
 	Request                  jsonObj             `json:"request"`
+}
+
+type txData struct {
+	ContractAddress common.Address `json:"contractAddress"`
+	ChainID         ChainID        `json:"chainId"`
+}
+
+type v3OnChainInputsRequest struct {
+	onChainInputsRequest
+	VerifierID *w3c.DID   `json:"verifierId"`
+	LinkNonce  JsonBigInt `json:"linkNonce"`
+	TxData     *txData    `json:"transactionData"`
 }
 
 type AtomicQueryInputsResponse struct {
@@ -426,13 +454,14 @@ func AtomicQueryMtpV2InputsFromJson(ctx context.Context, cfg EnvConfig,
 	inpMarsh.ProfileNonce = obj.ProfileNonce.BigInt()
 	inpMarsh.ClaimSubjectProfileNonce = obj.ClaimSubjectProfileNonce.BigInt()
 
-	circuitID, err := stringByPath(obj.Request, "circuitId")
+	circuitID, err := getCircuitID(obj.Request)
 	if err != nil {
 		return out, err
 	}
-	if circuitID != string(circuits.AtomicQueryMTPV2CircuitID) {
+	if circuitID != circuits.AtomicQueryMTPV2CircuitID {
 		return out, errors.New("wrong circuit")
 	}
+
 	var w3cCred verifiable.W3CCredential
 	err = json.Unmarshal(obj.VerifiableCredentials, &w3cCred)
 	if err != nil {
@@ -455,7 +484,8 @@ func AtomicQueryMtpV2InputsFromJson(ctx context.Context, cfg EnvConfig,
 			defer wg.Done()
 			start := time.Now()
 			inpMarsh.Query, out.VerifiablePresentation, queryErr = queryFromObj(
-				ctx, w3cCred, obj.Request, claim, cfg.documentLoader())
+				ctx, w3cCred, obj.Request, claim, cfg.documentLoader(),
+				circuitID)
 			slog.Debug("query done in", "time", time.Since(start))
 		}()
 	}
@@ -601,13 +631,14 @@ func AtomicQuerySigV2InputsFromJson(ctx context.Context, cfg EnvConfig,
 	inpMarsh.ProfileNonce = obj.ProfileNonce.BigInt()
 	inpMarsh.ClaimSubjectProfileNonce = obj.ClaimSubjectProfileNonce.BigInt()
 
-	circuitID, err := stringByPath(obj.Request, "circuitId")
+	circuitID, err := getCircuitID(obj.Request)
 	if err != nil {
 		return out, err
 	}
-	if circuitID != string(circuits.AtomicQuerySigV2CircuitID) {
+	if circuitID != circuits.AtomicQuerySigV2CircuitID {
 		return out, errors.New("wrong circuit")
 	}
+
 	var w3cCred verifiable.W3CCredential
 	err = json.Unmarshal(obj.VerifiableCredentials, &w3cCred)
 	if err != nil {
@@ -625,7 +656,7 @@ func AtomicQuerySigV2InputsFromJson(ctx context.Context, cfg EnvConfig,
 	}
 
 	inpMarsh.Query, out.VerifiablePresentation, err = queryFromObj(ctx, w3cCred,
-		obj.Request, inpMarsh.Claim.Claim, cfg.documentLoader())
+		obj.Request, inpMarsh.Claim.Claim, cfg.documentLoader(), circuitID)
 	if err != nil {
 		return out, err
 	}
@@ -679,13 +710,14 @@ func AtomicQueryMtpV2OnChainInputsFromJson(ctx context.Context, cfg EnvConfig,
 	inpMarsh.Signature = (*babyjub.Signature)(obj.Signature)
 	inpMarsh.Challenge = obj.Challenge.BigInt()
 
-	circuitID, err := stringByPath(obj.Request, "circuitId")
+	circuitID, err := getCircuitID(obj.Request)
 	if err != nil {
 		return out, err
 	}
-	if circuitID != string(circuits.AtomicQueryMTPV2OnChainCircuitID) {
+	if circuitID != circuits.AtomicQueryMTPV2OnChainCircuitID {
 		return out, errors.New("wrong circuit")
 	}
+
 	var w3cCred verifiable.W3CCredential
 	err = json.Unmarshal(obj.VerifiableCredentials, &w3cCred)
 	if err != nil {
@@ -707,7 +739,8 @@ func AtomicQueryMtpV2OnChainInputsFromJson(ctx context.Context, cfg EnvConfig,
 		go func() {
 			defer wg.Done()
 			inpMarsh.Query, out.VerifiablePresentation, queryErr = queryFromObj(
-				ctx, w3cCred, obj.Request, claim, cfg.documentLoader())
+				ctx, w3cCred, obj.Request, claim, cfg.documentLoader(),
+				circuitID)
 		}()
 	}
 
@@ -775,13 +808,14 @@ func AtomicQuerySigV2OnChainInputsFromJson(ctx context.Context, cfg EnvConfig,
 	inpMarsh.Signature = (*babyjub.Signature)(obj.Signature)
 	inpMarsh.Challenge = obj.Challenge.BigInt()
 
-	circuitID, err := stringByPath(obj.Request, "circuitId")
+	circuitID, err := getCircuitID(obj.Request)
 	if err != nil {
 		return out, err
 	}
-	if circuitID != string(circuits.AtomicQuerySigV2OnChainCircuitID) {
+	if circuitID != circuits.AtomicQuerySigV2OnChainCircuitID {
 		return out, errors.New("wrong circuit")
 	}
+
 	var w3cCred verifiable.W3CCredential
 	err = json.Unmarshal(obj.VerifiableCredentials, &w3cCred)
 	if err != nil {
@@ -799,7 +833,7 @@ func AtomicQuerySigV2OnChainInputsFromJson(ctx context.Context, cfg EnvConfig,
 	}
 
 	inpMarsh.Query, out.VerifiablePresentation, err = queryFromObj(ctx, w3cCred,
-		obj.Request, inpMarsh.Claim.Claim, cfg.documentLoader())
+		obj.Request, inpMarsh.Claim.Claim, cfg.documentLoader(), circuitID)
 	if err != nil {
 		return out, err
 	}
@@ -816,8 +850,9 @@ func AtomicQueryV3OnChainInputsFromJson(ctx context.Context, cfg EnvConfig,
 
 	var out AtomicQueryInputsResponse
 	var inpMarsh circuits.AtomicQueryV3OnChainInputs
+	inpMarsh.AuthEnabled = 1
 
-	var obj onChainInputsRequest
+	var obj v3OnChainInputsRequest
 	err := json.Unmarshal(in, &obj)
 	if err != nil {
 		return out, err
@@ -853,13 +888,14 @@ func AtomicQueryV3OnChainInputsFromJson(ctx context.Context, cfg EnvConfig,
 	inpMarsh.Signature = (*babyjub.Signature)(obj.Signature)
 	inpMarsh.Challenge = obj.Challenge.BigInt()
 
-	circuitID, err := stringByPath(obj.Request, "circuitId")
+	circuitID, err := getCircuitID(obj.Request)
 	if err != nil {
 		return out, err
 	}
-	if circuitID != string(circuits.AtomicQueryV3OnChainCircuitID) {
+	if circuitID != circuits.AtomicQueryV3OnChainCircuitID {
 		return out, errors.New("wrong circuit")
 	}
+
 	var w3cCred verifiable.W3CCredential
 	err = json.Unmarshal(obj.VerifiableCredentials, &w3cCred)
 	if err != nil {
@@ -883,12 +919,32 @@ func AtomicQueryV3OnChainInputsFromJson(ctx context.Context, cfg EnvConfig,
 	}
 
 	inpMarsh.Query, out.VerifiablePresentation, err = queryFromObj(ctx, w3cCred,
-		obj.Request, inpMarsh.Claim.Claim, cfg.documentLoader())
+		obj.Request, inpMarsh.Claim.Claim, cfg.documentLoader(), circuitID)
 	if err != nil {
 		return out, err
 	}
 
 	inpMarsh.CurrentTimeStamp = time.Now().Unix()
+
+	inpMarsh.LinkNonce = obj.LinkNonce.BigInt()
+	if obj.VerifierID != nil {
+		id, err := core.IDFromDID(*obj.VerifierID)
+		if err != nil {
+			return out, err
+		}
+		inpMarsh.VerifierID = &id
+	} else if obj.TxData != nil {
+		inpMarsh.VerifierID, err = verifierIDFromTxData(*obj.TxData)
+		if err != nil {
+			return out, err
+		}
+	}
+
+	inpMarsh.NullifierSessionID, err = bigIntOrZeroByPath(obj.Request,
+		"params.nullifierSessionId", true)
+	if err != nil {
+		return out, err
+	}
 
 	out.Inputs = inpMarsh
 
@@ -901,7 +957,7 @@ func AtomicQueryV3InputsFromJson(ctx context.Context, cfg EnvConfig,
 	var out AtomicQueryInputsResponse
 	var inpMarsh circuits.AtomicQueryV3Inputs
 
-	var obj inputsRequest
+	var obj v3InputsRequest
 	err := json.Unmarshal(in, &obj)
 	if err != nil {
 		return out, err
@@ -915,13 +971,14 @@ func AtomicQueryV3InputsFromJson(ctx context.Context, cfg EnvConfig,
 	inpMarsh.ProfileNonce = obj.ProfileNonce.BigInt()
 	inpMarsh.ClaimSubjectProfileNonce = obj.ClaimSubjectProfileNonce.BigInt()
 
-	circuitID, err := stringByPath(obj.Request, "circuitId")
+	circuitID, err := getCircuitID(obj.Request)
 	if err != nil {
 		return out, err
 	}
-	if circuitID != string(circuits.AtomicQueryV3CircuitID) {
+	if circuitID != circuits.AtomicQueryV3CircuitID {
 		return out, errors.New("wrong circuit")
 	}
+
 	var w3cCred verifiable.W3CCredential
 	err = json.Unmarshal(obj.VerifiableCredentials, &w3cCred)
 	if err != nil {
@@ -945,14 +1002,28 @@ func AtomicQueryV3InputsFromJson(ctx context.Context, cfg EnvConfig,
 	}
 
 	inpMarsh.Query, out.VerifiablePresentation, err = queryFromObj(ctx, w3cCred,
-		obj.Request, inpMarsh.Claim.Claim, cfg.documentLoader())
+		obj.Request, inpMarsh.Claim.Claim, cfg.documentLoader(), circuitID)
 	if err != nil {
 		return out, err
 	}
 
 	inpMarsh.CurrentTimeStamp = time.Now().Unix()
 
-	// TODO: what to do with LinkNonce, VerifierID, VerifierSessionID
+	inpMarsh.NullifierSessionID, err = bigIntOrZeroByPath(obj.Request,
+		"params.nullifierSessionId", true)
+	if err != nil {
+		return out, err
+	}
+
+	if obj.VerifierID != nil {
+		id, err := core.IDFromDID(*obj.VerifierID)
+		if err != nil {
+			return out, err
+		}
+		inpMarsh.VerifierID = &id
+	}
+
+	inpMarsh.LinkNonce = obj.LinkNonce.BigInt()
 
 	out.Inputs = inpMarsh
 
@@ -1028,8 +1099,8 @@ func querySkipRevocation(requestObj jsonObj) (bool, error) {
 }
 
 func queryFromObj(ctx context.Context, w3cCred verifiable.W3CCredential,
-	requestObj jsonObj, claim *core.Claim,
-	documentLoader ld.DocumentLoader) (out circuits.Query,
+	requestObj jsonObj, claim *core.Claim, documentLoader ld.DocumentLoader,
+	circuitID circuits.CircuitID) (out circuits.Query,
 	verifiablePresentation jsonObj, err error) {
 
 	merklizePosition, err := claim.GetMerklizedPosition()
@@ -1039,10 +1110,11 @@ func queryFromObj(ctx context.Context, w3cCred verifiable.W3CCredential,
 
 	if merklizePosition == core.MerklizedRootPositionNone {
 		return queryFromObjNonMerklized(ctx, w3cCred, requestObj,
-			documentLoader)
+			documentLoader, circuitID)
 	}
 
-	return queryFromObjMerklized(ctx, w3cCred, requestObj, documentLoader)
+	return queryFromObjMerklized(ctx, w3cCred, requestObj, documentLoader,
+		circuitID)
 }
 
 func wrapMerklizeWithRegion(ctx context.Context,
@@ -1059,7 +1131,8 @@ func wrapMerklizeWithRegion(ctx context.Context,
 
 func queryFromObjNonMerklized(ctx context.Context,
 	w3cCred verifiable.W3CCredential, requestObj jsonObj,
-	documentLoader ld.DocumentLoader) (out circuits.Query,
+	documentLoader ld.DocumentLoader,
+	circuitID circuits.CircuitID) (out circuits.Query,
 	verifiablePresentation jsonObj, err error) {
 
 	region := trace.StartRegion(ctx, "queryFromObjNonMerklized")
@@ -1121,8 +1194,14 @@ func queryFromObjNonMerklized(ctx context.Context,
 		}
 
 		verifiablePresentation = vp
-		out.Operator = circuits.EQ
-		out.Values = []*big.Int{valueEntry}
+		if circuitID == circuits.AtomicQueryV3CircuitID ||
+			circuitID == circuits.AtomicQueryV3OnChainCircuitID {
+			out.Operator = circuits.SD
+			out.Values = []*big.Int{}
+		} else {
+			out.Operator = circuits.EQ
+			out.Values = []*big.Int{valueEntry}
+		}
 	default:
 		out.Operator, out.Values, err = unpackOperatorWithArgs(opStr, val,
 			datatype, hasher)
@@ -1146,9 +1225,18 @@ func getQuerySchemaAndType(requestObj jsonObj) (string, string, error) {
 	return schemaURL, typeName, nil
 }
 
+func getCircuitID(requestObj jsonObj) (circuits.CircuitID, error) {
+	circuitID, err := stringByPath(requestObj, "circuitId")
+	if err != nil {
+		return "", err
+	}
+	return circuits.CircuitID(circuitID), nil
+}
+
 func queryFromObjMerklized(ctx context.Context,
 	w3cCred verifiable.W3CCredential, requestObj jsonObj,
-	documentLoader ld.DocumentLoader) (out circuits.Query,
+	documentLoader ld.DocumentLoader,
+	circuitID circuits.CircuitID) (out circuits.Query,
 	verifiablePresentation jsonObj, err error) {
 
 	region := trace.StartRegion(ctx, "queryFromObjMerklized")
@@ -1247,8 +1335,15 @@ func queryFromObjMerklized(ctx context.Context,
 		return out, nil, errors.New("only one operation per field is supported")
 	case errNoEntry:
 		// handle selective disclosure
-		out.Operator = circuits.EQ
-		out.Values = []*big.Int{out.ValueProof.Value}
+		if circuitID == circuits.AtomicQueryV3CircuitID ||
+			circuitID == circuits.AtomicQueryV3OnChainCircuitID {
+			out.Operator = circuits.SD
+			out.Values = []*big.Int{}
+		} else {
+			out.Operator = circuits.EQ
+			out.Values = []*big.Int{out.ValueProof.Value}
+		}
+
 		rawValue, err := mz.RawValue(path)
 		if err != nil {
 			return out, nil, err
@@ -1922,6 +2017,15 @@ func (cfg EnvConfig) documentLoader() ld.DocumentLoader {
 
 type ChainID uint64
 
+func (cid ChainID) Unpack() (core.Blockchain, core.NetworkID, error) {
+	for k, v := range knownChainIDs {
+		if v == cid {
+			return k.blockchain, k.networkID, nil
+		}
+	}
+	return core.NoChain, core.NoNetwork, fmt.Errorf("unknown chain ID")
+}
+
 func newChainIDFromString(in string) (ChainID, error) {
 	var chainID uint64
 	var err error
@@ -2459,4 +2563,18 @@ func fmtPath(path merklize.Path) string {
 		parts = append(parts, fmt.Sprintf("%v", p))
 	}
 	return "[" + strings.Join(parts, ",") + "]"
+}
+
+func verifierIDFromTxData(txData txData) (*core.ID, error) {
+	genState := core.GenesisFromEthAddress(txData.ContractAddress)
+	blockchain, networkID, err := txData.ChainID.Unpack()
+	if err != nil {
+		return nil, err
+	}
+	tp, err := core.BuildDIDType(core.DIDMethodIden3, blockchain, networkID)
+	if err != nil {
+		return nil, err
+	}
+	id := core.NewID(tp, genState)
+	return &id, nil
 }

@@ -2,6 +2,8 @@
   "id": "x1QQ78ktjAmia48pyEZENyurZhpRSdPMWmtv1zbsi",
   "profileNonce": "123",
   "claimSubjectProfileNonce": "234",
+  "verifierId": "did:iden3:polygon:mumbai:x1QQ78ktjAmia48pyEZENyurZhpRSdPMWmtv1zbsi",
+  "linkNonce": "456",
   "verifiableCredentials": {
     "id": "http://localhost:8001/api/v1/claim/98781b98-73c9-11ed-9818-3a0197678785",
     "@context": [
@@ -94,6 +96,9 @@
         }
       },
       "proofType": "Iden3SparseMerkleTreeProof"
+    },
+    "params": {
+      "nullifierSessionId": "123"
     }
   }
 }
