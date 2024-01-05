@@ -40,6 +40,7 @@ import (
 	"github.com/iden3/go-schema-processor/v2/processor"
 	"github.com/iden3/go-schema-processor/v2/verifiable"
 	mp "github.com/iden3/merkletree-proof"
+	mpHttp "github.com/iden3/merkletree-proof/http"
 	shell "github.com/ipfs/go-ipfs-api"
 	"github.com/piprate/json-gold/ld"
 )
@@ -2175,18 +2176,18 @@ func isErrInvalidRootsLength(err error) bool {
 		rpcErr.Error() == "execution reverted: Invalid roots length"
 }
 
-func newRhsCli(rhsURL string) (*mp.HTTPReverseHashCli, error) {
+func newRhsCli(rhsURL string) (mp.ReverseHashCli, error) {
 	if rhsURL == "" {
 		return nil, errors.New("reverse hash service url is empty")
 	}
 
-	return &mp.HTTPReverseHashCli{
+	return &mpHttp.ReverseHashCli{
 		URL:         rhsURL,
 		HTTPTimeout: 10 * time.Second,
 	}, nil
 }
 
-func treeStateFromRHS(ctx context.Context, rhsCli *mp.HTTPReverseHashCli,
+func treeStateFromRHS(ctx context.Context, rhsCli mp.ReverseHashCli,
 	state *merkletree.Hash) (circuits.TreeState, error) {
 
 	var treeState circuits.TreeState
