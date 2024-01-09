@@ -1,25 +1,22 @@
 IOS_OUT=ios
 
 ios-arm64:
-	GOOS=ios \
 	GOARCH=arm64 \
-	CGO_ENABLED=1 \
-	CLANGARCH=arm64 \
 	SDK=iphoneos \
-	CC=$(PWD)/clangwrap.sh \
-	CGO_CFLAGS="-fembed-bitcode" \
-	go build -buildmode=c-archive -o $(IOS_OUT)/libpolygonid-ios.a ./cmd/polygonid
+	MIN_VERSION=16 \
+	./build-ios.sh
 
-
-ios-simulator:
-	GOOS=darwin \
-	GOARCH=amd64 \
-	CGO_ENABLED=1 \
-	CLANGARCH=x86_64 \
+ios-sim-arm64:
+	GOARCH=arm64 \
 	SDK=iphonesimulator \
-	CC=$(PWD)/clangwrap.sh \
-	CGO_CFLAGS="-fembed-bitcode" \
-	go build -tags ios -buildmode=c-archive -o $(IOS_OUT)/libpolygonid-ios-simulator.a ./cmd/polygonid
+	MIN_VERSION=16 \
+	./build-ios.sh
+
+ios-sim-amd64:
+	GOARCH=amd64 \
+	SDK=iphonesimulator \
+	MIN_VERSION=16 \
+	./build-ios.sh
 
 darwin-arm64:
 	GOOS=darwin \
@@ -28,9 +25,26 @@ darwin-arm64:
 	CLANGARCH=arm64 \
 	go build -buildmode=c-archive -o $(IOS_OUT)/libpolygonid-darwin-arm64.a ./cmd/polygonid
 
-ios: ios-arm64 ios-simulator
-	lipo $(IOS_OUT)/libpolygonid-ios.a $(IOS_OUT)/libpolygonid-ios-simulator.a -create -output $(IOS_OUT)/libpolygonid.a
-	cp $(IOS_OUT)/libpolygonid-ios.h $(IOS_OUT)/libpolygonid.h
+darwin-amd64:
+	GOOS=darwin \
+	GOARCH=amd64 \
+	CGO_ENABLED=1 \
+	CLANGARCH=x86_64 \
+	go build -buildmode=c-archive -o $(IOS_OUT)/libpolygonid-darwin-amd64.a ./cmd/polygonid
+
+ios-device: ios-arm64
+	cp $(IOS_OUT)/libpolygonid-ios-arm64.a $(IOS_OUT)/libpolygonid-ios.a
+	cp $(IOS_OUT)/libpolygonid-ios-arm64.h $(IOS_OUT)/libpolygonid.h
+
+ios-simulator: ios-sim-arm64 ios-sim-amd64
+	lipo $(IOS_OUT)/libpolygonid-ios-sim-amd64.a $(IOS_OUT)/libpolygonid-ios-sim-arm64.a -create -output $(IOS_OUT)/libpolygonid-ios-sim.a
+	cp $(IOS_OUT)/libpolygonid-ios-sim-arm64.h $(IOS_OUT)/libpolygonid.h
+
+ios: ios-device ios-simulator
+
+darwin: darwin-arm64 darwin-amd64
+	lipo $(IOS_OUT)/libpolygonid-darwin-arm64.a $(IOS_OUT)/libpolygonid-darwin-amd64.a -create -output $(IOS_OUT)/libpolygonid-darwin.a
+	cp $(IOS_OUT)/libpolygonid-darwin-arm64.h $(IOS_OUT)/libpolygonid.h
 
 dylib:
 	go build -buildmode=c-shared -o $(IOS_OUT)/libpolygonid.dylib ./cmd/polygonid
