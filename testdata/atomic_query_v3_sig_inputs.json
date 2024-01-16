@@ -83,7 +83,7 @@
   },
   "request": {
     "id": 84239,
-    "circuitId": "credentialAtomicQueryV3",
+    "circuitId": "credentialAtomicQueryV3-beta.0",
     "query": {
       "allowedIssuers": "unused",
       "context": "https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld",
