@@ -6,7 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"net/http"
 	"os"
+	"path"
 	"sync"
 	"testing"
 
@@ -18,7 +20,6 @@ import (
 	"github.com/iden3/go-iden3-crypto/poseidon"
 	"github.com/iden3/go-merkletree-sql/v2"
 	"github.com/iden3/go-schema-processor/v2/verifiable"
-	shell "github.com/ipfs/go-ipfs-api"
 	"github.com/piprate/json-gold/ld"
 	"github.com/stretchr/testify/require"
 )
@@ -31,14 +32,14 @@ func TestHexHash_UnmarshalJSON(t *testing.T) {
 }
 
 func uploadIPFSFile(t testing.TB, ipfsURL string, fName string) string {
-	ipfsCli := shell.NewShell(ipfsURL)
+	cli := &ipfsCli{rpcURL: ipfsURL}
 
 	f, err := os.Open(fName)
 	require.NoError(t, err)
 	// no need to close f
 
 	// Context is a pure file (no directory)
-	cid, err := ipfsCli.Add(f)
+	cid, err := cli.Add(context.Background(), f, path.Base(fName))
 	require.NoError(t, err)
 
 	return cid
@@ -50,6 +51,16 @@ func readFixtureFile(name string) []byte {
 		panic(err)
 	}
 	return fileBytes
+}
+
+// Set HTTP client for IPFS to new one to prevent IPFS client going through
+// mocked HTTP client.
+func preserveIPFSHttpCli() func() {
+	oldDefaultHTTPClient := defaultIPFSHttpCli
+	defaultIPFSHttpCli = &http.Client{Transport: http.DefaultTransport}
+	return func() {
+		defaultIPFSHttpCli = oldDefaultHTTPClient
+	}
 }
 
 func TestPrepareInputs(t *testing.T) {
@@ -246,6 +257,8 @@ func TestPrepareInputs(t *testing.T) {
 		if ipfsURL == "" {
 			t.Skip("IPFS_URL is not set")
 		}
+
+		defer preserveIPFSHttpCli()()
 
 		cid := uploadIPFSFile(t, ipfsURL, "testdata/httpresp_kyc-v3.json-ld")
 		// CID should correspond to the URL from the
@@ -460,6 +473,8 @@ func TestPrepareInputs(t *testing.T) {
 		if ipfsURL == "" {
 			t.Skip("IPFS_URL is not set")
 		}
+
+		defer preserveIPFSHttpCli()()
 
 		cid := uploadIPFSFile(t, ipfsURL, "testdata/ipfs_QmcAJCriUKiU4WQogfhqpi6j8S8XTmZdmg7hpaVr4eGynW.json-ld")
 		// CID should correspond to the URL

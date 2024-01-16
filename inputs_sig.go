@@ -41,7 +41,6 @@ import (
 	"github.com/iden3/go-schema-processor/v2/verifiable"
 	mp "github.com/iden3/merkletree-proof"
 	mpHttp "github.com/iden3/merkletree-proof/http"
-	shell "github.com/ipfs/go-ipfs-api"
 	"github.com/piprate/json-gold/ld"
 )
 
@@ -1998,9 +1997,9 @@ type EnvConfig struct {
 }
 
 func (cfg EnvConfig) documentLoader() ld.DocumentLoader {
-	var ipfsNode *shell.Shell
+	var ipfsNode loaders.IPFSClient
 	if cfg.IPFSNodeURL != "" {
-		ipfsNode = shell.NewShell(cfg.IPFSNodeURL)
+		ipfsNode = &ipfsCli{rpcURL: cfg.IPFSNodeURL}
 	}
 
 	var opts []loaders.DocumentLoaderOption
