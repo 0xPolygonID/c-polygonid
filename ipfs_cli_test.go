@@ -17,6 +17,7 @@ func TestIPFSCli(t *testing.T) {
 	}
 
 	f, err := os.ReadFile("testdata/httpresp_kyc-v3.json-ld")
+	require.NoError(t, err)
 
 	cli := &ipfsCli{rpcURL: ipfsURL}
 
@@ -30,5 +31,6 @@ func TestIPFSCli(t *testing.T) {
 	defer func() { _ = fReader.Close() }()
 
 	f2, err := io.ReadAll(fReader)
+	require.NoError(t, err)
 	require.Equal(t, f, f2)
 }
