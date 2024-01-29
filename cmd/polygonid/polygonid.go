@@ -863,13 +863,11 @@ func PLGNCacheCredentials(in *C.char, cfg *C.char, status **C.PLGNStatus) bool {
 
 // createEnvConfig returns empty config if input json is nil.
 func createEnvConfig(cfgJson *C.char) (c_polygonid.EnvConfig, error) {
-	var cfg c_polygonid.EnvConfig
-	var err error
+	var cfgData []byte
 	if cfgJson != nil {
-		cfgData := C.GoBytes(unsafe.Pointer(cfgJson), C.int(C.strlen(cfgJson)))
-		err = json.Unmarshal(cfgData, &cfg)
+		cfgData = C.GoBytes(unsafe.Pointer(cfgJson), C.int(C.strlen(cfgJson)))
 	}
-	return cfg, err
+	return c_polygonid.NewEnvConfigFromJSON(cfgData)
 }
 
 type atomicQueryInputsFn func(ctx context.Context, cfg c_polygonid.EnvConfig,

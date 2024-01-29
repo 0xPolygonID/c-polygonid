@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"log"
+	"strconv"
 
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
@@ -32,4 +33,50 @@ func (s *hexSigJson) UnmarshalJSON(bytes []byte) error {
 	}
 	_, err = (*babyjub.Signature)(s).Decompress(compSigBytes)
 	return err
+}
+
+type jsonByte byte
+
+func (b *jsonByte) Byte() byte {
+	return byte(*b)
+}
+
+func (b *jsonByte) UnmarshalJSON(in []byte) error {
+	if len(in) == 0 {
+		return errors.New("invalid byte format")
+	}
+	if in[0] == '"' {
+		if len(in) < 3 || in[len(in)-1] != '"' {
+			return errors.New("invalid byte format")
+		}
+
+		in = in[1 : len(in)-1]
+		prefix := ""
+		if len(in) > 2 {
+			prefix = string(in[0:2])
+		}
+		switch prefix {
+		case "0x", "0X":
+			in2, err := hex.DecodeString(string(in[2:]))
+			if err != nil {
+				return err
+			}
+			if len(in2) > 1 {
+				return errors.New("invalid byte format")
+			}
+			*b = jsonByte(in2[0])
+		case "0b", "0B":
+			i, err := strconv.ParseUint(string(in[2:]), 2, 8)
+			if err != nil {
+				return err
+			}
+			*b = jsonByte(i)
+		}
+	}
+	i, err := strconv.ParseUint(string(in), 10, 8)
+	if err != nil {
+		return err
+	}
+	*b = jsonByte(i)
+	return nil
 }

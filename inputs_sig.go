@@ -5,12 +5,14 @@ import (
 	"context"
 	"crypto/sha256"
 	_ "embed"
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"log/slog"
+	"math"
 	"math/big"
 	"net/http"
 	"net/url"
@@ -35,7 +37,6 @@ import (
 	"github.com/iden3/go-iden3-crypto/utils"
 	"github.com/iden3/go-merkletree-sql/v2"
 	json2 "github.com/iden3/go-schema-processor/v2/json"
-	"github.com/iden3/go-schema-processor/v2/loaders"
 	"github.com/iden3/go-schema-processor/v2/merklize"
 	"github.com/iden3/go-schema-processor/v2/processor"
 	"github.com/iden3/go-schema-processor/v2/verifiable"
@@ -1988,34 +1989,24 @@ func (p *PerChainConfig) UnmarshalJSON(bytes []byte) error {
 	return nil
 }
 
-type EnvConfig struct {
-	ChainConfigs          PerChainConfig
-	EthereumURL           string         // Deprecated: Use ChainConfigs instead
-	StateContractAddr     common.Address // Deprecated: Use ChainConfigs instead
-	ReverseHashServiceUrl string         // Deprecated
-	IPFSNodeURL           string
-}
-
-func (cfg EnvConfig) documentLoader() ld.DocumentLoader {
-	var ipfsNode loaders.IPFSClient
-	if cfg.IPFSNodeURL != "" {
-		ipfsNode = &ipfsCli{rpcURL: cfg.IPFSNodeURL}
-	}
-
-	var opts []loaders.DocumentLoaderOption
-
-	cacheEngine, err := newBadgerCacheEngine(
-		withEmbeddedDocumentBytes(
-			"https://www.w3.org/2018/credentials/v1",
-			credentialsV1JsonLDBytes))
-	if err == nil {
-		opts = append(opts, loaders.WithCacheEngine(cacheEngine))
-	}
-
-	return loaders.NewDocumentLoader(ipfsNode, "", opts...)
-}
-
 type ChainID uint64
+
+func (cid ChainID) MarshalBinary() ([]byte, error) {
+	var data [8]byte
+	binary.LittleEndian.PutUint64(data[:], cid.Uint64())
+	return data[:], nil
+}
+
+func (cid ChainID) Uint64() uint64 {
+	return uint64(cid)
+}
+
+func (cid ChainID) Int() (int, error) {
+	if cid > math.MaxInt {
+		return 0, fmt.Errorf("chain ID is too big")
+	}
+	return int(cid), nil
+}
 
 func (cid ChainID) Unpack() (core.Blockchain, core.NetworkID, error) {
 	for k, v := range knownChainIDs {
