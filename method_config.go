@@ -13,7 +13,7 @@ type MethodConfig struct {
 	NetworkID   core.NetworkID  `json:"network"`
 	NetworkFlag *jsonByte       `json:"networkFlag"`
 	MethodByte  *jsonByte       `json:"methodByte"`
-	ChainID     *ChainID        `json:"chainId"`
+	ChainID     *core.ChainID   `json:"chainId"`
 }
 
 // Hash generate a unique hash for the method config
@@ -30,8 +30,7 @@ func (cfg MethodConfig) Hash() uint64 {
 		_, _ = h.Write([]byte{cfg.MethodByte.Byte()})
 	}
 	if cfg.ChainID != nil {
-		chainIDBytes, _ := cfg.ChainID.MarshalBinary()
-		_, _ = h.Write(chainIDBytes)
+		_, _ = h.Write(chainIDToBytes(*cfg.ChainID))
 	}
 	return h.Sum64()
 }

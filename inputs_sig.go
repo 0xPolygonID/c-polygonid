@@ -5,14 +5,12 @@ import (
 	"context"
 	"crypto/sha256"
 	_ "embed"
-	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"log/slog"
-	"math"
 	"math/big"
 	"net/http"
 	"net/url"
@@ -417,7 +415,7 @@ type onChainInputsRequest struct {
 
 type txData struct {
 	ContractAddress common.Address `json:"contractAddress"`
-	ChainID         ChainID        `json:"chainId"`
+	ChainID         core.ChainID   `json:"chainId"`
 }
 
 type v3OnChainInputsRequest struct {
@@ -1735,7 +1733,7 @@ func stateContractHasID(ctx context.Context, id *core.ID, cfg ChainConfig,
 }
 
 type onchainRevStatus struct {
-	chainID         ChainID
+	chainID         core.ChainID
 	contractAddress common.Address
 	revNonce        uint64
 	genesisState    *big.Int
@@ -1967,7 +1965,7 @@ func (cc ChainConfig) validate() error {
 	return nil
 }
 
-type PerChainConfig map[ChainID]ChainConfig
+type PerChainConfig map[core.ChainID]ChainConfig
 
 func (p *PerChainConfig) UnmarshalJSON(bytes []byte) error {
 	if (*p) == nil {
@@ -1979,7 +1977,7 @@ func (p *PerChainConfig) UnmarshalJSON(bytes []byte) error {
 		return err
 	}
 	for k, v := range o {
-		var chainID ChainID
+		var chainID core.ChainID
 		chainID, err = newChainIDFromString(k)
 		if err != nil {
 			return err
@@ -1989,65 +1987,20 @@ func (p *PerChainConfig) UnmarshalJSON(bytes []byte) error {
 	return nil
 }
 
-type ChainID uint64
-
-func (cid ChainID) MarshalBinary() ([]byte, error) {
-	var data [8]byte
-	binary.LittleEndian.PutUint64(data[:], cid.Uint64())
-	return data[:], nil
-}
-
-func (cid ChainID) Uint64() uint64 {
-	return uint64(cid)
-}
-
-func (cid ChainID) Int() (int, error) {
-	if cid > math.MaxInt {
-		return 0, fmt.Errorf("chain ID is too big")
+func newChainIDFromString(in string) (core.ChainID, error) {
+	radix := 10
+	if strings.HasPrefix(in, "0x") || strings.HasPrefix(in, "0X") {
+		radix = 16
+		in = in[2:]
 	}
-	return int(cid), nil
-}
 
-func (cid ChainID) Unpack() (core.Blockchain, core.NetworkID, error) {
-	for k, v := range knownChainIDs {
-		if v == cid {
-			return k.blockchain, k.networkID, nil
-		}
+	var chainID core.ChainID
+	assertUnderlineTypeInt32(chainID)
+	i, err := strconv.ParseInt(in, radix, 32)
+	if err != nil {
+		return 0, fmt.Errorf("can't parse ChainID type: %w", err)
 	}
-	return core.NoChain, core.NoNetwork, fmt.Errorf("unknown chain ID")
-}
-
-func newChainIDFromString(in string) (ChainID, error) {
-	var chainID uint64
-	var err error
-	if strings.HasPrefix(in, "0x") ||
-		strings.HasPrefix(in, "0X") {
-		chainID, err = strconv.ParseUint(in[2:], 16, 64)
-		if err != nil {
-			return 0, err
-		}
-	} else {
-		chainID, err = strconv.ParseUint(in, 10, 64)
-		if err != nil {
-			return 0, err
-		}
-	}
-	return ChainID(chainID), nil
-}
-
-type chainIDKey struct {
-	blockchain core.Blockchain
-	networkID  core.NetworkID
-}
-
-var knownChainIDs = map[chainIDKey]ChainID{
-	{core.Ethereum, core.Main}:    1,
-	{core.Ethereum, core.Goerli}:  5,
-	{core.Polygon, core.Main}:     137,
-	{core.ZkEVM, core.Main}:       1101,
-	{core.ZkEVM, core.Test}:       1442,
-	{core.Polygon, core.Mumbai}:   80001,
-	{core.Ethereum, core.Sepolia}: 11155111,
+	return core.ChainID(i), nil
 }
 
 func (cfg EnvConfig) networkCfgByID(id *core.ID) (ChainConfig, error) {
@@ -2059,7 +2012,7 @@ func (cfg EnvConfig) networkCfgByID(id *core.ID) (ChainConfig, error) {
 	return cfg.networkCfgByChainID(chainID)
 }
 
-func (cfg EnvConfig) networkCfgByChainID(chainID ChainID) (ChainConfig, error) {
+func (cfg EnvConfig) networkCfgByChainID(chainID core.ChainID) (ChainConfig, error) {
 	chainCfg, ok := cfg.ChainConfigs[chainID]
 	if !ok {
 		chainCfg = cfg.defaultChainCfg()
@@ -2075,7 +2028,7 @@ func (cfg EnvConfig) defaultChainCfg() ChainConfig {
 	}
 }
 
-func chainIDFromID(id *core.ID) (ChainID, error) {
+func chainIDFromID(id *core.ID) (core.ChainID, error) {
 	blockchain, err := core.BlockchainFromID(*id)
 	if err != nil {
 		return 0, err
@@ -2086,13 +2039,7 @@ func chainIDFromID(id *core.ID) (ChainID, error) {
 		return 0, err
 	}
 
-	key := chainIDKey{blockchain, networkID}
-	chainID, ok := knownChainIDs[key]
-	if !ok {
-		return 0, fmt.Errorf("unknown chain: %s", id.String())
-	}
-
-	return chainID, nil
+	return core.GetChainID(blockchain, networkID)
 }
 
 // Currently, our library does not have a Close function. As a result, we
@@ -2558,7 +2505,7 @@ func fmtPath(path merklize.Path) string {
 
 func verifierIDFromTxData(txData txData) (*core.ID, error) {
 	genState := core.GenesisFromEthAddress(txData.ContractAddress)
-	blockchain, networkID, err := txData.ChainID.Unpack()
+	blockchain, networkID, err := core.NetworkByChainID(txData.ChainID)
 	if err != nil {
 		return nil, err
 	}

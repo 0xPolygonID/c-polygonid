@@ -1,11 +1,13 @@
 package c_polygonid
 
 import (
+	"encoding/binary"
 	"encoding/hex"
 	"errors"
 	"log"
 	"strconv"
 
+	core "github.com/iden3/go-iden3-core/v2"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 )
 
@@ -79,4 +81,23 @@ func (b *jsonByte) UnmarshalJSON(in []byte) error {
 	}
 	*b = jsonByte(i)
 	return nil
+}
+
+// function to fail a compilation if underlined type is not int32
+func assertUnderlineTypeInt32[T ~int32](_ T) {}
+
+func chainIDToInt(chainID core.ChainID) int {
+	// assertion is required to correctly handle the underlined type during
+	// int conversion
+	assertUnderlineTypeInt32(chainID)
+	return int(chainID)
+}
+
+func chainIDToBytes(chainID core.ChainID) []byte {
+	// assertion is required to correctly handle the underlined type during
+	// int to bytes serialization
+	assertUnderlineTypeInt32(chainID)
+	var chainIDBytes [4]byte
+	binary.LittleEndian.PutUint32(chainIDBytes[:], uint32(chainID))
+	return chainIDBytes[:]
 }

@@ -66,11 +66,7 @@ func registerDIDMethods(methodConfigs []MethodConfig) error {
 	defer globalRegistationLock.Unlock()
 
 	for _, methodCfg := range newMethodConfigs {
-		chainIDi, err := methodCfg.ChainID.Int()
-		if err != nil {
-			return fmt.Errorf("can't convert chain ID %v to int: %w",
-				*methodCfg.ChainID, err)
-		}
+		chainIDi := chainIDToInt(*methodCfg.ChainID)
 
 		params := core.DIDMethodNetworkParams{
 			Method:      methodCfg.MethodName,
@@ -78,7 +74,7 @@ func registerDIDMethods(methodConfigs []MethodConfig) error {
 			Network:     methodCfg.NetworkID,
 			NetworkFlag: methodCfg.NetworkFlag.Byte(),
 		}
-		err = core.RegisterDIDMethodNetwork(params,
+		err := core.RegisterDIDMethodNetwork(params,
 			core.WithChainID(chainIDi),
 			core.WithDIDMethodByte(methodCfg.MethodByte.Byte()))
 		if err != nil {

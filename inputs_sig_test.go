@@ -116,7 +116,7 @@ func TestPrepareInputs(t *testing.T) {
 			httpmock.IgnoreUntouchedURLs(),
 			httpmock.WithPostRequestBodyProcessor(removeIdFromEthBody))()
 		cfg := EnvConfig{
-			ChainConfigs: map[ChainID]ChainConfig{
+			ChainConfigs: map[core.ChainID]ChainConfig{
 				80001: {
 					RPCUrl:            "http://localhost:8545",
 					StateContractAddr: common.HexToAddress("0x134B1BE34911E39A8397ec6289782989729807a4"),
@@ -141,7 +141,7 @@ func TestPrepareInputs(t *testing.T) {
 			httpmock.IgnoreUntouchedURLs(),
 			httpmock.WithPostRequestBodyProcessor(removeIdFromEthBody))()
 		cfg := EnvConfig{
-			ChainConfigs: map[ChainID]ChainConfig{
+			ChainConfigs: map[core.ChainID]ChainConfig{
 				80001: {
 					RPCUrl:            "http://localhost:8545",
 					StateContractAddr: common.HexToAddress("0x134B1BE34911E39A8397ec6289782989729807a4"),
@@ -696,7 +696,7 @@ func TestEnvConfig_UnmarshalJSON(t *testing.T) {
 				StateContractAddr:     common.HexToAddress("0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655"),
 				ReverseHashServiceUrl: "http://localhost:8003",
 				IPFSNodeURL:           "http://localhost:5001",
-				ChainConfigs: map[ChainID]ChainConfig{
+				ChainConfigs: map[core.ChainID]ChainConfig{
 					1: {
 						RPCUrl:            "http://localhost:8545",
 						StateContractAddr: common.HexToAddress("0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655"),
