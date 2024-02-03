@@ -48,11 +48,6 @@ func registerDIDMethods(methodConfigs []MethodConfig) error {
 	newMethodConfigs := make([]MethodConfig, 0, len(methodConfigs))
 
 	for _, methodCfg := range methodConfigs {
-		err := methodCfg.validate()
-		if err != nil {
-			return fmt.Errorf("invalid method config: %w", err)
-		}
-
 		if _, ok := registeredDIDMethods.Load(methodCfg.Hash()); !ok {
 			newMethodConfigs = append(newMethodConfigs, methodCfg)
 		}
@@ -66,24 +61,24 @@ func registerDIDMethods(methodConfigs []MethodConfig) error {
 	defer globalRegistationLock.Unlock()
 
 	for _, methodCfg := range newMethodConfigs {
-		chainIDi := chainIDToInt(*methodCfg.ChainID)
+		chainIDi := chainIDToInt(methodCfg.ChainID)
 
 		params := core.DIDMethodNetworkParams{
 			Method:      methodCfg.MethodName,
 			Blockchain:  methodCfg.Blockchain,
 			Network:     methodCfg.NetworkID,
-			NetworkFlag: methodCfg.NetworkFlag.Byte(),
+			NetworkFlag: methodCfg.NetworkFlag,
 		}
 		err := core.RegisterDIDMethodNetwork(params,
 			core.WithChainID(chainIDi),
-			core.WithDIDMethodByte(methodCfg.MethodByte.Byte()))
+			core.WithDIDMethodByte(methodCfg.MethodByte))
 		if err != nil {
 			return fmt.Errorf(
 				"can't register DID method %v, blockchain %v, network ID %v, "+
 					"network flag: %x, method byte %v, chain ID %v: %w",
 				methodCfg.MethodName, methodCfg.Blockchain, methodCfg.NetworkID,
-				*methodCfg.NetworkFlag, *methodCfg.MethodByte,
-				*methodCfg.ChainID, err)
+				methodCfg.NetworkFlag, methodCfg.MethodByte,
+				methodCfg.ChainID, err)
 		}
 
 		registeredDIDMethods.Store(methodCfg.Hash(), struct{}{})

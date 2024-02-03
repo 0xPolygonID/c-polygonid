@@ -5,7 +5,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"log"
+	"math/big"
 	"strconv"
+	"strings"
 
 	core "github.com/iden3/go-iden3-core/v2"
 	"github.com/iden3/go-iden3-crypto/babyjub"
@@ -47,39 +49,73 @@ func (b *jsonByte) UnmarshalJSON(in []byte) error {
 	if len(in) == 0 {
 		return errors.New("invalid byte format")
 	}
+	num := string(in)
+	radix := 10
 	if in[0] == '"' {
 		if len(in) < 3 || in[len(in)-1] != '"' {
 			return errors.New("invalid byte format")
 		}
 
-		in = in[1 : len(in)-1]
+		num = string(in[1 : len(in)-1])
 		prefix := ""
-		if len(in) > 2 {
-			prefix = string(in[0:2])
+		if len(num) > 2 {
+			prefix = num[:2]
 		}
 		switch prefix {
 		case "0x", "0X":
-			in2, err := hex.DecodeString(string(in[2:]))
-			if err != nil {
-				return err
-			}
-			if len(in2) > 1 {
-				return errors.New("invalid byte format")
-			}
-			*b = jsonByte(in2[0])
+			radix = 16
+			num = num[2:]
 		case "0b", "0B":
-			i, err := strconv.ParseUint(string(in[2:]), 2, 8)
-			if err != nil {
-				return err
-			}
-			*b = jsonByte(i)
+			radix = 2
+			num = num[2:]
 		}
 	}
-	i, err := strconv.ParseUint(string(in), 10, 8)
+	i, err := strconv.ParseUint(num, radix, 8)
 	if err != nil {
 		return err
 	}
 	*b = jsonByte(i)
+	return nil
+}
+
+type jsonNumber big.Int
+
+// UnmarshalJSON implements json.Unmarshaler interface. It unmarshals any
+// number-like JSON value into a big.Int.
+//
+// Examples:
+//
+//	"0x123" -> 291
+//	"0X123" -> 291
+//	  "123" -> 123
+//	    123 -> 123
+func (j *jsonNumber) UnmarshalJSON(in []byte) error {
+	if len(in) == 0 {
+		return errors.New("empty input")
+	}
+
+	if j == nil {
+		return errors.New("jsonNumber is nil")
+	}
+
+	var s string
+	var radix = 10
+
+	if in[0] >= '0' && in[0] <= '9' {
+		s = string(in)
+	} else if in[0] == '"' && in[len(in)-1] == '"' {
+		s = string(in[1 : len(in)-1])
+		if strings.HasPrefix(s, "0x") || strings.HasPrefix(s, "0X") {
+			radix = 16
+			s = s[2:]
+		}
+	}
+
+	_, ok := ((*big.Int)(j)).SetString(s, radix)
+	if !ok {
+		return errors.New("invalid integer number format")
+	}
+
 	return nil
 }
 
