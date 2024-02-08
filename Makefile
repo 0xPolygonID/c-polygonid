@@ -4,33 +4,53 @@ ios-arm64:
 	GOOS=ios \
 	GOARCH=arm64 \
 	CGO_ENABLED=1 \
-	CLANGARCH=arm64 \
 	SDK=iphoneos \
+	TARGET=arm64-apple-ios16 \
 	CC=$(PWD)/clangwrap.sh \
 	CGO_CFLAGS="-fembed-bitcode" \
 	go build -buildmode=c-archive -o $(IOS_OUT)/libpolygonid-ios.a ./cmd/polygonid
+	cp $(IOS_OUT)/libpolygonid-ios.h $(IOS_OUT)/libpolygonid.h
 
 
-ios-simulator:
+ios-simulator-x86_64:
 	GOOS=darwin \
 	GOARCH=amd64 \
 	CGO_ENABLED=1 \
-	CLANGARCH=x86_64 \
 	SDK=iphonesimulator \
+	TARGET=x86-64-apple-ios16-simulator \
 	CC=$(PWD)/clangwrap.sh \
 	CGO_CFLAGS="-fembed-bitcode" \
-	go build -tags ios -buildmode=c-archive -o $(IOS_OUT)/libpolygonid-ios-simulator.a ./cmd/polygonid
+	go build -tags ios -buildmode=c-archive -o $(IOS_OUT)/libpolygonid-ios-simulator-x86_64.a ./cmd/polygonid
+	cp $(IOS_OUT)/libpolygonid-ios-simulator-x86_64.h $(IOS_OUT)/libpolygonid.h
+
+ios-simulator-arm64:
+	GOOS=darwin \
+	GOARCH=arm64 \
+	CGO_ENABLED=1 \
+	SDK=iphonesimulator \
+	TARGET=arm64-apple-ios16-simulator \
+	CC=$(PWD)/clangwrap.sh \
+	CGO_CFLAGS="-fembed-bitcode" \
+	go build -tags ios -buildmode=c-archive -o $(IOS_OUT)/libpolygonid-ios-simulator-arm64.a ./cmd/polygonid
+	cp $(IOS_OUT)/libpolygonid-ios-simulator-arm64.h $(IOS_OUT)/libpolygonid.h
 
 darwin-arm64:
 	GOOS=darwin \
 	GOARCH=arm64 \
 	CGO_ENABLED=1 \
-	CLANGARCH=arm64 \
 	go build -buildmode=c-archive -o $(IOS_OUT)/libpolygonid-darwin-arm64.a ./cmd/polygonid
+	cp $(IOS_OUT)/libpolygonid-darwin-arm64.h $(IOS_OUT)/libpolygonid.h
 
-ios: ios-arm64 ios-simulator
-	lipo $(IOS_OUT)/libpolygonid-ios.a $(IOS_OUT)/libpolygonid-ios-simulator.a -create -output $(IOS_OUT)/libpolygonid.a
+# Build a legacy multi-architecture version of libpolygonid.a with iOS Device arm64 & iOS Simulator x86_64
+ios-old: ios-arm64 ios-simulator-x86_64
+	lipo $(IOS_OUT)/libpolygonid-ios.a $(IOS_OUT)/libpolygonid-ios-simulator-x86_64.a -create -output $(IOS_OUT)/libpolygonid.a
 	cp $(IOS_OUT)/libpolygonid-ios.h $(IOS_OUT)/libpolygonid.h
+
+ios-simulator: ios-simulator-x86_64 ios-simulator-arm64
+	lipo $(IOS_OUT)/libpolygonid-ios-simulator-x86_64.a $(IOS_OUT)/libpolygonid-ios-simulator-arm64.a -create -output $(IOS_OUT)/libpolygonid-ios-simulator.a
+	cp $(IOS_OUT)/libpolygonid-ios-simulator-arm64.h $(IOS_OUT)/libpolygonid.h
+
+ios: ios-old ios-arm64 ios-simulator
 
 dylib:
 	go build -buildmode=c-shared -o $(IOS_OUT)/libpolygonid.dylib ./cmd/polygonid
