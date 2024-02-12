@@ -70,6 +70,27 @@ This object should be freed with `PLGNStatusFree` function.
 make darwin-arm64
 ```
 
+## Build for iOS device
+
+```shell
+make ios
+```
+
+The Makefile includes several iOS-specific targets for building the library 
+for iOS devices. Here is the list of all targets and the libraries that
+will be built:
+
+| Target                    | File | Description                                                                                            | 
+|---------------------------| --- |--------------------------------------------------------------------------------------------------------|
+| **ios-arm64**             | ios/libpolygonid-ios.a | iOS Device arm64 architecture                                                                          |
+| **ios-simulator-x86_64**  | ios/libpolygonid-ios-simulator-x86_64 | iOS Simulator x86_64 architecture                                                                      |
+| **ios-simulator-arm64**   | ios/libpolygonid-ios-simulator-arm64 | iOS Simulator arm64 architecture                                                                       |
+| **ios-old**               | ios/libpolygonid.a | a universal binary that includes two architectures:<br>- iOS Device arm64<br>- iOS Simulator x86_64    |
+| **ios-simulator**         | ios/libpolygonid-ios-simulator.a | a universal binary that includes two architectures:<br>- iOS Simulator x86_64<br>- iOS Simulator arm64 |
+| **ios**                   | | Build everything above                                                                                 |
+
+After each build target there will be an `ios/libpolygonid.h` header file.
+
 ## Run tests
 
 The library build be built with previous command.
