@@ -5,19 +5,15 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/ethereum/go-ethereum/common"
 	core "github.com/iden3/go-iden3-core/v2"
 	"github.com/iden3/go-schema-processor/v2/loaders"
 	"github.com/piprate/json-gold/ld"
 )
 
 type EnvConfig struct {
-	DIDMethods            []MethodConfig
-	ChainConfigs          PerChainConfig
-	EthereumURL           string         // Deprecated: Use ChainConfigs instead
-	StateContractAddr     common.Address // Deprecated: Use ChainConfigs instead
-	ReverseHashServiceUrl string         // Deprecated
-	IPFSNodeURL           string
+	DIDMethods   []MethodConfig
+	ChainConfigs PerChainConfig
+	IPFSNodeURL  string
 }
 
 var globalRegistationLock sync.Mutex

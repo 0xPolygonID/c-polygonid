@@ -68,10 +68,7 @@ func TestNewEnvConfigFromJSON(t *testing.T) {
 					StateContractAddr: common.HexToAddress("0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655"),
 				},
 			},
-			EthereumURL:           "http://localhost:8545",
-			StateContractAddr:     common.HexToAddress("0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655"),
-			ReverseHashServiceUrl: "http://localhost:8003",
-			IPFSNodeURL:           "http://localhost:5001",
+			IPFSNodeURL: "http://localhost:5001",
 		},
 		cfg)
 
