@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-20.04
     container: golang:${{ matrix.containers }}
     env:
-      IPFS_URL: ${{secrets.IPFS_URL }}
+      IPFS_URL: http://ipfs:5001
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v4
@@ -27,3 +27,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
       - run: go test -race -timeout=60s -find-unused-httpresp ./...
+    services:
+      ipfs:
+        image: ipfs/kubo:v0.26.0
+        ports:
+          - 5001:5001
