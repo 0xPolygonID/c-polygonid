@@ -61,6 +61,7 @@ func preserveIPFSHttpCli() func() {
 }
 
 func TestPrepareInputs(t *testing.T) {
+	defer mockBadgerLog(t)()
 
 	type PrepareInputsFn func(
 		ctx context.Context, cfg EnvConfig, in []byte) (
@@ -871,6 +872,7 @@ func (c *countingDocumentLoader) reset() {
 }
 
 func TestMerklizeCred(t *testing.T) {
+	defer mockBadgerLog(t)()
 	flushCacheDB()
 
 	defer httpmock.MockHTTPClient(t, map[string]string{
@@ -931,6 +933,8 @@ func vcCredChecksum(in []byte) []byte {
 }
 
 func TestPreCacheVC(t *testing.T) {
+	defer mockBadgerLog(t)()
+
 	flushCacheDB()
 
 	defer httpmock.MockHTTPClient(t, map[string]string{
