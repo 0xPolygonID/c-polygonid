@@ -36,11 +36,33 @@ func NewEnvConfigFromJSON(in []byte) (EnvConfig, error) {
 		return cfg, fmt.Errorf("unable to parse json config: %w", err)
 	}
 
-	if len(cfg.ChainConfigs) == 0 {
+	if len(cfg.DIDMethods) == 0 {
 		return cfg, nil
 	}
 
 	err = registerDIDMethods(cfg.DIDMethods)
+	if err != nil {
+		return cfg, err
+	}
+
+	var zeroAddr common.Address
+	for _, didMethod := range cfg.DIDMethods {
+		chainIDCfg, ok := cfg.ChainConfigs[didMethod.ChainID]
+		if !ok {
+			return cfg, fmt.Errorf("no chain config found for chain ID %v",
+				didMethod.ChainID)
+		}
+		if chainIDCfg.RPCUrl == "" {
+			return cfg, fmt.Errorf("no RPC URL found for chain ID %v",
+				didMethod.ChainID)
+		}
+		if chainIDCfg.StateContractAddr == zeroAddr {
+			return cfg, fmt.Errorf(
+				"no state contract address found for chain ID %v",
+				didMethod.ChainID)
+		}
+	}
+
 	return cfg, err
 }
 

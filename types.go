@@ -3,7 +3,9 @@ package c_polygonid
 import (
 	"encoding/binary"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"math/big"
 	"strconv"
@@ -11,6 +13,7 @@ import (
 
 	core "github.com/iden3/go-iden3-core/v2"
 	"github.com/iden3/go-iden3-crypto/babyjub"
+	"github.com/iden3/go-iden3-crypto/utils"
 )
 
 // wrapper type to unmarshal signature from json
@@ -136,4 +139,33 @@ func chainIDToBytes(chainID core.ChainID) []byte {
 	var chainIDBytes [4]byte
 	binary.LittleEndian.PutUint32(chainIDBytes[:], uint32(chainID))
 	return chainIDBytes[:]
+}
+
+type JsonFieldIntStr big.Int
+
+func (i *JsonFieldIntStr) UnmarshalJSON(bytes []byte) error {
+	var s *string
+	err := json.Unmarshal(bytes, &s)
+	if err != nil {
+		return err
+	}
+	if s == nil {
+		(*big.Int)(i).SetInt64(0)
+		return nil
+	}
+
+	_, ok := (*big.Int)(i).SetString(*s, 10)
+	if !ok {
+		return fmt.Errorf("invalid Int string")
+	}
+
+	if !utils.CheckBigIntInField((*big.Int)(i)) {
+		return fmt.Errorf("int is not in field")
+	}
+
+	return nil
+}
+
+func (i *JsonFieldIntStr) Int() *big.Int {
+	return (*big.Int)(i)
 }
