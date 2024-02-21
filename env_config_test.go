@@ -23,7 +23,7 @@ func TestNewEnvConfigFromJSON(t *testing.T) {
       "rpcUrl": "http://localhost:8546",
       "stateContractAddr": "0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655"
     },
-    "0X11": {
+    "0X2835": {
       "rpcUrl": "http://localhost:8547",
       "stateContractAddr": "0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655"
     }
@@ -63,7 +63,7 @@ func TestNewEnvConfigFromJSON(t *testing.T) {
 					RPCUrl:            "http://localhost:8546",
 					StateContractAddr: common.HexToAddress("0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655"),
 				},
-				17: {
+				10293: {
 					RPCUrl:            "http://localhost:8547",
 					StateContractAddr: common.HexToAddress("0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655"),
 				},
