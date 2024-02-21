@@ -975,3 +975,62 @@ func TestVerifierIDFromTxData(t *testing.T) {
 		"17966356888215056651324659145404695842840677593163532338422715818832826881",
 		id.BigInt().Text(10))
 }
+
+func TestNewGenesysID(t *testing.T) {
+	in := `{
+  "claimsTreeRoot":"16306276920027997118951972513784102597349518910734830865369546877495436692483",
+  "blockchain":"polygon",
+  "network":"mumbai"
+}`
+
+	ctx := context.Background()
+
+	resp, err := NewGenesysID(ctx, EnvConfig{}, []byte(in))
+	require.NoError(t, err)
+	wantResp := GenesysIDResponse{
+		DID:     "did:polygonid:polygon:mumbai:2qMJFBiKaPx3XCKbu1Q45QNaUfdpzk9KkcmNaiyAxc",
+		ID:      "2qMJFBiKaPx3XCKbu1Q45QNaUfdpzk9KkcmNaiyAxc",
+		IDAsInt: "24121873806719949961527676655485054357633990236472608901764984551147442690",
+	}
+	require.Equal(t, wantResp, resp)
+}
+
+func TestNewGenesysID_DIDMethod(t *testing.T) {
+	cfgJSON := `{
+  "chainConfigs": {
+    "59140": {
+      "rpcUrl": "http://localhost:8545",
+      "stateContractAddr": "0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655"
+    }
+  },
+  "didMethods": [
+    {
+      "name": "polygonid",
+      "blockchain": "linea",
+      "network": "testnet",
+      "networkFlag": "0b01000011",
+      "methodByte": "0b00000010",
+      "chainID": "59140"
+    }
+  ]
+}`
+	cfg, err := NewEnvConfigFromJSON([]byte(cfgJSON))
+	require.NoError(t, err)
+
+	in := `{
+  "claimsTreeRoot":"16306276920027997118951972513784102597349518910734830865369546877495436692483",
+  "blockchain":"linea",
+  "network":"testnet"
+}`
+
+	ctx := context.Background()
+
+	resp, err := NewGenesysID(ctx, cfg, []byte(in))
+	require.NoError(t, err)
+	wantResp := GenesysIDResponse{
+		DID:     "did:polygonid:linea:testnet:31Akw5AB2xBrwqmbDUA2XoSGCfTepz52q9jmFE4mXA",
+		ID:      "31Akw5AB2xBrwqmbDUA2XoSGCfTepz52q9jmFE4mXA",
+		IDAsInt: "24460059377712687587111979692736628604804094576108957842967948238113620738",
+	}
+	require.Equal(t, wantResp, resp)
+}

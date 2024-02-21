@@ -2011,3 +2011,84 @@ func verifierIDFromTxData(txData txData) (*core.ID, error) {
 	id := core.NewID(tp, genState)
 	return &id, nil
 }
+
+type GenesysIDResponse struct {
+	DID     string `json:"did"`
+	ID      string `json:"id"`
+	IDAsInt string `json:"idAsInt"`
+}
+
+func NewGenesysID(ctx context.Context, cfg EnvConfig,
+	in []byte) (GenesysIDResponse, error) {
+
+	var req struct {
+		ClaimsTreeRoot *JsonFieldIntStr `json:"claimsTreeRoot"`
+		Blockchain     *core.Blockchain `json:"blockchain"`
+		Network        *core.NetworkID  `json:"network"`
+		Method         *core.DIDMethod  `json:"method"`
+	}
+
+	if in == nil {
+		return GenesysIDResponse{}, errors.New("request is empty")
+	}
+
+	err := json.Unmarshal(in, &req)
+	if err != nil {
+		return GenesysIDResponse{},
+			fmt.Errorf("failed to unmarshal request: %w", err)
+	}
+
+	if req.ClaimsTreeRoot == nil {
+		return GenesysIDResponse{},
+			errors.New("claims tree root is not set in the request")
+	}
+
+	if req.Blockchain == nil {
+		return GenesysIDResponse{},
+			errors.New("blockchain is not set in the request")
+	}
+
+	if req.Network == nil {
+		return GenesysIDResponse{},
+			errors.New("network is not set in the request")
+	}
+
+	if req.Method == nil {
+		// for backward compatibility, if method is not set, use polygon
+		var m = core.DIDMethodPolygonID
+		req.Method = &m
+	}
+
+	state, err := merkletree.HashElems(req.ClaimsTreeRoot.Int(),
+		merkletree.HashZero.BigInt(), merkletree.HashZero.BigInt())
+	if err != nil {
+		return GenesysIDResponse{},
+			fmt.Errorf("failed to calculate state: %w", err)
+	}
+
+	typ, err := core.BuildDIDType(*req.Method, *req.Blockchain,
+		*req.Network)
+	if err != nil {
+		return GenesysIDResponse{},
+			fmt.Errorf("failed to build DID type: %w", err)
+	}
+
+	coreID, err := core.NewIDFromIdenState(typ, state.BigInt())
+	if err != nil {
+		return GenesysIDResponse{},
+			fmt.Errorf("failed to create ID: %w", err)
+	}
+
+	did, err := core.ParseDIDFromID(*coreID)
+	if err != nil {
+		return GenesysIDResponse{},
+			fmt.Errorf("failed to make DID from ID: %w", err)
+	}
+
+	return GenesysIDResponse{
+			DID:     did.String(),
+			ID:      coreID.String(),
+			IDAsInt: coreID.BigInt().String(),
+		},
+		nil
+}
