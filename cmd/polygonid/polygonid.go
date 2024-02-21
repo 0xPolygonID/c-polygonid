@@ -216,6 +216,9 @@ func PLGNAuthV2InputsMarshal(jsonResponse **C.char, in *C.char,
 	return true
 }
 
+// Deprecated: Use PLGNNewGenesisID instead. It supports environment
+// configuration, giving the ability to register custom DID methods.
+//
 //export PLGNCalculateGenesisID
 func PLGNCalculateGenesisID(jsonResponse **C.char, in *C.char,
 	status **C.PLGNStatus) bool {
