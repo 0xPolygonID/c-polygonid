@@ -21,7 +21,7 @@ type EnvConfig struct {
 	StateContractAddr string
 }
 
-var globalRegistationLock sync.Mutex
+var globalRegistrationLock sync.Mutex
 var registeredDIDMethods sync.Map
 
 // NewEnvConfigFromJSON returns empty config if input json is nil.
@@ -90,8 +90,8 @@ func registerDIDMethods(methodConfigs []MethodConfig) error {
 		return nil
 	}
 
-	globalRegistationLock.Lock()
-	defer globalRegistationLock.Unlock()
+	globalRegistrationLock.Lock()
+	defer globalRegistrationLock.Unlock()
 
 	for _, methodCfg := range newMethodConfigs {
 		chainIDi := chainIDToInt(methodCfg.ChainID)
