@@ -689,7 +689,9 @@ func TestEnvConfig_UnmarshalJSON(t *testing.T) {
   }
 }`,
 			want: EnvConfig{
-				IPFSNodeURL: "http://localhost:5001",
+				IPFSNodeURL:       "http://localhost:5001",
+				EthereumURL:       "http://localhost:8545",
+				StateContractAddr: "0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655",
 				ChainConfigs: map[core.ChainID]ChainConfig{
 					1: {
 						RPCUrl:            "http://localhost:8545",
