@@ -10,8 +10,6 @@ import (
 
 func TestNewEnvConfigFromJSON(t *testing.T) {
 	cfgJSON := `{
-  "ethereumUrl": "http://localhost:8545",
-  "stateContractAddr": "0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655",
   "reverseHashServiceUrl": "http://localhost:8003",
   "ipfsNodeUrl": "http://localhost:5001",
   "chainConfigs": {
