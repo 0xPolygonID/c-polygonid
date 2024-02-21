@@ -15,6 +15,10 @@ type EnvConfig struct {
 	DIDMethods   []MethodConfig
 	ChainConfigs PerChainConfig
 	IPFSNodeURL  string
+
+	// backward incompatible fields, it's an error to use them
+	EthereumURL       string
+	StateContractAddr string
 }
 
 var globalRegistationLock sync.Mutex
@@ -31,6 +35,16 @@ func NewEnvConfigFromJSON(in []byte) (EnvConfig, error) {
 	err = json.Unmarshal(in, &cfg)
 	if err != nil {
 		return cfg, fmt.Errorf("unable to parse json config: %w", err)
+	}
+
+	if cfg.EthereumURL != "" {
+		return cfg, fmt.Errorf(
+			"ethereumUrl is deprecated, use chainConfigs instead")
+	}
+
+	if cfg.StateContractAddr != "" {
+		return cfg, fmt.Errorf(
+			"stateContractAddr is deprecated, use chainConfigs instead")
 	}
 
 	if len(cfg.DIDMethods) == 0 {
