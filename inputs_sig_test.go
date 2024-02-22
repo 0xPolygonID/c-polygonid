@@ -1036,3 +1036,27 @@ func TestNewGenesysID_DIDMethod(t *testing.T) {
 	}
 	require.Equal(t, wantResp, resp)
 }
+
+func TestNewGenesysID_DIDMethod_Error(t *testing.T) {
+	cfgJSON := `{
+  "chainConfigs": {
+    "59140": {
+      "rpcUrl": "http://localhost:8545",
+      "stateContractAddr": "0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655"
+    }
+  }
+}`
+	cfg, err := NewEnvConfigFromJSON([]byte(cfgJSON))
+	require.NoError(t, err)
+
+	in := `{
+  "claimsTreeRoot":"16306276920027997118951972513784102597349518910734830865369546877495436692483",
+  "blockchain":"linea2",
+  "network":"testnet2"
+}`
+
+	ctx := context.Background()
+
+	_, err = NewGenesysID(ctx, cfg, []byte(in))
+	require.EqualError(t, err, "failed to build DID type: not supported network")
+}

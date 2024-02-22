@@ -176,7 +176,7 @@ run_test(TEST tc) {
   }
 
   if (!ok) {
-	consume_status(status, "Error marshaling input");
+	consume_status(status, "Error calling function");
 	ret_val = 1;
 	goto cleanup;
   }
