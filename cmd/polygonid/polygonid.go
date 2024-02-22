@@ -271,7 +271,7 @@ func PLGNNewGenesisID(jsonResponse **C.char, in *C.char, cfg *C.char,
 
 	inStr := C.GoString(in)
 	resp, err := c_polygonid.NewGenesysID(ctx, envCfg, []byte(inStr))
-	if in == nil {
+	if err != nil {
 		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
 		return false
 	}
