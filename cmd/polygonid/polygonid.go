@@ -861,6 +861,56 @@ func PLGNCacheCredentials(in *C.char, cfg *C.char, status **C.PLGNStatus) bool {
 	return true
 }
 
+//export PLGNW3CCredentialFromOnchainHex
+func PLGNW3CCredentialFromOnchainHex(jsonResponse **C.char, in *C.char,
+	cfg *C.char, status **C.PLGNStatus) bool {
+
+	if jsonResponse == nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_NIL_POINTER,
+			"jsonResponse pointer is nil")
+		return false
+	}
+
+	if in == nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_NIL_POINTER,
+			"pointer to request is nil")
+		return false
+	}
+
+	ctx, cancel := logAPITime()
+	defer cancel()
+
+	ctx2, cancel2 := context.WithTimeout(ctx, defaultTimeout)
+	defer cancel2()
+
+	inData := C.GoBytes(unsafe.Pointer(in), C.int(C.strlen(in)))
+
+	envCfg, err := createEnvConfig(cfg)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		return false
+	}
+
+	credential, err := c_polygonid.W3CCredentialFromOnchainHex(
+		ctx2,
+		envCfg,
+		inData,
+	)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		return false
+	}
+
+	credentialJSON, err := json.Marshal(credential)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		return false
+	}
+
+	*jsonResponse = C.CString(string(credentialJSON))
+	return true
+}
+
 // createEnvConfig returns empty config if input json is nil.
 func createEnvConfig(cfgJson *C.char) (c_polygonid.EnvConfig, error) {
 	var cfgData []byte

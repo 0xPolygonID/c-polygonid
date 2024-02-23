@@ -1,0 +1,28 @@
+{
+    "@context": [
+        {
+            "@protected": true,
+            "@version": 1.1,
+            "id": "@id",
+            "type": "@type",
+            "Balance": {
+                "@context": {
+                    "@propagate": true,
+                    "@protected": true,
+                    "polygon-vocab": "urn:uuid:a33d80ea-88c9-4c70-a321-fc7bc9ef9cc4#",
+                    "iden3_serialization": "iden3:v1:slotIndexA=address&slotIndexB=balance",
+                    "xsd": "http://www.w3.org/2001/XMLSchema#",
+                    "address": {
+                        "@id": "polygon-vocab:address",
+                        "@type": "xsd:positiveInteger"
+                    },
+                    "balance": {
+                        "@id": "polygon-vocab:balance",
+                        "@type": "xsd:positiveInteger"
+                    }
+                },
+                "@id": "urn:uuid:4dac09b1-2c08-47bc-abc7-c6ecef9be36b"
+            }
+        }
+    ]
+}
