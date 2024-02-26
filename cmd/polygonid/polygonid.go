@@ -863,13 +863,22 @@ func PLGNCacheCredentials(in *C.char, cfg *C.char, status **C.PLGNStatus) bool {
 
 // PLGNW3CCredentialFromOnchainHex returns a verifiable credential from an onchain data hex string.
 //
-// Sample configuration:
+// Sample input:
 //
-//		{
+//	{
 //	   "issuerDID": "did:polygonid:polygon:mumbai:2qCU58EJgrEMJvPfhUCnFCwuKQTkX8VmJX2sJCH6C8",
 //	   "hexdata": "0x0...",
 //	   "version": "0.0.1"
-//		}
+//	}
+//
+// Sample configuration:
+//
+//	{
+//	  "ChainConfigs": {
+//	    "80001": {
+//	      "RPCUrl": "https://rpc-mumbai",
+//	    }
+//	}
 //
 //export PLGNW3CCredentialFromOnchainHex
 func PLGNW3CCredentialFromOnchainHex(jsonResponse **C.char, in *C.char,
