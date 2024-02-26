@@ -577,7 +577,7 @@ func PLGNProfileID(jsonResponse **C.char, in *C.char,
 //
 // The configuration example may be found in the [README.md] file.
 //
-// [README.md] https://github.com/0xPolygonID/c-polygonid/blob/main/README.md#configuration
+// [README.md]: https://github.com/0xPolygonID/c-polygonid/blob/main/README.md#configuration
 //
 //export PLGNAtomicQuerySigV2Inputs
 func PLGNAtomicQuerySigV2Inputs(jsonResponse **C.char, in *C.char, cfg *C.char,
@@ -665,7 +665,7 @@ func marshalInputsResponse(
 //
 // The configuration example may be found in the [README.md] file.
 //
-// [README.md] https://github.com/0xPolygonID/c-polygonid/blob/main/README.md#configuration
+// [README.md]: https://github.com/0xPolygonID/c-polygonid/blob/main/README.md#configuration
 //
 //export PLGNAtomicQueryMtpV2Inputs
 func PLGNAtomicQueryMtpV2Inputs(jsonResponse **C.char, in *C.char, cfg *C.char,
@@ -728,7 +728,7 @@ func PLGNMtpV2Inputs(jsonResponse **C.char, in *C.char,
 //
 // The configuration example may be found in the [README.md] file.
 //
-// [README.md] https://github.com/0xPolygonID/c-polygonid/blob/main/README.md#configuration
+// [README.md]: https://github.com/0xPolygonID/c-polygonid/blob/main/README.md#configuration
 //
 //export PLGNAtomicQuerySigV2OnChainInputs
 func PLGNAtomicQuerySigV2OnChainInputs(jsonResponse **C.char, in *C.char,
@@ -749,7 +749,7 @@ func PLGNAtomicQuerySigV2OnChainInputs(jsonResponse **C.char, in *C.char,
 //
 // The configuration example may be found in the [README.md] file.
 //
-// [README.md] https://github.com/0xPolygonID/c-polygonid/blob/main/README.md#configuration
+// [README.md]: https://github.com/0xPolygonID/c-polygonid/blob/main/README.md#configuration
 //
 //export PLGNAtomicQueryMtpV2OnChainInputs
 func PLGNAtomicQueryMtpV2OnChainInputs(jsonResponse **C.char, in *C.char,
@@ -857,7 +857,7 @@ func PLGNCacheCredentials(in *C.char, cfg *C.char, status **C.PLGNStatus) bool {
 //
 // The configuration example may be found in the [README.md] file.
 //
-// [README.md] https://github.com/0xPolygonID/c-polygonid/blob/main/README.md#configuration
+// [README.md]: https://github.com/0xPolygonID/c-polygonid/blob/main/README.md#configuration
 //
 //export PLGNW3CCredentialFromOnchainHex
 func PLGNW3CCredentialFromOnchainHex(jsonResponse **C.char, in *C.char,
