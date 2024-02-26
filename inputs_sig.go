@@ -233,7 +233,8 @@ func claimWithSigProofFromObj(ctx context.Context, cfg EnvConfig,
 	}
 	issuerID, err := core.IDFromDID(*issuerDID)
 	if err != nil {
-		return out, err
+		return out, fmt.Errorf("can't get issuer ID from DID (%v): %w",
+			issuerDID, err)
 	}
 	out.IssuerID = &issuerID
 	out.Claim, err = proof.GetCoreClaim()
