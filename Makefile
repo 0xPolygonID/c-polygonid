@@ -54,7 +54,7 @@ darwin-arm64:
 
 # Build a legacy multi-architecture version of libpolygonid.a with iOS Device arm64 & iOS Simulator x86_64
 ios-old: ios-arm64 ios-simulator-x86_64
-	lipo $(IOS_OUT)/libpolygonid-ios.a $(IOS_OUT)/libpolygonid-ios-simulator-x86_64.a -create -output $(IOS_OUT)/libpolygonid-sim.a
+	lipo $(IOS_OUT)/libpolygonid-ios.a $(IOS_OUT)/libpolygonid-ios-simulator-x86_64.a -create -output $(IOS_OUT)/libpolygonid.a
 	cp $(IOS_OUT)/libpolygonid-ios.h $(IOS_OUT)/libpolygonid.h
 
 ios-device: ios-arm64
