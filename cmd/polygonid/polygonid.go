@@ -575,13 +575,9 @@ func PLGNProfileID(jsonResponse **C.char, in *C.char,
 // Additional configuration may be required for Reverse Hash Service
 // revocation validation. In other case cfg may be nil.
 //
-// Sample configuration:
+// The configuration example may be found in the [README.md] file.
 //
-//	{
-//	 "ethereumUrl": "http://localhost:8545",
-//	 "stateContractAddr": "0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655",
-//	 "reverseHashServiceUrl": "http://localhost:8003"
-//	}
+// [README.md] https://github.com/0xPolygonID/c-polygonid/blob/main/README.md#configuration
 //
 //export PLGNAtomicQuerySigV2Inputs
 func PLGNAtomicQuerySigV2Inputs(jsonResponse **C.char, in *C.char, cfg *C.char,
@@ -667,13 +663,9 @@ func marshalInputsResponse(
 // Additional configuration may be required for Reverse Hash Service
 // revocation validation. In other case cfg may be nil.
 //
-// Sample configuration:
+// The configuration example may be found in the [README.md] file.
 //
-//	{
-//	  "ethereumUrl": "http://localhost:8545",
-//	  "stateContractAddr": "0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655",
-//	  "reverseHashServiceUrl": "http://localhost:8003"
-//	}
+// [README.md] https://github.com/0xPolygonID/c-polygonid/blob/main/README.md#configuration
 //
 //export PLGNAtomicQueryMtpV2Inputs
 func PLGNAtomicQueryMtpV2Inputs(jsonResponse **C.char, in *C.char, cfg *C.char,
@@ -734,13 +726,9 @@ func PLGNMtpV2Inputs(jsonResponse **C.char, in *C.char,
 // Additional configuration may be required for Reverse Hash Service
 // revocation validation. In other case cfg may be nil.
 //
-// Sample configuration:
+// The configuration example may be found in the [README.md] file.
 //
-//	{
-//	  "ethereumUrl": "http://localhost:8545",
-//	  "stateContractAddr": "0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655",
-//	  "reverseHashServiceUrl": "http://localhost:8003"
-//	}
+// [README.md] https://github.com/0xPolygonID/c-polygonid/blob/main/README.md#configuration
 //
 //export PLGNAtomicQuerySigV2OnChainInputs
 func PLGNAtomicQuerySigV2OnChainInputs(jsonResponse **C.char, in *C.char,
@@ -759,13 +747,9 @@ func PLGNAtomicQuerySigV2OnChainInputs(jsonResponse **C.char, in *C.char,
 // Additional configuration may be required for Reverse Hash Service
 // revocation validation. In other case cfg may be nil.
 //
-// Sample configuration:
+// The configuration example may be found in the [README.md] file.
 //
-//	{
-//	  "ethereumUrl": "http://localhost:8545",
-//	  "stateContractAddr": "0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655",
-//	  "reverseHashServiceUrl": "http://localhost:8003"
-//	}
+// [README.md] https://github.com/0xPolygonID/c-polygonid/blob/main/README.md#configuration
 //
 //export PLGNAtomicQueryMtpV2OnChainInputs
 func PLGNAtomicQueryMtpV2OnChainInputs(jsonResponse **C.char, in *C.char,
@@ -871,14 +855,9 @@ func PLGNCacheCredentials(in *C.char, cfg *C.char, status **C.PLGNStatus) bool {
 //	   "version": "0.0.1"
 //	}
 //
-// Sample configuration:
+// The configuration example may be found in the [README.md] file.
 //
-//	{
-//	  "ChainConfigs": {
-//	    "80001": {
-//	      "RPCUrl": "https://rpc-mumbai",
-//	    }
-//	}
+// [README.md] https://github.com/0xPolygonID/c-polygonid/blob/main/README.md#configuration
 //
 //export PLGNW3CCredentialFromOnchainHex
 func PLGNW3CCredentialFromOnchainHex(jsonResponse **C.char, in *C.char,
