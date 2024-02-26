@@ -45,6 +45,7 @@ func W3CCredentialFromOnchainHex(
 		return nil,
 			fmt.Errorf("failed to connect to ethereum: %w", err)
 	}
+	defer ethcli.Close()
 
 	credential, err := convertor.W3CCredentialFromOnchainHex(
 		ctx,

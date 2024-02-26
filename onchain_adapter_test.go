@@ -32,27 +32,11 @@ func TestW3CCredentialFromOnchainHex(t *testing.T) {
 
 		// since want verifiable credential was parsed from json,
 		// there not are types for the fields
-		outBytes, err := json.Marshal(out)
-		require.NoError(t, err)
 		var actualOutCredential *verifiable.W3CCredential
-		err = json.Unmarshal(outBytes, &actualOutCredential)
+		err = remarshalObj(&actualOutCredential, out)
 		require.NoError(t, err)
 
 		require.Equal(t, wantOutCredential, actualOutCredential)
-	}
-
-	removeIdFromEthBody := func(body []byte) []byte {
-		var ethBody map[string]any
-		err := json.Unmarshal(body, &ethBody)
-		require.NoError(t, err)
-		if stringFromJsonObj(ethBody, "jsonrpc") == "2.0" &&
-			stringFromJsonObj(ethBody, "method") == "eth_call" {
-
-			delete(ethBody, "id")
-		}
-		body, err = json.Marshal(ethBody)
-		require.NoError(t, err)
-		return body
 	}
 
 	t.Run("happy path", func(t *testing.T) {

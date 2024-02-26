@@ -861,6 +861,16 @@ func PLGNCacheCredentials(in *C.char, cfg *C.char, status **C.PLGNStatus) bool {
 	return true
 }
 
+// PLGNW3CCredentialFromOnchainHex returns a verifiable credential from an onchain data hex string.
+//
+// Sample configuration:
+//
+//		{
+//	   "issuerDID": "did:polygonid:polygon:mumbai:2qCU58EJgrEMJvPfhUCnFCwuKQTkX8VmJX2sJCH6C8",
+//	   "hexdata": "0x0...",
+//	   "version": "0.0.1"
+//		}
+//
 //export PLGNW3CCredentialFromOnchainHex
 func PLGNW3CCredentialFromOnchainHex(jsonResponse **C.char, in *C.char,
 	cfg *C.char, status **C.PLGNStatus) bool {
