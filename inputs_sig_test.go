@@ -60,6 +60,24 @@ func preserveIPFSHttpCli() func() {
 	}
 }
 
+func removeIdFromEthBody(body []byte) []byte {
+	var ethBody map[string]any
+	err := json.Unmarshal(body, &ethBody)
+	if err != nil {
+		panic(err)
+	}
+	if stringFromJsonObj(ethBody, "jsonrpc") == "2.0" &&
+		stringFromJsonObj(ethBody, "method") == "eth_call" {
+
+		delete(ethBody, "id")
+	}
+	body, err = json.Marshal(ethBody)
+	if err != nil {
+		panic(err)
+	}
+	return body
+}
+
 func TestPrepareInputs(t *testing.T) {
 	defer mockBadgerLog(t)()
 
@@ -86,20 +104,6 @@ func TestPrepareInputs(t *testing.T) {
 		} else {
 			require.Equal(t, wantVR, out.VerifiablePresentation)
 		}
-	}
-
-	removeIdFromEthBody := func(body []byte) []byte {
-		var ethBody map[string]any
-		err := json.Unmarshal(body, &ethBody)
-		require.NoError(t, err)
-		if stringFromJsonObj(ethBody, "jsonrpc") == "2.0" &&
-			stringFromJsonObj(ethBody, "method") == "eth_call" {
-
-			delete(ethBody, "id")
-		}
-		body, err = json.Marshal(ethBody)
-		require.NoError(t, err)
-		return body
 	}
 
 	t.Run("AtomicQueryMtpV2Onchain", func(t *testing.T) {

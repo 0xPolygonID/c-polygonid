@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	core "github.com/iden3/go-iden3-core/v2"
+	"github.com/iden3/go-iden3-core/v2/w3c"
 	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/iden3/go-iden3-crypto/utils"
 )
@@ -168,4 +169,26 @@ func (i *JsonFieldIntStr) UnmarshalJSON(bytes []byte) error {
 
 func (i *JsonFieldIntStr) Int() *big.Int {
 	return (*big.Int)(i)
+}
+
+type coreDID w3c.DID
+
+func (d *coreDID) UnmarshalJSON(bytes []byte) error {
+	var s *string
+	err := json.Unmarshal(bytes, &s)
+	if err != nil {
+		return err
+	}
+	if s == nil {
+		*d = coreDID(w3c.DID{})
+		return nil
+	}
+
+	did, err := w3c.ParseDID(*s)
+	if err != nil {
+		return err
+	}
+
+	*d = coreDID(*did)
+	return nil
 }

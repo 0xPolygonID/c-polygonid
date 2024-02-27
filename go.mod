@@ -1,15 +1,15 @@
 module github.com/0xPolygonID/c-polygonid
 
-go 1.21
+go 1.21.4
 
 require (
 	github.com/dgraph-io/badger/v4 v4.2.0
-	github.com/ethereum/go-ethereum v1.13.11
-	github.com/iden3/contracts-abi/state/go/abi v0.0.0-20230405152923-4a25f6f1f0f4
+	github.com/ethereum/go-ethereum v1.13.12
 	github.com/iden3/go-circuits/v2 v2.0.1
-	github.com/iden3/go-iden3-core/v2 v2.0.4-0.20240129182142-32180363999b
+	github.com/iden3/go-iden3-core/v2 v2.0.4
 	github.com/iden3/go-iden3-crypto v0.0.15
 	github.com/iden3/go-merkletree-sql/v2 v2.0.6
+	github.com/iden3/go-onchain-credential-adapter v0.0.0-20240223120548-5d8d1d28c6d1
 	github.com/iden3/go-schema-processor/v2 v2.3.0
 	github.com/iden3/merkletree-proof v0.1.0
 	github.com/piprate/json-gold v0.5.1-0.20230111113000-6ddbe6e6f19f
@@ -44,6 +44,8 @@ require (
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/holiman/uint256 v1.2.4 // indirect
 	github.com/iden3/contracts-abi/onchain-credential-status-resolver/go/abi v0.0.0-20230911113809-c58b7e7a69b0 // indirect
+	github.com/iden3/contracts-abi/onchain-non-merklized-issuer-base/v0/go/abi v0.0.0-20240222110004-06aa097d1318 // indirect
+	github.com/iden3/contracts-abi/state/go/abi v0.0.0-20230405152923-4a25f6f1f0f4 // indirect
 	github.com/klauspost/compress v1.16.5 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/mmcloughlin/addchain v0.4.0 // indirect

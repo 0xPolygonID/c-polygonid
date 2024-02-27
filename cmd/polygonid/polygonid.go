@@ -575,13 +575,9 @@ func PLGNProfileID(jsonResponse **C.char, in *C.char,
 // Additional configuration may be required for Reverse Hash Service
 // revocation validation. In other case cfg may be nil.
 //
-// Sample configuration:
+// The configuration example may be found in the [README.md] file.
 //
-//	{
-//	 "ethereumUrl": "http://localhost:8545",
-//	 "stateContractAddr": "0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655",
-//	 "reverseHashServiceUrl": "http://localhost:8003"
-//	}
+// [README.md]: https://github.com/0xPolygonID/c-polygonid/blob/main/README.md#configuration
 //
 //export PLGNAtomicQuerySigV2Inputs
 func PLGNAtomicQuerySigV2Inputs(jsonResponse **C.char, in *C.char, cfg *C.char,
@@ -667,13 +663,9 @@ func marshalInputsResponse(
 // Additional configuration may be required for Reverse Hash Service
 // revocation validation. In other case cfg may be nil.
 //
-// Sample configuration:
+// The configuration example may be found in the [README.md] file.
 //
-//	{
-//	  "ethereumUrl": "http://localhost:8545",
-//	  "stateContractAddr": "0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655",
-//	  "reverseHashServiceUrl": "http://localhost:8003"
-//	}
+// [README.md]: https://github.com/0xPolygonID/c-polygonid/blob/main/README.md#configuration
 //
 //export PLGNAtomicQueryMtpV2Inputs
 func PLGNAtomicQueryMtpV2Inputs(jsonResponse **C.char, in *C.char, cfg *C.char,
@@ -734,13 +726,9 @@ func PLGNMtpV2Inputs(jsonResponse **C.char, in *C.char,
 // Additional configuration may be required for Reverse Hash Service
 // revocation validation. In other case cfg may be nil.
 //
-// Sample configuration:
+// The configuration example may be found in the [README.md] file.
 //
-//	{
-//	  "ethereumUrl": "http://localhost:8545",
-//	  "stateContractAddr": "0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655",
-//	  "reverseHashServiceUrl": "http://localhost:8003"
-//	}
+// [README.md]: https://github.com/0xPolygonID/c-polygonid/blob/main/README.md#configuration
 //
 //export PLGNAtomicQuerySigV2OnChainInputs
 func PLGNAtomicQuerySigV2OnChainInputs(jsonResponse **C.char, in *C.char,
@@ -759,13 +747,9 @@ func PLGNAtomicQuerySigV2OnChainInputs(jsonResponse **C.char, in *C.char,
 // Additional configuration may be required for Reverse Hash Service
 // revocation validation. In other case cfg may be nil.
 //
-// Sample configuration:
+// The configuration example may be found in the [README.md] file.
 //
-//	{
-//	  "ethereumUrl": "http://localhost:8545",
-//	  "stateContractAddr": "0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655",
-//	  "reverseHashServiceUrl": "http://localhost:8003"
-//	}
+// [README.md]: https://github.com/0xPolygonID/c-polygonid/blob/main/README.md#configuration
 //
 //export PLGNAtomicQueryMtpV2OnChainInputs
 func PLGNAtomicQueryMtpV2OnChainInputs(jsonResponse **C.char, in *C.char,
@@ -858,6 +842,70 @@ func PLGNCacheCredentials(in *C.char, cfg *C.char, status **C.PLGNStatus) bool {
 		return false
 	}
 
+	return true
+}
+
+// PLGNW3CCredentialFromOnchainHex returns a verifiable credential from an onchain data hex string.
+//
+// Sample input:
+//
+//	{
+//	   "issuerDID": "did:polygonid:polygon:mumbai:2qCU58EJgrEMJvPfhUCnFCwuKQTkX8VmJX2sJCH6C8",
+//	   "hexdata": "0x0...",
+//	   "version": "0.0.1"
+//	}
+//
+// The configuration example may be found in the [README.md] file.
+//
+// [README.md]: https://github.com/0xPolygonID/c-polygonid/blob/main/README.md#configuration
+//
+//export PLGNW3CCredentialFromOnchainHex
+func PLGNW3CCredentialFromOnchainHex(jsonResponse **C.char, in *C.char,
+	cfg *C.char, status **C.PLGNStatus) bool {
+
+	if jsonResponse == nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_NIL_POINTER,
+			"jsonResponse pointer is nil")
+		return false
+	}
+
+	if in == nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_NIL_POINTER,
+			"pointer to request is nil")
+		return false
+	}
+
+	ctx, cancel := logAPITime()
+	defer cancel()
+
+	ctx2, cancel2 := context.WithTimeout(ctx, defaultTimeout)
+	defer cancel2()
+
+	inData := C.GoBytes(unsafe.Pointer(in), C.int(C.strlen(in)))
+
+	envCfg, err := createEnvConfig(cfg)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		return false
+	}
+
+	credential, err := c_polygonid.W3CCredentialFromOnchainHex(
+		ctx2,
+		envCfg,
+		inData,
+	)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		return false
+	}
+
+	credentialJSON, err := json.Marshal(credential)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		return false
+	}
+
+	*jsonResponse = C.CString(string(credentialJSON))
 	return true
 }
 
