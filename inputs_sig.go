@@ -35,7 +35,6 @@ import (
 	"github.com/iden3/go-iden3-crypto/utils"
 	"github.com/iden3/go-merkletree-sql/v2"
 	json2 "github.com/iden3/go-schema-processor/v2/json"
-	"github.com/iden3/go-schema-processor/v2/loaders"
 	"github.com/iden3/go-schema-processor/v2/merklize"
 	"github.com/iden3/go-schema-processor/v2/processor"
 	"github.com/iden3/go-schema-processor/v2/verifiable"
@@ -234,7 +233,8 @@ func claimWithSigProofFromObj(ctx context.Context, cfg EnvConfig,
 	}
 	issuerID, err := core.IDFromDID(*issuerDID)
 	if err != nil {
-		return out, err
+		return out, fmt.Errorf("can't get issuer ID from DID (%v): %w",
+			issuerDID, err)
 	}
 	out.IssuerID = &issuerID
 	out.Claim, err = proof.GetCoreClaim()
@@ -416,7 +416,7 @@ type onChainInputsRequest struct {
 
 type txData struct {
 	ContractAddress common.Address `json:"contractAddress"`
-	ChainID         ChainID        `json:"chainId"`
+	ChainID         core.ChainID   `json:"chainId"`
 }
 
 type v3OnChainInputsRequest struct {
@@ -1734,7 +1734,7 @@ func stateContractHasID(ctx context.Context, id *core.ID, cfg ChainConfig,
 }
 
 type onchainRevStatus struct {
-	chainID         ChainID
+	chainID         core.ChainID
 	contractAddress common.Address
 	revNonce        uint64
 	genesisState    *big.Int
@@ -1966,7 +1966,7 @@ func (cc ChainConfig) validate() error {
 	return nil
 }
 
-type PerChainConfig map[ChainID]ChainConfig
+type PerChainConfig map[core.ChainID]ChainConfig
 
 func (p *PerChainConfig) UnmarshalJSON(bytes []byte) error {
 	if (*p) == nil {
@@ -1978,7 +1978,7 @@ func (p *PerChainConfig) UnmarshalJSON(bytes []byte) error {
 		return err
 	}
 	for k, v := range o {
-		var chainID ChainID
+		var chainID core.ChainID
 		chainID, err = newChainIDFromString(k)
 		if err != nil {
 			return err
@@ -1988,75 +1988,20 @@ func (p *PerChainConfig) UnmarshalJSON(bytes []byte) error {
 	return nil
 }
 
-type EnvConfig struct {
-	ChainConfigs          PerChainConfig
-	EthereumURL           string         // Deprecated: Use ChainConfigs instead
-	StateContractAddr     common.Address // Deprecated: Use ChainConfigs instead
-	ReverseHashServiceUrl string         // Deprecated
-	IPFSNodeURL           string
-}
-
-func (cfg EnvConfig) documentLoader() ld.DocumentLoader {
-	var ipfsNode loaders.IPFSClient
-	if cfg.IPFSNodeURL != "" {
-		ipfsNode = &ipfsCli{rpcURL: cfg.IPFSNodeURL}
+func newChainIDFromString(in string) (core.ChainID, error) {
+	radix := 10
+	if strings.HasPrefix(in, "0x") || strings.HasPrefix(in, "0X") {
+		radix = 16
+		in = in[2:]
 	}
 
-	var opts []loaders.DocumentLoaderOption
-
-	cacheEngine, err := newBadgerCacheEngine(
-		withEmbeddedDocumentBytes(
-			"https://www.w3.org/2018/credentials/v1",
-			credentialsV1JsonLDBytes))
-	if err == nil {
-		opts = append(opts, loaders.WithCacheEngine(cacheEngine))
+	var chainID core.ChainID
+	assertUnderlineTypeInt32(chainID)
+	i, err := strconv.ParseInt(in, radix, 32)
+	if err != nil {
+		return 0, fmt.Errorf("can't parse ChainID type: %w", err)
 	}
-
-	return loaders.NewDocumentLoader(ipfsNode, "", opts...)
-}
-
-type ChainID uint64
-
-func (cid ChainID) Unpack() (core.Blockchain, core.NetworkID, error) {
-	for k, v := range knownChainIDs {
-		if v == cid {
-			return k.blockchain, k.networkID, nil
-		}
-	}
-	return core.NoChain, core.NoNetwork, fmt.Errorf("unknown chain ID")
-}
-
-func newChainIDFromString(in string) (ChainID, error) {
-	var chainID uint64
-	var err error
-	if strings.HasPrefix(in, "0x") ||
-		strings.HasPrefix(in, "0X") {
-		chainID, err = strconv.ParseUint(in[2:], 16, 64)
-		if err != nil {
-			return 0, err
-		}
-	} else {
-		chainID, err = strconv.ParseUint(in, 10, 64)
-		if err != nil {
-			return 0, err
-		}
-	}
-	return ChainID(chainID), nil
-}
-
-type chainIDKey struct {
-	blockchain core.Blockchain
-	networkID  core.NetworkID
-}
-
-var knownChainIDs = map[chainIDKey]ChainID{
-	{core.Ethereum, core.Main}:    1,
-	{core.Ethereum, core.Goerli}:  5,
-	{core.Polygon, core.Main}:     137,
-	{core.ZkEVM, core.Main}:       1101,
-	{core.ZkEVM, core.Test}:       1442,
-	{core.Polygon, core.Mumbai}:   80001,
-	{core.Ethereum, core.Sepolia}: 11155111,
+	return core.ChainID(i), nil
 }
 
 func (cfg EnvConfig) networkCfgByID(id *core.ID) (ChainConfig, error) {
@@ -2068,7 +2013,7 @@ func (cfg EnvConfig) networkCfgByID(id *core.ID) (ChainConfig, error) {
 	return cfg.networkCfgByChainID(chainID)
 }
 
-func (cfg EnvConfig) networkCfgByChainID(chainID ChainID) (ChainConfig, error) {
+func (cfg EnvConfig) networkCfgByChainID(chainID core.ChainID) (ChainConfig, error) {
 	chainCfg, ok := cfg.ChainConfigs[chainID]
 	if !ok {
 		chainCfg = cfg.defaultChainCfg()
@@ -2084,7 +2029,7 @@ func (cfg EnvConfig) defaultChainCfg() ChainConfig {
 	}
 }
 
-func chainIDFromID(id *core.ID) (ChainID, error) {
+func chainIDFromID(id *core.ID) (core.ChainID, error) {
 	blockchain, err := core.BlockchainFromID(*id)
 	if err != nil {
 		return 0, err
@@ -2095,13 +2040,7 @@ func chainIDFromID(id *core.ID) (ChainID, error) {
 		return 0, err
 	}
 
-	key := chainIDKey{blockchain, networkID}
-	chainID, ok := knownChainIDs[key]
-	if !ok {
-		return 0, fmt.Errorf("unknown chain: %s", id.String())
-	}
-
-	return chainID, nil
+	return core.GetChainID(blockchain, networkID)
 }
 
 // Currently, our library does not have a Close function. As a result, we
@@ -2567,7 +2506,7 @@ func fmtPath(path merklize.Path) string {
 
 func verifierIDFromTxData(txData txData) (*core.ID, error) {
 	genState := core.GenesisFromEthAddress(txData.ContractAddress)
-	blockchain, networkID, err := txData.ChainID.Unpack()
+	blockchain, networkID, err := core.NetworkByChainID(txData.ChainID)
 	if err != nil {
 		return nil, err
 	}
@@ -2577,4 +2516,85 @@ func verifierIDFromTxData(txData txData) (*core.ID, error) {
 	}
 	id := core.NewID(tp, genState)
 	return &id, nil
+}
+
+type GenesysIDResponse struct {
+	DID     string `json:"did"`
+	ID      string `json:"id"`
+	IDAsInt string `json:"idAsInt"`
+}
+
+func NewGenesysID(ctx context.Context, cfg EnvConfig,
+	in []byte) (GenesysIDResponse, error) {
+
+	var req struct {
+		ClaimsTreeRoot *JsonFieldIntStr `json:"claimsTreeRoot"`
+		Blockchain     *core.Blockchain `json:"blockchain"`
+		Network        *core.NetworkID  `json:"network"`
+		Method         *core.DIDMethod  `json:"method"`
+	}
+
+	if in == nil {
+		return GenesysIDResponse{}, errors.New("request is empty")
+	}
+
+	err := json.Unmarshal(in, &req)
+	if err != nil {
+		return GenesysIDResponse{},
+			fmt.Errorf("failed to unmarshal request: %w", err)
+	}
+
+	if req.ClaimsTreeRoot == nil {
+		return GenesysIDResponse{},
+			errors.New("claims tree root is not set in the request")
+	}
+
+	if req.Blockchain == nil {
+		return GenesysIDResponse{},
+			errors.New("blockchain is not set in the request")
+	}
+
+	if req.Network == nil {
+		return GenesysIDResponse{},
+			errors.New("network is not set in the request")
+	}
+
+	if req.Method == nil {
+		// for backward compatibility, if method is not set, use polygon
+		var m = core.DIDMethodPolygonID
+		req.Method = &m
+	}
+
+	state, err := merkletree.HashElems(req.ClaimsTreeRoot.Int(),
+		merkletree.HashZero.BigInt(), merkletree.HashZero.BigInt())
+	if err != nil {
+		return GenesysIDResponse{},
+			fmt.Errorf("failed to calculate state: %w", err)
+	}
+
+	typ, err := core.BuildDIDType(*req.Method, *req.Blockchain,
+		*req.Network)
+	if err != nil {
+		return GenesysIDResponse{},
+			fmt.Errorf("failed to build DID type: %w", err)
+	}
+
+	coreID, err := core.NewIDFromIdenState(typ, state.BigInt())
+	if err != nil {
+		return GenesysIDResponse{},
+			fmt.Errorf("failed to create ID: %w", err)
+	}
+
+	did, err := core.ParseDIDFromID(*coreID)
+	if err != nil {
+		return GenesysIDResponse{},
+			fmt.Errorf("failed to make DID from ID: %w", err)
+	}
+
+	return GenesysIDResponse{
+			DID:     did.String(),
+			ID:      coreID.String(),
+			IDAsInt: coreID.BigInt().String(),
+		},
+		nil
 }

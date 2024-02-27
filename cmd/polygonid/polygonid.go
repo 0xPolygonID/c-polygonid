@@ -216,18 +216,15 @@ func PLGNAuthV2InputsMarshal(jsonResponse **C.char, in *C.char,
 	return true
 }
 
+// Deprecated: Use PLGNNewGenesisID instead. It supports environment
+// configuration, giving the ability to register custom DID methods.
+//
 //export PLGNCalculateGenesisID
 func PLGNCalculateGenesisID(jsonResponse **C.char, in *C.char,
 	status **C.PLGNStatus) bool {
 
-	_, cancel := logAPITime()
+	ctx, cancel := logAPITime()
 	defer cancel()
-
-	var req struct {
-		ClaimsTreeRoot *jsonIntStr     `json:"claimsTreeRoot"`
-		Blockchain     core.Blockchain `json:"blockchain"`
-		Network        core.NetworkID  `json:"network"`
-	}
 
 	if in == nil {
 		maybeCreateStatus(status, C.PLGNSTATUSCODE_NIL_POINTER,
@@ -235,47 +232,50 @@ func PLGNCalculateGenesisID(jsonResponse **C.char, in *C.char,
 		return false
 	}
 
-	err := json.Unmarshal([]byte(C.GoString(in)), &req)
+	inStr := C.GoString(in)
+	resp, err := c_polygonid.NewGenesysID(ctx, c_polygonid.EnvConfig{},
+		[]byte(inStr))
 	if err != nil {
 		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
 		return false
 	}
 
-	state, err := merkletree.HashElems(req.ClaimsTreeRoot.Int(),
-		merkletree.HashZero.BigInt(), merkletree.HashZero.BigInt())
+	respB, err := json.Marshal(resp)
 	if err != nil {
 		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
 		return false
 	}
 
-	typ, err := core.BuildDIDType(core.DIDMethodPolygonID, req.Blockchain,
-		req.Network)
+	*jsonResponse = C.CString(string(respB))
+	return true
+}
+
+//export PLGNNewGenesisID
+func PLGNNewGenesisID(jsonResponse **C.char, in *C.char, cfg *C.char,
+	status **C.PLGNStatus) bool {
+
+	ctx, cancel := logAPITime()
+	defer cancel()
+
+	if in == nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_NIL_POINTER,
+			"pointer to request is nil")
+		return false
+	}
+
+	envCfg, err := createEnvConfig(cfg)
 	if err != nil {
 		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
 		return false
 	}
 
-	coreID, err := core.NewIDFromIdenState(typ, state.BigInt())
+	inStr := C.GoString(in)
+	resp, err := c_polygonid.NewGenesysID(ctx, envCfg, []byte(inStr))
 	if err != nil {
 		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
 		return false
 	}
 
-	did, err := core.ParseDIDFromID(*coreID)
-	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
-		return false
-	}
-
-	resp := struct {
-		DID     string `json:"did"`
-		ID      string `json:"id"`
-		IDAsInt string `json:"idAsInt"`
-	}{
-		DID:     did.String(),
-		ID:      coreID.String(),
-		IDAsInt: coreID.BigInt().String(),
-	}
 	respB, err := json.Marshal(resp)
 	if err != nil {
 		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
@@ -863,13 +863,11 @@ func PLGNCacheCredentials(in *C.char, cfg *C.char, status **C.PLGNStatus) bool {
 
 // createEnvConfig returns empty config if input json is nil.
 func createEnvConfig(cfgJson *C.char) (c_polygonid.EnvConfig, error) {
-	var cfg c_polygonid.EnvConfig
-	var err error
+	var cfgData []byte
 	if cfgJson != nil {
-		cfgData := C.GoBytes(unsafe.Pointer(cfgJson), C.int(C.strlen(cfgJson)))
-		err = json.Unmarshal(cfgData, &cfg)
+		cfgData = C.GoBytes(unsafe.Pointer(cfgJson), C.int(C.strlen(cfgJson)))
 	}
-	return cfg, err
+	return c_polygonid.NewEnvConfigFromJSON(cfgData)
 }
 
 type atomicQueryInputsFn func(ctx context.Context, cfg c_polygonid.EnvConfig,

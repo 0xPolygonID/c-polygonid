@@ -28,6 +28,16 @@ The configuration object is a JSON document with the following structure:
 ```json5
 {
   "ipfsNodeUrl": "http://localhost:5001", // IPFS Node URL
+  "didMethods": [
+    {
+      "name": "ethr",           // DID method name
+      "blockchain": "ethereum", // Blockchain name
+      "network": "mainnet",     // Network name
+      "networkFlag": 6,         // Network flag
+      "methodByte": "0b010011", // Method byte
+      "chainID": "10293"
+    }
+  ],
   "chainConfigs": {
     "1": { // Chain ID as decimal
       "rpcUrl": "http://localhost:8545", // RPC URL
