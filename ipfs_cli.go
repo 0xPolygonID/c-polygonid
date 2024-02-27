@@ -25,7 +25,7 @@ func (c *ipfsCli) Cat(path string) (io.ReadCloser, error) {
 		url.QueryEscape(path)
 	resp, err := c.getHttpCli().Post(rpcURL, "", http.NoBody)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to send IPFS CAT request: %w", err)
 	}
 	if resp.StatusCode != http.StatusOK {
 		_ = resp.Body.Close()
@@ -63,7 +63,7 @@ func (c *ipfsCli) Add(ctx context.Context, f io.Reader,
 
 	resp, err := c.getHttpCli().Do(req)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to send IPFS ADD request: %w", err)
 	}
 
 	defer func() { _ = resp.Body.Close() }()

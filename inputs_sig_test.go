@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/json"
-	"fmt"
 	"math/big"
 	"net/http"
 	"os"
@@ -16,8 +15,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/iden3/go-circuits/v2"
 	core "github.com/iden3/go-iden3-core/v2"
-	"github.com/iden3/go-iden3-core/v2/w3c"
-	"github.com/iden3/go-iden3-crypto/poseidon"
 	"github.com/iden3/go-merkletree-sql/v2"
 	"github.com/iden3/go-schema-processor/v2/verifiable"
 	"github.com/piprate/json-gold/ld"
@@ -64,6 +61,7 @@ func preserveIPFSHttpCli() func() {
 }
 
 func TestPrepareInputs(t *testing.T) {
+	defer mockBadgerLog(t)()
 
 	type PrepareInputsFn func(
 		ctx context.Context, cfg EnvConfig, in []byte) (
@@ -151,7 +149,7 @@ func TestPrepareInputs(t *testing.T) {
 
 		doTest(t, "atomic_query_mtp_v2_on_chain_status_inputs.json", "",
 			AtomicQueryMtpV2InputsFromJson, nil, cfg,
-			"GetRevocationProof smart contract call [GetRevocationStatus]: roots were not saved to identity tree store")
+			"error resolving revocation status: GetRevocationProof smart contract call [GetRevocationStatus]: roots were not saved to identity tree store")
 	})
 
 	t.Run("AtomicQueryMtpV2InputsFromJson", func(t *testing.T) {
@@ -407,14 +405,19 @@ func TestPrepareInputs(t *testing.T) {
 			defer httpmock.MockHTTPClient(t, map[string]string{
 				`http://localhost:8545%%%{"jsonrpc":"2.0","id":1,"method":"eth_call","params":[{"from":"0x0000000000000000000000000000000000000000","input":"0xb4bdea55000d5228592025eac998034e2c03f242819d84806687a3b0c95eefa295ca1202","to":"0x6f0a444df4d231d85f66e4836f836034f0fefe24"},"latest"]}`: "testdata/httpresp_eth_resp1.json",
 				"http://localhost:8003/node/8ef2ce21e01d86ec2376fe28bf6b47a84d08f8628d970474a2698cebf94bca1c":                "testdata/httpresp_rhs_8ef2ce21e01d86ec2376fe28bf6b47a84d08f8628d970474a2698cebf94bca1c.json",
+				"http://localhost:8003/node/8ef2e21e01d86ec2376fe28bf6b47a84d08f8628d970474a2698cebf94bca1c":                 "testdata/httpresp_rhs_8ef2ce21e01d86ec2376fe28bf6b47a84d08f8628d970474a2698cebf94bca1c.json",
 				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld":             "testdata/httpresp_kyc-v3.json-ld",
 				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld": "testdata/httpresp_iden3credential_v2.json",
 			}, httpmock.IgnoreUntouchedURLs())()
 
 			cfg := EnvConfig{
-				EthereumURL: "http://localhost:8545",
-				StateContractAddr: common.HexToAddress(
-					"0x6F0a444Df4d231D85F66e4836f836034F0feFE24"),
+				ChainConfigs: map[core.ChainID]ChainConfig{
+					80001: {
+						RPCUrl: "http://localhost:8545",
+						StateContractAddr: common.HexToAddress(
+							"0x6F0a444Df4d231D85F66e4836f836034F0feFE24"),
+					},
+				},
 			}
 			doTest(t, "atomic_query_sig_v2_merklized_rhs_inputs.json",
 				"atomic_query_sig_v2_merklized_rhs_output.json",
@@ -437,9 +440,13 @@ func TestPrepareInputs(t *testing.T) {
 			}, httpmock.IgnoreUntouchedURLs())()
 
 			cfg := EnvConfig{
-				EthereumURL: "http://localhost:8545",
-				StateContractAddr: common.HexToAddress(
-					"0x6F0a444Df4d231D85F66e4836f836034F0feFE24"),
+				ChainConfigs: map[core.ChainID]ChainConfig{
+					80001: {
+						RPCUrl: "http://localhost:8545",
+						StateContractAddr: common.HexToAddress(
+							"0x6F0a444Df4d231D85F66e4836f836034F0feFE24"),
+					},
+				},
 			}
 			doTest(t, "atomic_query_sig_v2_merklized_rhs_inputs.json",
 				"atomic_query_sig_v2_merklized_rhs_nonempty_output.json",
@@ -458,9 +465,13 @@ func TestPrepareInputs(t *testing.T) {
 			}, httpmock.IgnoreUntouchedURLs())()
 
 			cfg := EnvConfig{
-				EthereumURL: "http://localhost:8545",
-				StateContractAddr: common.HexToAddress(
-					"0x6F0a444Df4d231D85F66e4836f836034F0feFE24"),
+				ChainConfigs: map[core.ChainID]ChainConfig{
+					80001: {
+						RPCUrl: "http://localhost:8545",
+						StateContractAddr: common.HexToAddress(
+							"0x6F0a444Df4d231D85F66e4836f836034F0feFE24"),
+					},
+				},
 			}
 			doTest(t, "atomic_query_sig_v2_merklized_rhs_revoked_inputs.json",
 				"", AtomicQuerySigV2InputsFromJson, nil, cfg,
@@ -643,30 +654,16 @@ func TestEnvConfig_UnmarshalJSON(t *testing.T) {
 	}{
 		{
 			title: "one",
-			in: `{
-  "ethereumUrl": "http://localhost:8545",
-  "stateContractAddr": "0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655",
-  "reverseHashServiceUrl": "http://localhost:8003"
-}`,
-			want: EnvConfig{
-				EthereumURL:           "http://localhost:8545",
-				StateContractAddr:     common.HexToAddress("0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655"),
-				ReverseHashServiceUrl: "http://localhost:8003",
-			},
+			in:    `{}`,
+			want:  EnvConfig{},
 		},
 		{
 			title: "ipfs node",
 			in: `{
-  "ethereumUrl": "http://localhost:8545",
-  "stateContractAddr": "0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655",
-  "reverseHashServiceUrl": "http://localhost:8003",
   "ipfsNodeUrl": "http://localhost:5001"
 }`,
 			want: EnvConfig{
-				EthereumURL:           "http://localhost:8545",
-				StateContractAddr:     common.HexToAddress("0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655"),
-				ReverseHashServiceUrl: "http://localhost:8003",
-				IPFSNodeURL:           "http://localhost:5001",
+				IPFSNodeURL: "http://localhost:5001",
 			},
 		},
 		{
@@ -692,10 +689,9 @@ func TestEnvConfig_UnmarshalJSON(t *testing.T) {
   }
 }`,
 			want: EnvConfig{
-				EthereumURL:           "http://localhost:8545",
-				StateContractAddr:     common.HexToAddress("0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655"),
-				ReverseHashServiceUrl: "http://localhost:8003",
-				IPFSNodeURL:           "http://localhost:5001",
+				IPFSNodeURL:       "http://localhost:5001",
+				EthereumURL:       "http://localhost:8545",
+				StateContractAddr: "0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655",
 				ChainConfigs: map[core.ChainID]ChainConfig{
 					1: {
 						RPCUrl:            "http://localhost:8545",
@@ -831,172 +827,6 @@ func TestAtomicQuerySigV2OnChainInputsFromJson(t *testing.T) {
 	require.Equal(t, &wantGistProof, obj.GistProof)
 }
 
-func Test_resolverOnChainRevocationStatus(t *testing.T) {
-	t.Skip("skipping test, this is for debugging OnchainRevocation status only")
-	cfg := EnvConfig{
-		EthereumURL:       "<RPC>",
-		StateContractAddr: common.HexToAddress("0x66277D6E1Ad434772AF2A88de2901e3435Dbb8E6"),
-	}
-
-	did, err := w3c.ParseDID("did:polygonid:polygon:mumbai:2qCU58EJgrEM9Lvkv6vTqkybetLHDL4yfpRNS32eas")
-	require.NoError(t, err)
-	id, err := core.IDFromDID(*did)
-	require.NoError(t, err)
-	status := &verifiable.CredentialStatus{
-		ID:              "did:polygonid:polygon:mumbai:2qCU58EJgrEM9Lvkv6vTqkybetLHDL4yfpRNS32eas/credentialStatus?revocationNonce=689689820&contractAddress=80001:0xA5055e131A3544BfB4eA20CD269e6f738fAE32B0",
-		Type:            "Iden3OnchainSparseMerkleTreeProof2023",
-		RevocationNonce: 689689820,
-	}
-
-	got, err := resolverOnChainRevocationStatus(context.Background(), cfg, &id, status)
-	require.NoError(t, err)
-
-	proofJson, _ := json.Marshal(got)
-	fmt.Println(string(proofJson))
-
-	fmt.Printf("%+v\n", got.TreeState)
-	fmt.Println("RevTreeRoot : ", got.TreeState.RevocationRoot.BigInt())
-
-	root, _ := merkletree.RootFromProof(got.Proof, big.NewInt(689689820), big.NewInt(0))
-	fmt.Println("Root : ", root.BigInt())
-
-	// ????
-	nonce, b := new(big.Int).SetString("689689820", 10)
-	require.True(t, b)
-
-	fmt.Printf("Proof %+v\n", got.Proof)
-
-	proofValid := merkletree.VerifyProof(got.TreeState.RevocationRoot,
-		got.Proof, nonce, big.NewInt(0))
-
-	require.True(t, proofValid)
-
-	state, _ := poseidon.Hash([]*big.Int{got.TreeState.ClaimsRoot.BigInt(), got.TreeState.RevocationRoot.BigInt(),
-		got.TreeState.RootOfRoots.BigInt()})
-
-	fmt.Println("State : ", state)
-	require.Equal(t, state, got.TreeState.State.BigInt())
-}
-
-func TestNetworkCfgByID(t *testing.T) {
-	defaultChainCfg := ChainConfig{
-		RPCUrl:            "http://host2.com/default",
-		StateContractAddr: common.BytesToAddress([]byte{1}),
-	}
-
-	cfg := EnvConfig{
-		ChainConfigs: PerChainConfig{
-			80001: ChainConfig{
-				RPCUrl:            "http://host1.com/mumbai",
-				StateContractAddr: common.BytesToAddress([]byte{2}),
-			},
-		},
-		EthereumURL:           defaultChainCfg.RPCUrl,
-		StateContractAddr:     defaultChainCfg.StateContractAddr,
-		ReverseHashServiceUrl: "",
-		IPFSNodeURL:           "",
-	}
-
-	emptyCfg := EnvConfig{}
-
-	mkID := func(t testing.TB, method core.DIDMethod,
-		blockchain core.Blockchain, network core.NetworkID) *core.ID {
-
-		tp, err := core.BuildDIDType(method, blockchain, network)
-		require.NoError(t, err)
-		id, err := core.NewIDFromIdenState(tp, big.NewInt(1))
-		require.NoError(t, err)
-		return id
-	}
-
-	t.Run("chain config found", func(t *testing.T) {
-		polygonMumbaiID := mkID(t, core.DIDMethodPolygonID, core.Polygon,
-			core.Mumbai)
-		chainCfg, err := cfg.networkCfgByID(polygonMumbaiID)
-		require.NoError(t, err)
-		require.Equal(t, cfg.ChainConfigs[80001], chainCfg)
-	})
-
-	t.Run("default chain config", func(t *testing.T) {
-		ethMainID := mkID(t, core.DIDMethodIden3, core.Ethereum, core.Main)
-		chainCfg, err := cfg.networkCfgByID(ethMainID)
-		require.NoError(t, err)
-		require.Equal(t, defaultChainCfg, chainCfg)
-	})
-
-	t.Run("config is empty", func(t *testing.T) {
-		ethMainID := mkID(t, core.DIDMethodIden3, core.Ethereum, core.Main)
-		_, err := emptyCfg.networkCfgByID(ethMainID)
-		require.EqualError(t, err, "ethereum url is empty")
-	})
-
-}
-
-func TestRHSBaseURL(t *testing.T) {
-	mkHash := func(t testing.TB, hexStr string) *merkletree.Hash {
-		h, err := merkletree.NewHashFromHex(hexStr)
-		require.NoError(t, err)
-		return h
-	}
-
-	testCases := []struct {
-		title   string
-		in      string
-		baseURL string
-		hash    *merkletree.Hash
-		wantErr string
-	}{
-		{
-			title:   "old format 1",
-			in:      "http://localhost:8003/node/",
-			baseURL: "http://localhost:8003/",
-			hash:    nil,
-			wantErr: "",
-		},
-		{
-			title:   "old format 2",
-			in:      "http://localhost:8003/node/",
-			baseURL: "http://localhost:8003/",
-			hash:    nil,
-			wantErr: "",
-		},
-		{
-			title:   "without node suffix",
-			in:      "http://localhost:8003/",
-			baseURL: "http://localhost:8003/",
-			hash:    nil,
-			wantErr: "",
-		},
-		{
-			title:   "with state",
-			in:      "http://localhost:8003/node/?state=46a119b1184b2f4256c13633d1f36dc2f489523e14ca4058e1c53324f16a4506",
-			baseURL: "http://localhost:8003/",
-			hash:    mkHash(t, "46a119b1184b2f4256c13633d1f36dc2f489523e14ca4058e1c53324f16a4506"),
-			wantErr: "",
-		},
-		{
-			title:   "error parsing state",
-			in:      "http://localhost:8003/node?state=46a119b1184b2f4256c13633d1f36dc2f489523e14ca4058e1c53324f16a45",
-			baseURL: "",
-			hash:    nil,
-			wantErr: "invalid hash length",
-		},
-	}
-	for i := range testCases {
-		tc := testCases[i]
-		t.Run(tc.title, func(t *testing.T) {
-			baseURL, hash, err := rhsBaseURL(tc.in)
-			if tc.wantErr != "" {
-				require.EqualError(t, err, tc.wantErr)
-			} else {
-				require.NoError(t, err)
-				require.Equal(t, tc.baseURL, baseURL)
-				require.Equal(t, tc.hash, hash)
-			}
-		})
-	}
-}
-
 func stringFromJsonObj(obj map[string]any, key string) string {
 	v, ok := obj[key].(string)
 	if ok {
@@ -1044,6 +874,7 @@ func (c *countingDocumentLoader) reset() {
 }
 
 func TestMerklizeCred(t *testing.T) {
+	defer mockBadgerLog(t)()
 	flushCacheDB()
 
 	defer httpmock.MockHTTPClient(t, map[string]string{
@@ -1104,6 +935,8 @@ func vcCredChecksum(in []byte) []byte {
 }
 
 func TestPreCacheVC(t *testing.T) {
+	defer mockBadgerLog(t)()
+
 	flushCacheDB()
 
 	defer httpmock.MockHTTPClient(t, map[string]string{

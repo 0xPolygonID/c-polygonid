@@ -9,6 +9,8 @@ import (
 	"github.com/dgraph-io/badger/v4"
 )
 
+var badgerLogger badger.Logger = nil
+
 var globalDB *badger.DB
 var dbCnt int
 var dbCond = sync.NewCond(&sync.Mutex{})
@@ -99,6 +101,9 @@ func openDB() (*badger.DB, error) {
 	}
 
 	opts := badger.DefaultOptions(badgerPath)
+	if badgerLogger != nil {
+		opts.Logger = badgerLogger
+	}
 
 	return badger.Open(opts)
 }

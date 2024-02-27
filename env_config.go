@@ -12,15 +12,16 @@ import (
 )
 
 type EnvConfig struct {
-	DIDMethods            []MethodConfig
-	ChainConfigs          PerChainConfig
-	EthereumURL           string         // Deprecated: Use ChainConfigs instead
-	StateContractAddr     common.Address // Deprecated: Use ChainConfigs instead
-	ReverseHashServiceUrl string         // Deprecated
-	IPFSNodeURL           string
+	DIDMethods   []MethodConfig
+	ChainConfigs PerChainConfig
+	IPFSNodeURL  string
+
+	// backward incompatible fields, it's an error to use them
+	EthereumURL       string
+	StateContractAddr string
 }
 
-var globalRegistationLock sync.Mutex
+var globalRegistrationLock sync.Mutex
 var registeredDIDMethods sync.Map
 
 // NewEnvConfigFromJSON returns empty config if input json is nil.
@@ -34,6 +35,16 @@ func NewEnvConfigFromJSON(in []byte) (EnvConfig, error) {
 	err = json.Unmarshal(in, &cfg)
 	if err != nil {
 		return cfg, fmt.Errorf("unable to parse json config: %w", err)
+	}
+
+	if cfg.EthereumURL != "" {
+		return cfg, fmt.Errorf(
+			"ethereumUrl is deprecated, use chainConfigs instead")
+	}
+
+	if cfg.StateContractAddr != "" {
+		return cfg, fmt.Errorf(
+			"stateContractAddr is deprecated, use chainConfigs instead")
 	}
 
 	if len(cfg.DIDMethods) == 0 {
@@ -79,8 +90,8 @@ func registerDIDMethods(methodConfigs []MethodConfig) error {
 		return nil
 	}
 
-	globalRegistationLock.Lock()
-	defer globalRegistationLock.Unlock()
+	globalRegistrationLock.Lock()
+	defer globalRegistrationLock.Unlock()
 
 	for _, methodCfg := range newMethodConfigs {
 		chainIDi := chainIDToInt(methodCfg.ChainID)
