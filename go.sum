@@ -170,6 +170,8 @@ github.com/iden3/go-merkletree-sql/v2 v2.0.6 h1:vsVDImnvnHf7Ggr45ptFOXJyWNA/8IwV
 github.com/iden3/go-merkletree-sql/v2 v2.0.6/go.mod h1:kRhHKYpui5DUsry5RpveP6IC4XMe6iApdV9VChRYuEk=
 github.com/iden3/go-onchain-credential-adapter v0.0.0-20240223120548-5d8d1d28c6d1 h1:xpKhrLYi0s6ocUCrFwkjG0YQjndDGMW7/cgU9KjLyig=
 github.com/iden3/go-onchain-credential-adapter v0.0.0-20240223120548-5d8d1d28c6d1/go.mod h1:1RVClY0JdWmzgx3ZBvy0Z2bNyPg2iz+0R9Ryl2Z3s64=
+github.com/iden3/go-onchain-credential-adapter v0.0.0-20240310150701-8f736ebbe935 h1:Qo8DYETiib0UFe7zRpH0oUcT0Appzm2+2ZMyX8KY06I=
+github.com/iden3/go-onchain-credential-adapter v0.0.0-20240310150701-8f736ebbe935/go.mod h1:1RVClY0JdWmzgx3ZBvy0Z2bNyPg2iz+0R9Ryl2Z3s64=
 github.com/iden3/go-schema-processor/v2 v2.3.1 h1:cjsfUZNgyPoHQDEES4vuVod948QC9l35QkoEIat0ghc=
 github.com/iden3/go-schema-processor/v2 v2.3.1/go.mod h1:BcHVDZyn8q8vUlL+XpOo7hpwXmEjxzO8ao1LkvFsM+k=
 github.com/iden3/merkletree-proof v0.1.0 h1:AHmpkbCTLKv1MWWt6YwogB65E4y6UZthbZYPed81w4U=

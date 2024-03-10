@@ -7,16 +7,16 @@ import (
 
 	"github.com/ethereum/go-ethereum/ethclient"
 	core "github.com/iden3/go-iden3-core/v2"
-	"github.com/iden3/go-iden3-core/v2/w3c"
 	convertor "github.com/iden3/go-onchain-credential-adapter"
 	"github.com/iden3/go-schema-processor/v2/merklize"
 	"github.com/iden3/go-schema-processor/v2/verifiable"
 )
 
 type w3CCredentialFromOnchainHexRequest struct {
-	IssuerDID coreDID `json:"issuerDID"`
-	Hexdata   string  `json:"hexdata"`
-	Version   string  `json:"version"`
+	ContractAddress string `json:"contractAddress"`
+	ChainID         int32  `json:"chainID"`
+	Hexdata         string `json:"hexdata"`
+	Version         string `json:"version"`
 }
 
 func W3CCredentialFromOnchainHex(
@@ -29,15 +29,9 @@ func W3CCredentialFromOnchainHex(
 		return nil, fmt.Errorf("failed to unmarshal input params: %w", err)
 	}
 
-	issuerDID := w3c.DID(inParams.IssuerDID)
-
-	chainID, err := core.ChainIDfromDID(issuerDID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get chain id from issuer: %w", err)
-	}
-	chainConfig, ok := envCfg.ChainConfigs[chainID]
+	chainConfig, ok := envCfg.ChainConfigs[core.ChainID(inParams.ChainID)]
 	if !ok {
-		return nil, fmt.Errorf("chain id '%d' not found in config", chainID)
+		return nil, fmt.Errorf("chain id '%d' not found in config", inParams.ChainID)
 	}
 
 	ethcli, err := ethclient.DialContext(ctx, chainConfig.RPCUrl)
@@ -50,7 +44,8 @@ func W3CCredentialFromOnchainHex(
 	credential, err := convertor.W3CCredentialFromOnchainHex(
 		ctx,
 		ethcli,
-		&issuerDID,
+		inParams.ContractAddress,
+		inParams.ChainID,
 		inParams.Hexdata,
 		inParams.Version,
 		convertor.WithMerklizeOptions(
