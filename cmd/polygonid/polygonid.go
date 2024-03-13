@@ -909,6 +909,60 @@ func PLGNW3CCredentialFromOnchainHex(jsonResponse **C.char, in *C.char,
 	return true
 }
 
+// PLGNDescribeID parses ID and return it in different representations.
+// Request example:
+//
+// {"id":"31Akw5AB2xBrwqmbDUA2XoSGCfTepz52q9jmFE4mXA"}
+//
+// {"idAsInt":"24460059377712687587111979692736628604804094576108957842967948238113620738"}
+//
+// There is possible to pass both id & idAsInt fields in the request. But if the
+// resulted ID would not be equal, error returns.
+//
+// Response example:
+//
+//	{
+//	  "did":     "did:polygonid:linea:testnet:31Akw5AB2xBrwqmbDUA2XoSGCfTepz52q9jmFE4mXA",
+//	  "id":      "31Akw5AB2xBrwqmbDUA2XoSGCfTepz52q9jmFE4mXA",
+//	  "idAsInt": "24460059377712687587111979692736628604804094576108957842967948238113620738",
+//	}
+//
+//export PLGNDescribeID
+func PLGNDescribeID(jsonResponse **C.char, in *C.char, cfg *C.char,
+	status **C.PLGNStatus) (ok bool) {
+
+	ctx, cancel := logAPITime()
+	defer cancel()
+
+	if in == nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_NIL_POINTER,
+			"pointer to request is nil")
+		return false
+	}
+
+	envCfg, err := createEnvConfig(cfg)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		return false
+	}
+
+	inBytes := C.GoString(in)
+	resp, err := c_polygonid.DescribeID(ctx, envCfg, inBytes)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		return false
+	}
+
+	respB, err := json.Marshal(resp)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		return false
+	}
+
+	*jsonResponse = C.CString(string(respB))
+	return true
+}
+
 // createEnvConfig returns empty config if input json is nil.
 func createEnvConfig(cfgJson *C.char) (c_polygonid.EnvConfig, error) {
 	var cfgData []byte

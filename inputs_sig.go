@@ -2093,3 +2093,63 @@ func NewGenesysID(ctx context.Context, cfg EnvConfig,
 		},
 		nil
 }
+
+type DescribeIDResponse struct {
+	DID     string `json:"did"`
+	ID      string `json:"id"`
+	IDAsInt string `json:"idAsInt"`
+}
+
+func DescribeID(ctx context.Context, cfg EnvConfig,
+	in []byte) (DescribeIDResponse, error) {
+
+	var req struct {
+		ID      *core.ID         `json:"id"`
+		IDAsInt *JsonFieldIntStr `json:"idAsInt"`
+	}
+
+	if in == nil {
+		return DescribeIDResponse{}, errors.New("request is empty")
+	}
+
+	err := json.Unmarshal(in, &req)
+	if err != nil {
+		return DescribeIDResponse{},
+			fmt.Errorf("failed to unmarshal request: %w", err)
+	}
+
+	var id *core.ID
+	if req.ID != nil {
+		id = req.ID
+	}
+
+	if req.IDAsInt != nil {
+		newID, err := core.IDFromInt(req.IDAsInt.Int())
+		if err != nil {
+			return DescribeIDResponse{},
+				fmt.Errorf("failed to create ID from int: %w", err)
+		}
+		if id == nil {
+			id = &newID
+		} else if !id.Equal(&newID) {
+			return DescribeIDResponse{},
+				errors.New("id and idAsInt are different")
+		}
+	}
+
+	if id == nil {
+		return DescribeIDResponse{}, errors.New("id is not set in the request")
+	}
+
+	did, err := core.ParseDIDFromID(*id)
+	if err != nil {
+		return DescribeIDResponse{},
+			fmt.Errorf("failed to make DID from ID: %w", err)
+	}
+
+	return DescribeIDResponse{
+		DID:     did.String(),
+		ID:      id.String(),
+		IDAsInt: id.BigInt().String(),
+	}, nil
+}
