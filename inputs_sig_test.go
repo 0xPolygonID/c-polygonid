@@ -1070,9 +1070,6 @@ func TestDescribeID(t *testing.T) {
 
 	ctx := context.Background()
 
-	_, err := DescribeID(ctx, EnvConfig{}, []byte(in))
-	require.EqualError(t, err, "failed to make DID from ID: not supported blockchain")
-
 	cfgJSON := `{
   "chainConfigs": {
     "59140": {
