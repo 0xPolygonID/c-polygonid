@@ -1325,6 +1325,14 @@ func queryFromObjMerklized(ctx context.Context,
 	}
 	field, op, err := getQueryFieldAndOperator(requestObj)
 	if errors.As(err, &errPathNotFound{}) {
+
+		if circuitID == circuits.AtomicQueryV3CircuitID ||
+			circuitID == circuits.AtomicQueryV3OnChainCircuitID {
+			out.Operator = circuits.NOOP
+			out.Values = []*big.Int{}
+			return out, nil, nil
+		}
+
 		out.Operator = circuits.EQ
 		var path merklize.Path
 		path, err = merklize.NewPath(

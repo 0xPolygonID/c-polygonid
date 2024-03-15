@@ -554,6 +554,19 @@ func TestPrepareInputs(t *testing.T) {
 			AtomicQueryV3InputsFromJson, nil, EnvConfig{}, "")
 	})
 
+	t.Run("AtomicQueryV3InputsFromJson - empty query", func(t *testing.T) {
+		defer httpmock.MockHTTPClient(t, map[string]string{
+			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld":                                                         "testdata/httpresp_kyc-v3.json-ld",
+			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld":                                             "testdata/httpresp_iden3credential_v2.json",
+			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/2376431481": "testdata/httpresp_rev_status_2376431481.json",
+			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/0":          "testdata/httpresp_rev_status_wuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU_0.json",
+		}, httpmock.IgnoreUntouchedURLs())()
+
+		doTest(t, "atomic_query_v3_sig_empty_query_inputs.json",
+			"atomic_query_v3_sig_empty_query_output.json",
+			AtomicQueryV3InputsFromJson, nil, EnvConfig{}, "")
+	})
+
 	// Inputs does not include proof type, but the query has both. Choose MTP.
 	t.Run("AtomicQueryV3InputsFromJson - No proof type, Have both", func(t *testing.T) {
 		defer httpmock.MockHTTPClient(t, map[string]string{
