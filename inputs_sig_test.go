@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"strconv"
 	"sync"
 	"testing"
 
@@ -648,6 +649,20 @@ func TestPrepareInputs(t *testing.T) {
 			AtomicQueryV3OnChainInputsFromJson, nil, EnvConfig{}, "")
 	})
 
+	t.Run("LinkedMultiQueryInputsFromJson", func(t *testing.T) {
+		defer httpmock.MockHTTPClient(t, map[string]string{
+			"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qDnyCaxj4zdYmj6LbegYMjWSnkbKAyqtq31YeuyZV/claims/revocation/status/3972757": "testdata/httpresp_rev_status_3972757.json",
+			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld":                                                           "testdata/httpresp_kyc-v3.json-ld",
+			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld":                                               "testdata/httpresp_iden3credential_v2.json",
+			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/2376431481":   "testdata/httpresp_rev_status_2376431481.json",
+			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/0":            "testdata/httpresp_rev_status_wuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU_0.json",
+		}, httpmock.IgnoreUntouchedURLs())()
+
+		doTest(t, "linked_multi_query_inputs.json",
+			"atomic_query_v3_on_chain_tx_data_output.json",
+			LinkedMultiQueryInputsFromJson, nil, EnvConfig{}, "")
+	})
+
 }
 
 func TestEnvConfig_UnmarshalJSON(t *testing.T) {
@@ -1063,4 +1078,66 @@ func TestNewGenesysID_DIDMethod_Error(t *testing.T) {
 
 	_, err = NewGenesysID(ctx, cfg, []byte(in))
 	require.EqualError(t, err, "failed to build DID type: not supported network")
+}
+
+func TestMkVPObj(t *testing.T) {
+	testCases := []struct {
+		in      []objEntry
+		want    jsonObj
+		wantErr string
+	}{
+		{
+			in:      []objEntry{{}},
+			wantErr: "empty key",
+		},
+		{
+			in:   []objEntry{},
+			want: jsonObj{},
+		},
+		{
+			in: []objEntry{
+				{"x.y1.z1", 3},
+				{"x.y1.z2", 4},
+				{"x.y2", 5},
+			},
+			want: jsonObj{
+				"@type": "tp",
+				"x": jsonObj{
+					"y1": jsonObj{
+						"z1": 3,
+						"z2": 4,
+					},
+					"y2": 5,
+				},
+			},
+		},
+		{
+			in: []objEntry{
+				{"x.y1.z1", 3},
+				{"x.y1.z2", 4},
+				{"x.y1", 5},
+			},
+			wantErr: "key already exists: y1",
+		},
+		{
+			in: []objEntry{
+				{"x.y1", 5},
+				{"x.y1.z1", 3},
+				{"x.y1.z2", 4},
+			},
+			wantErr: "not a json object: y1",
+		},
+	}
+
+	for i, tc := range testCases {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			out, err := mkVPObj("tp", tc.in...)
+			if tc.wantErr != "" {
+				require.EqualError(t, err, tc.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tc.want, out)
+		})
+	}
 }

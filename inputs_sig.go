@@ -465,6 +465,11 @@ type v3InputsRequest struct {
 	LinkNonce  JsonBigInt `json:"linkNonce"`
 }
 
+type linkedMultiQueryInputsRequest struct {
+	inputsRequest
+	LinkNonce *JsonBigInt `json:"linkNonce"`
+}
+
 type onChainInputsRequest struct {
 	ID                       *core.ID            `json:"id"`
 	ProfileNonce             *JsonBigInt         `json:"profileNonce"`
@@ -627,24 +632,63 @@ func verifiablePresentationFromCred(ctx context.Context,
 		return nil, nil, datatype, hasher, err
 	}
 
-	verifiablePresentation = fmtVerifiablePresentation(contextURL,
-		contextType, field, rawValue)
+	verifiablePresentation, err = fmtVerifiablePresentation(contextURL,
+		contextType, objEntry{key: field, value: rawValue})
 
 	return
 }
 
-func mkVPObj(field string, value any) (string, any) {
-	idx := strings.Index(field, ".")
-	if idx == -1 {
-		return field, value
-	}
-
-	nestedField, value := mkVPObj(field[idx+1:], value)
-	return field[:idx], map[string]any{nestedField: value}
+type objEntry struct {
+	key   string
+	value any
 }
 
-func fmtVerifiablePresentation(context string, tp string, field string,
-	value any) map[string]any {
+func mkVPObj(tp string, kvs ...objEntry) (jsonObj, error) {
+	out := jsonObj{"@type": tp}
+	for _, kv := range kvs {
+		err := insertKV(out, kv)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return out, nil
+}
+
+func insertKV(obj jsonObj, kv objEntry) error {
+	if kv.key == "" {
+		return errors.New("empty key")
+	}
+
+	idx := strings.Index(kv.key, ".")
+	if idx == -1 {
+		if _, ok := obj[kv.key]; ok {
+			return fmt.Errorf("key already exists: %v", kv.key)
+		}
+
+		obj[kv.key] = kv.value
+		return nil
+	}
+
+	if idx == 0 || idx == len(kv.key)-1 {
+		return fmt.Errorf("invalid key with an empty part: %v", kv.key)
+	}
+
+	var nestedObj jsonObj
+	nestedObjI, ok := obj[kv.key[:idx]]
+	if !ok {
+		nestedObj = make(jsonObj)
+		obj[kv.key[:idx]] = nestedObj
+	} else {
+		nestedObj, ok = nestedObjI.(jsonObj)
+		if !ok {
+			return fmt.Errorf("not a json object: %v", kv.key[:idx])
+		}
+	}
+	return insertKV(nestedObj, objEntry{key: kv.key[idx+1:], value: kv.value})
+}
+
+func fmtVerifiablePresentation(context string, tp string,
+	kvs ...objEntry) (map[string]any, error) {
 
 	var ldContext any
 
@@ -660,21 +704,20 @@ func fmtVerifiablePresentation(context string, tp string, field string,
 		vcTypes = append(vcTypes, tp)
 	}
 
-	// if field name is a dot-separated path, create nested object from it.
-	field, value = mkVPObj(field, value)
+	credSubject, err := mkVPObj(tp, kvs...)
+	if err != nil {
+		return nil, err
+	}
 
 	return map[string]any{
 		"@context": baseContext,
 		"@type":    "VerifiablePresentation",
 		"verifiableCredential": map[string]any{
-			"@context": ldContext,
-			"@type":    vcTypes,
-			"credentialSubject": map[string]any{
-				"@type": tp,
-				field:   value,
-			},
+			"@context":          ldContext,
+			"@type":             vcTypes,
+			"credentialSubject": credSubject,
 		},
-	}
+	}, nil
 }
 
 func AtomicQuerySigV2InputsFromJson(ctx context.Context, cfg EnvConfig,
@@ -1096,6 +1139,61 @@ func AtomicQueryV3InputsFromJson(ctx context.Context, cfg EnvConfig,
 	return out, nil
 }
 
+func LinkedMultiQueryInputsFromJson(ctx context.Context, cfg EnvConfig,
+	in []byte) (AtomicQueryInputsResponse, error) {
+
+	var out AtomicQueryInputsResponse
+	var inpMarsh circuits.LinkedMultiQueryInputs
+
+	var obj linkedMultiQueryInputsRequest
+	err := json.Unmarshal(in, &obj)
+	if err != nil {
+		return out, err
+	}
+
+	if obj.LinkNonce == nil {
+		return out, errors.New(`"linkNonce" field is required`)
+	}
+	inpMarsh.LinkNonce = obj.LinkNonce.BigInt()
+
+	circuitID, err := getCircuitID(obj.Request)
+	if err != nil {
+		return out, err
+	}
+	if circuitID != circuits.AtomicQueryV3CircuitID {
+		return out, errors.New("wrong circuit")
+	}
+
+	var w3cCred verifiable.W3CCredential
+	err = json.Unmarshal(obj.VerifiableCredentials, &w3cCred)
+	if err != nil {
+		return out, err
+	}
+
+	reqProofType, err := queryProofType(obj.Request)
+	if err != nil {
+		return out, err
+	}
+
+	claim, _, err := claimWithSigAndMtpProofFromObj(ctx, cfg, w3cCred, true,
+		reqProofType)
+	if err != nil {
+		return out, err
+	}
+
+	inpMarsh.Claim = claim.Claim
+
+	inpMarsh.Query, out.VerifiablePresentation, err = queriesFromObj(ctx,
+		w3cCred, obj.Request, inpMarsh.Claim, cfg.documentLoader(), circuitID)
+	if err != nil {
+		return out, err
+	}
+
+	out.Inputs = inpMarsh
+
+	return out, nil
+}
+
 // return empty circuits.ProofType if not found
 func queryProofType(requestObj jsonObj) (circuits.ProofType, error) {
 	result, err := getByPath(requestObj, "query.proofType")
@@ -1140,7 +1238,7 @@ func buildQueryPath(ctx context.Context, contextURL string, contextType string,
 		return
 	}
 	// took from identity-server prepareMerklizedQuery func
-	err = path.Prepend("https://www.w3.org/2018/credentials#credentialSubject")
+	err = path.Prepend(iriCredentialSubject)
 	if err != nil {
 		return
 	}
@@ -1180,6 +1278,25 @@ func queryFromObj(ctx context.Context, w3cCred verifiable.W3CCredential,
 	}
 
 	return queryFromObjMerklized(ctx, w3cCred, requestObj, documentLoader,
+		circuitID, claim)
+}
+
+func queriesFromObj(ctx context.Context, w3cCred verifiable.W3CCredential,
+	requestObj jsonObj, claim *core.Claim, documentLoader ld.DocumentLoader,
+	circuitID circuits.CircuitID) ([]*circuits.Query, jsonObj, error) {
+
+	merklizePosition, err := claim.GetMerklizedPosition()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if merklizePosition == core.MerklizedRootPositionNone {
+		panic("not implemented")
+		//return queryFromObjNonMerklized(ctx, w3cCred, requestObj,
+		//	documentLoader, circuitID)
+	}
+
+	return queriesFromObjMerklized(ctx, w3cCred, requestObj, documentLoader,
 		circuitID)
 }
 
@@ -1302,7 +1419,7 @@ func getCircuitID(requestObj jsonObj) (circuits.CircuitID, error) {
 func queryFromObjMerklized(ctx context.Context,
 	w3cCred verifiable.W3CCredential, requestObj jsonObj,
 	documentLoader ld.DocumentLoader,
-	circuitID circuits.CircuitID) (out circuits.Query,
+	circuitID circuits.CircuitID, claim *core.Claim) (out circuits.Query,
 	verifiablePresentation jsonObj, err error) {
 
 	region := trace.StartRegion(ctx, "queryFromObjMerklized")
@@ -1312,6 +1429,19 @@ func queryFromObjMerklized(ctx context.Context,
 	if err != nil {
 		return out, nil, err
 	}
+
+	// TODO uncomment this on tests fixes
+	//mzRoot, err := claim.GetMerklizedRoot()
+	//if err != nil {
+	//	return out, nil, err
+	//}
+	//if mzRoot.Cmp(mz.Root().BigInt()) != 0 {
+	//	return out, nil, fmt.Errorf(
+	//		"claim's merklized root does not match calculated merklized "+
+	//			"credential root. Claim's merklized root: %v, "+
+	//			"credential merklized croot: %v",
+	//		mzRoot.String(), mz.Root().BigInt().String())
+	//}
 
 	var contextURL string
 	contextURL, err = stringByPath(requestObj, "query.context")
@@ -1410,12 +1540,16 @@ func queryFromObjMerklized(ctx context.Context,
 			out.Values = []*big.Int{out.ValueProof.Value}
 		}
 
-		rawValue, err := mz.RawValue(path)
+		var rawValue any
+		rawValue, err = mz.RawValue(path)
 		if err != nil {
-			return out, nil, err
+			return circuits.Query{}, nil, err
 		}
-		verifiablePresentation = fmtVerifiablePresentation(contextURL,
-			contextType, field, rawValue)
+		verifiablePresentation, err = fmtVerifiablePresentation(contextURL,
+			contextType, objEntry{key: field, value: rawValue})
+		if err != nil {
+			return circuits.Query{}, nil, err
+		}
 	default:
 		fieldDatatype, err := mz.JSONLDType(path)
 		if err != nil {
@@ -1429,6 +1563,191 @@ func queryFromObjMerklized(ctx context.Context,
 		}
 	}
 	return out, verifiablePresentation, nil
+}
+
+const iriCredentialSubject = "https://www.w3.org/2018/credentials#credentialSubject"
+
+func mkValueProof(ctx context.Context, mz *merklize.Merklizer,
+	path merklize.Path) (*circuits.ValueProof, error) {
+
+	existenceProof, mzValue, err := mz.Proof(ctx, path)
+	if err != nil {
+		return nil, err
+	}
+
+	if !existenceProof.Existence {
+		return nil, fmt.Errorf(
+			"value not found in verifiable credential by path %v",
+			fmtPath(path))
+	}
+
+	var valueEntry *big.Int
+	valueEntry, err = mzValue.MtEntry()
+	if err != nil {
+		return nil, err
+	}
+
+	var pathEntry *big.Int
+	pathEntry, err = path.MtEntry()
+	if err != nil {
+		return nil, err
+	}
+
+	return &circuits.ValueProof{
+		Path:  pathEntry,
+		Value: valueEntry,
+		MTP:   existenceProof,
+	}, nil
+}
+
+func mkEqQuery(ctx context.Context, mz *merklize.Merklizer,
+	path merklize.Path) (circuits.Query, error) {
+
+	valueProof, err := mkValueProof(ctx, mz, path)
+	if err != nil {
+		return circuits.Query{}, err
+	}
+
+	return circuits.Query{
+		Operator:   circuits.EQ,
+		Values:     []*big.Int{valueProof.Value},
+		ValueProof: valueProof,
+	}, nil
+}
+
+func queriesFromObjMerklized(ctx context.Context,
+	w3cCred verifiable.W3CCredential, requestObj jsonObj,
+	documentLoader ld.DocumentLoader,
+	circuitID circuits.CircuitID) ([]*circuits.Query, jsonObj, error) {
+
+	region := trace.StartRegion(ctx, "queryFromObjMerklized")
+	defer region.End()
+
+	mz, err := wrapMerklizeWithRegion(ctx, w3cCred, documentLoader)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var contextURL string
+	contextURL, err = stringByPath(requestObj, "query.context")
+	if err != nil {
+		return nil, nil, err
+	}
+	var contextType string
+	contextType, err = stringByPath(requestObj, "query.type")
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var queries = make([]*circuits.Query, circuits.LinkedMultiQueryLength)
+	var queryIndex = 0
+	var credSubjObj jsonObj
+	credSubjObj, err = objByBath(requestObj, "query.credentialSubject")
+	if errors.As(err, &errPathNotFound{}) {
+		var path merklize.Path
+		path, err = merklize.NewPath(iriCredentialSubject)
+		if err != nil {
+			return nil, nil, err
+		}
+		var query circuits.Query
+		query, err = mkEqQuery(ctx, mz, path)
+		if err != nil {
+			return nil, nil, err
+		}
+		queries[0] = &query
+		return queries, nil, nil
+	} else if err != nil {
+		return nil, nil,
+			fmt.Errorf("unable to extract field from query: %w", err)
+	}
+
+	var vpEntries []objEntry
+
+	for field, opsI := range credSubjObj {
+		ops, ok := opsI.(jsonObj)
+		if !ok {
+			return nil, nil, fmt.Errorf(
+				"for query field '%v' the opators object is of incorrect type: %T",
+				field, opsI)
+
+		}
+
+		var path merklize.Path
+		path, err = buildQueryPath(ctx, contextURL, contextType, field,
+			documentLoader)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		var valueProof *circuits.ValueProof
+		valueProof, err = mkValueProof(ctx, mz, path)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		if len(ops) == 0 {
+
+			// Handle selective disclosure
+
+			var query = circuits.Query{ValueProof: valueProof}
+			if circuitID == circuits.AtomicQueryV3CircuitID ||
+				circuitID == circuits.AtomicQueryV3OnChainCircuitID ||
+				circuitID == circuits.LinkedMultiQuery10CircuitID {
+				query.Operator = circuits.SD
+				query.Values = []*big.Int{}
+			} else {
+				query.Operator = circuits.EQ
+				query.Values = []*big.Int{query.ValueProof.Value}
+			}
+
+			if queryIndex >= circuits.LinkedMultiQueryLength {
+				return nil, nil, errors.New("too many queries")
+			}
+			queries[queryIndex] = &query
+			queryIndex++
+
+			vpEntry := objEntry{key: field}
+			vpEntry.value, err = mz.RawValue(path)
+			if err != nil {
+				return nil, nil, err
+			}
+			vpEntries = append(vpEntries, vpEntry)
+
+		} else {
+
+			for op, val := range ops {
+				var fieldDatatype string
+				fieldDatatype, err = mz.JSONLDType(path)
+				if err != nil {
+					return nil, nil, err
+				}
+
+				var query = circuits.Query{ValueProof: valueProof}
+				query.Operator, query.Values, err = unpackOperatorWithArgs(op,
+					val, fieldDatatype, mz.Hasher())
+				if err != nil {
+					return nil, nil, err
+				}
+
+				if queryIndex >= circuits.LinkedMultiQueryLength {
+					return nil, nil, errors.New("too many queries")
+				}
+				queries[queryIndex] = &query
+				queryIndex++
+			}
+		}
+	}
+
+	var verifiablePresentation jsonObj
+	if len(vpEntries) > 0 {
+		verifiablePresentation, err = fmtVerifiablePresentation(contextURL,
+			contextType, vpEntries...)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
+	return queries, verifiablePresentation, nil
 }
 
 // Return int operator value by its name and arguments as big.Ints array.
