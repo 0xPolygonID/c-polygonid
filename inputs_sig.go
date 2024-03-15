@@ -1211,6 +1211,13 @@ func queryFromObjNonMerklized(ctx context.Context,
 
 	field, op, err := getQueryFieldAndOperator(requestObj)
 	if errors.As(err, &errPathNotFound{}) {
+		if circuitID == circuits.AtomicQueryMTPV2CircuitID ||
+			circuitID == circuits.AtomicQueryMTPV2OnChainCircuitID ||
+			circuitID == circuits.AtomicQuerySigV2CircuitID ||
+			circuitID == circuits.AtomicQuerySigV2OnChainCircuitID {
+			return out, nil, errors.New(
+				"credentialSubject field is not found in query")
+		}
 		out.Operator = circuits.NOOP
 		out.Values = []*big.Int{}
 		return out, nil, nil
