@@ -16,6 +16,7 @@ import (
 	"github.com/iden3/go-circuits/v2"
 	core "github.com/iden3/go-iden3-core/v2"
 	"github.com/iden3/go-merkletree-sql/v2"
+	"github.com/iden3/go-schema-processor/v2/merklize"
 	"github.com/iden3/go-schema-processor/v2/verifiable"
 	"github.com/piprate/json-gold/ld"
 	"github.com/stretchr/testify/require"
@@ -1063,4 +1064,22 @@ func TestNewGenesysID_DIDMethod_Error(t *testing.T) {
 
 	_, err = NewGenesysID(ctx, cfg, []byte(in))
 	require.EqualError(t, err, "failed to build DID type: not supported network")
+}
+
+func bi(in string) *big.Int {
+	i, ok := new(big.Int).SetString(in, 10)
+	if !ok {
+		panic(in)
+	}
+	return i
+}
+
+func TestUnpackOperatorWithArgs(t *testing.T) {
+	op, vals, err := unpackOperatorWithArgs("$exists", true, ld.XSDString,
+		merklize.PoseidonHasher{})
+	require.NoError(t, err)
+	require.Equal(t, circuits.EXISTS, op)
+	require.Equal(t,
+		[]*big.Int{bi("18586133768512220936620570745912940619677854269274689475585506675881198879027")},
+		vals)
 }

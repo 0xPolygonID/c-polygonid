@@ -1431,6 +1431,10 @@ func queryFromObjMerklized(ctx context.Context,
 	return out, verifiablePresentation, nil
 }
 
+var opDatatypeRedefine = map[int]string{
+	circuits.EXISTS: ld.XSDBoolean,
+}
+
 // Return int operator value by its name and arguments as big.Ints array.
 func unpackOperatorWithArgs(opStr string, opValue any,
 	datatype string, hasher merklize.Hasher) (int, []*big.Int, error) {
@@ -1446,6 +1450,10 @@ func unpackOperatorWithArgs(opStr string, opValue any,
 	op, ok := circuits.QueryOperators[opStr]
 	if !ok {
 		return 0, nil, errors.New("unknown operator")
+	}
+
+	if newDT, ok := opDatatypeRedefine[op]; ok {
+		datatype = newDT
 	}
 
 	var err error
