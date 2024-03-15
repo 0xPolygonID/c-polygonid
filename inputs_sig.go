@@ -1208,6 +1208,13 @@ func queryFromObjNonMerklized(ctx context.Context,
 
 	field, op, err := getQueryFieldAndOperator(requestObj)
 	if errors.As(err, &errPathNotFound{}) {
+		if circuitID == circuits.AtomicQueryMTPV2CircuitID ||
+			circuitID == circuits.AtomicQueryMTPV2OnChainCircuitID ||
+			circuitID == circuits.AtomicQuerySigV2CircuitID ||
+			circuitID == circuits.AtomicQuerySigV2OnChainCircuitID {
+			return out, nil, errors.New(
+				"credentialSubject field is not found in query")
+		}
 		out.Operator = circuits.NOOP
 		out.Values = []*big.Int{}
 		return out, nil, nil
@@ -1322,6 +1329,14 @@ func queryFromObjMerklized(ctx context.Context,
 	}
 	field, op, err := getQueryFieldAndOperator(requestObj)
 	if errors.As(err, &errPathNotFound{}) {
+
+		if circuitID == circuits.AtomicQueryV3CircuitID ||
+			circuitID == circuits.AtomicQueryV3OnChainCircuitID {
+			out.Operator = circuits.NOOP
+			out.Values = []*big.Int{}
+			return out, nil, nil
+		}
+
 		out.Operator = circuits.EQ
 		var path merklize.Path
 		path, err = merklize.NewPath(
@@ -1428,6 +1443,10 @@ func queryFromObjMerklized(ctx context.Context,
 	return out, verifiablePresentation, nil
 }
 
+var opDatatypeRedefine = map[int]string{
+	circuits.EXISTS: ld.XSDBoolean,
+}
+
 // Return int operator value by its name and arguments as big.Ints array.
 func unpackOperatorWithArgs(opStr string, opValue any,
 	datatype string, hasher merklize.Hasher) (int, []*big.Int, error) {
@@ -1443,6 +1462,10 @@ func unpackOperatorWithArgs(opStr string, opValue any,
 	op, ok := circuits.QueryOperators[opStr]
 	if !ok {
 		return 0, nil, errors.New("unknown operator")
+	}
+
+	if newDT, ok := opDatatypeRedefine[op]; ok {
+		datatype = newDT
 	}
 
 	var err error
