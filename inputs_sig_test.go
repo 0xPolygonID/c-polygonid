@@ -1096,3 +1096,65 @@ func TestUnpackOperatorWithArgs(t *testing.T) {
 		[]*big.Int{bi("18586133768512220936620570745912940619677854269274689475585506675881198879027")},
 		vals)
 }
+
+func TestDescribeID(t *testing.T) {
+	in := `{"id":"31Akw5AB2xBrwqmbDUA2XoSGCfTepz52q9jmFE4mXA"}`
+
+	ctx := context.Background()
+
+	cfgJSON := `{
+  "chainConfigs": {
+    "59140": {
+      "rpcUrl": "http://localhost:8545",
+      "stateContractAddr": "0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655"
+    }
+  },
+  "didMethods": [
+    {
+      "name": "polygonid",
+      "blockchain": "linea",
+      "network": "testnet",
+      "networkFlag": "0b01000011",
+      "methodByte": "0b00000010",
+      "chainID": "59140"
+    }
+  ]
+}`
+	cfg, err := NewEnvConfigFromJSON([]byte(cfgJSON))
+	require.NoError(t, err)
+
+	resp, err := DescribeID(ctx, cfg, []byte(in))
+	require.NoError(t, err)
+	wantResp := DescribeIDResponse{
+		DID:     "did:polygonid:linea:testnet:31Akw5AB2xBrwqmbDUA2XoSGCfTepz52q9jmFE4mXA",
+		ID:      "31Akw5AB2xBrwqmbDUA2XoSGCfTepz52q9jmFE4mXA",
+		IDAsInt: "24460059377712687587111979692736628604804094576108957842967948238113620738",
+	}
+	require.Equal(t, wantResp, resp)
+
+	in = `{"idAsInt":"24460059377712687587111979692736628604804094576108957842967948238113620738"}`
+	resp, err = DescribeID(ctx, cfg, []byte(in))
+	require.NoError(t, err)
+	require.Equal(t, wantResp, resp)
+
+	in = `{
+  "id":"31Akw5AB2xBrwqmbDUA2XoSGCfTepz52q9jmFE4mXA",
+  "idAsInt":"24460059377712687587111979692736628604804094576108957842967948238113620738"
+}`
+	resp, err = DescribeID(ctx, cfg, []byte(in))
+	require.NoError(t, err)
+	require.Equal(t, wantResp, resp)
+
+	in = `{
+  "idAsInt":"24460059377712687587111979692736628604804094576108957842967948238113620739"
+}`
+	_, err = DescribeID(ctx, cfg, []byte(in))
+	require.EqualError(t, err, "failed to create ID from int: IDFromBytes error: checksum error")
+
+	in = `{
+  "id":"2qMJFBiKaPx3XCKbu1Q45QNaUfdpzk9KkcmNaiyAxc",
+  "idAsInt":"24460059377712687587111979692736628604804094576108957842967948238113620738"
+}`
+	_, err = DescribeID(ctx, cfg, []byte(in))
+	require.EqualError(t, err, "id and idAsInt are different")
+}
