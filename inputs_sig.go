@@ -999,11 +999,8 @@ func AtomicQueryV3OnChainInputsFromJson(ctx context.Context, cfg EnvConfig,
 			return out, err
 		}
 		inpMarsh.VerifierID = &id
-	} else if obj.TxData != nil {
-		inpMarsh.VerifierID, err = verifierIDFromTxData(*obj.TxData)
-		if err != nil {
-			return out, err
-		}
+	} else {
+		inpMarsh.VerifierID = &core.ID{}
 	}
 
 	inpMarsh.NullifierSessionID, err = bigIntOrZeroByPath(obj.Request,
@@ -1997,20 +1994,6 @@ func fmtPath(path merklize.Path) string {
 		parts = append(parts, fmt.Sprintf("%v", p))
 	}
 	return "[" + strings.Join(parts, ",") + "]"
-}
-
-func verifierIDFromTxData(txData txData) (*core.ID, error) {
-	genState := core.GenesisFromEthAddress(txData.ContractAddress)
-	blockchain, networkID, err := core.NetworkByChainID(txData.ChainID)
-	if err != nil {
-		return nil, err
-	}
-	tp, err := core.BuildDIDType(core.DIDMethodIden3, blockchain, networkID)
-	if err != nil {
-		return nil, err
-	}
-	id := core.NewID(tp, genState)
-	return &id, nil
 }
 
 type GenesysIDResponse struct {
