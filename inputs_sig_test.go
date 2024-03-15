@@ -332,16 +332,15 @@ func TestPrepareInputs(t *testing.T) {
 			AtomicQuerySigV2InputsFromJson, nil, EnvConfig{}, "")
 	})
 
-	t.Run("AtomicQuerySigV2InputsFromJson NonMerklized - noop",
+	t.Run("AtomicQuerySigV2InputsFromJson NonMerklized - missing credentialSubject",
 		func(t *testing.T) {
 			defer httpmock.MockHTTPClient(t, map[string]string{
 				"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qDNRmjPHUrtnPWfXQ4kKwZfarfsSYoiFBxB9tDkui/claims/revocation/status/3878863870": "testdata/httpresp_rev_status_3878863870.json",
 				"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qDNRmjPHUrtnPWfXQ4kKwZfarfsSYoiFBxB9tDkui/claims/revocation/status/0":          "testdata/httpresp_rev_status_2qDNRmjPHUrtnPWfXQ4kKwZfarfsSYoiFBxB9tDkui_0.json",
 			}, httpmock.IgnoreUntouchedURLs())()
 
-			doTest(t, "atomic_query_sig_v2_non_merklized_noop_inputs.json",
-				"atomic_query_sig_v2_non_merklized_noop_output.json",
-				AtomicQuerySigV2InputsFromJson, nil, EnvConfig{}, "")
+			doTest(t, "atomic_query_sig_v2_non_merklized_noop_inputs.json", "",
+				AtomicQuerySigV2InputsFromJson, nil, EnvConfig{}, "credentialSubject field is not found in query")
 		})
 
 	t.Run("AtomicQuerySigV2InputsFromJson NonMerklized Disclosure",
