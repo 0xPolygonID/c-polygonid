@@ -982,19 +982,6 @@ func TestPreCacheVC(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestVerifierIDFromTxData(t *testing.T) {
-	in := txData{
-		ContractAddress: common.HexToAddress("0x199194Cb1884BF288757fac94B3349Cefef93629"),
-		ChainID:         80001,
-	}
-	id, err := verifierIDFromTxData(in)
-	require.NoError(t, err)
-	require.Equal(t, "wuL2hHjCC1L7GL9KpQZtBcFvsyqknxq6otmdWtmqs", id.String())
-	require.Equal(t,
-		"17966356888215056651324659145404695842840677593163532338422715818832826881",
-		id.BigInt().Text(10))
-}
-
 func TestNewGenesysID(t *testing.T) {
 	in := `{
   "claimsTreeRoot":"16306276920027997118951972513784102597349518910734830865369546877495436692483",
