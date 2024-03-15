@@ -1084,6 +1084,8 @@ func AtomicQueryV3InputsFromJson(ctx context.Context, cfg EnvConfig,
 			return out, err
 		}
 		inpMarsh.VerifierID = &id
+	} else {
+		inpMarsh.VerifierID = &core.ID{}
 	}
 
 	inpMarsh.LinkNonce = obj.LinkNonce.BigInt()
