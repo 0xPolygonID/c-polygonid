@@ -12,6 +12,7 @@ import (
 	"log/slog"
 	"math/big"
 	"runtime/trace"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -1159,7 +1160,7 @@ func LinkedMultiQueryInputsFromJson(ctx context.Context, cfg EnvConfig,
 	if err != nil {
 		return out, err
 	}
-	if circuitID != circuits.AtomicQueryV3CircuitID {
+	if circuitID != circuits.LinkedMultiQuery10CircuitID {
 		return out, errors.New("wrong circuit")
 	}
 
@@ -1629,6 +1630,15 @@ func mkEqQuery(ctx context.Context, mz *merklize.Merklizer,
 	}, nil
 }
 
+func sortedKeys(m jsonObj) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
 func queriesFromObjMerklized(ctx context.Context,
 	w3cCred verifiable.W3CCredential, requestObj jsonObj,
 	documentLoader ld.DocumentLoader,
@@ -1677,12 +1687,13 @@ func queriesFromObjMerklized(ctx context.Context,
 
 	var vpEntries []objEntry
 
-	for field, opsI := range credSubjObj {
-		ops, ok := opsI.(jsonObj)
+	fields := sortedKeys(credSubjObj)
+	for _, field := range fields {
+		ops, ok := credSubjObj[field].(jsonObj)
 		if !ok {
 			return nil, nil, fmt.Errorf(
 				"for query field '%v' the opators object is of incorrect type: %T",
-				field, opsI)
+				field, credSubjObj[field])
 
 		}
 
@@ -1729,7 +1740,10 @@ func queriesFromObjMerklized(ctx context.Context,
 
 		} else {
 
-			for op, val := range ops {
+			sortedOps := sortedKeys(ops)
+			for _, op := range sortedOps {
+				val := ops[op]
+
 				var fieldDatatype string
 				fieldDatatype, err = mz.JSONLDType(path)
 				if err != nil {

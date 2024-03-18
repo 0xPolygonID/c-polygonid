@@ -670,7 +670,7 @@ func TestPrepareInputs(t *testing.T) {
 		}, httpmock.IgnoreUntouchedURLs())()
 
 		doTest(t, "linked_multi_query_inputs.json",
-			"atomic_query_v3_on_chain_tx_data_output.json",
+			"linked_multi_query_output.json",
 			LinkedMultiQueryInputsFromJson, nil, EnvConfig{}, "")
 	})
 
@@ -787,7 +787,9 @@ func assertEqualWithoutTimestamp(t testing.TB, wantFName string,
 	err = json.Unmarshal(inputsBytes, &inputsObj)
 	require.NoError(t, err)
 
-	wantObj["timestamp"] = inputsObj["timestamp"]
+	if ts, ok := inputsObj["timestamp"]; ok {
+		wantObj["timestamp"] = ts
+	}
 
 	require.Equal(t, wantObj, inputsObj, "file name: %s\nwant: %s\ngot: %s",
 		wantFName, jsonWant, inputsBytes)
