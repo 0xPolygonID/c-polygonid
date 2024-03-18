@@ -17,6 +17,7 @@ import (
 	"github.com/iden3/go-circuits/v2"
 	core "github.com/iden3/go-iden3-core/v2"
 	"github.com/iden3/go-merkletree-sql/v2"
+	"github.com/iden3/go-schema-processor/v2/merklize"
 	"github.com/iden3/go-schema-processor/v2/verifiable"
 	"github.com/piprate/json-gold/ld"
 	"github.com/stretchr/testify/require"
@@ -332,25 +333,22 @@ func TestPrepareInputs(t *testing.T) {
 			AtomicQuerySigV2InputsFromJson, nil, EnvConfig{}, "")
 	})
 
-	t.Run("AtomicQuerySigV2InputsFromJson NonMerklized - noop",
+	t.Run("AtomicQuerySigV2InputsFromJson NonMerklized - missing credentialSubject",
 		func(t *testing.T) {
 			defer httpmock.MockHTTPClient(t, map[string]string{
 				"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qDNRmjPHUrtnPWfXQ4kKwZfarfsSYoiFBxB9tDkui/claims/revocation/status/3878863870": "testdata/httpresp_rev_status_3878863870.json",
 				"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qDNRmjPHUrtnPWfXQ4kKwZfarfsSYoiFBxB9tDkui/claims/revocation/status/0":          "testdata/httpresp_rev_status_2qDNRmjPHUrtnPWfXQ4kKwZfarfsSYoiFBxB9tDkui_0.json",
 			}, httpmock.IgnoreUntouchedURLs())()
 
-			doTest(t, "atomic_query_sig_v2_non_merklized_noop_inputs.json",
-				"atomic_query_sig_v2_non_merklized_noop_output.json",
-				AtomicQuerySigV2InputsFromJson, nil, EnvConfig{}, "")
+			doTest(t, "atomic_query_sig_v2_non_merklized_noop_inputs.json", "",
+				AtomicQuerySigV2InputsFromJson, nil, EnvConfig{}, "credentialSubject field is not found in query")
 		})
 
 	t.Run("AtomicQuerySigV2InputsFromJson NonMerklized Disclosure",
 		func(t *testing.T) {
 			defer httpmock.MockHTTPClient(t, map[string]string{
-				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld":                                                  "testdata/httpresp_iden3credential_v2.json",
 				"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qDNRmjPHUrtnPWfXQ4kKwZfarfsSYoiFBxB9tDkui/claims/revocation/status/3878863870": "testdata/httpresp_rev_status_3878863870.json",
 				"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qDNRmjPHUrtnPWfXQ4kKwZfarfsSYoiFBxB9tDkui/claims/revocation/status/0":          "testdata/httpresp_rev_status_2qDNRmjPHUrtnPWfXQ4kKwZfarfsSYoiFBxB9tDkui_0.json",
-				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3-non-merklized.json-ld":                                                "testdata/httpresp_kyc-v3-non-merklized.json-ld",
 			}, httpmock.IgnoreUntouchedURLs())()
 
 			wantVerifiablePresentation := map[string]any{
@@ -551,6 +549,19 @@ func TestPrepareInputs(t *testing.T) {
 
 		doTest(t, "atomic_query_v3_sig_inputs.json",
 			"atomic_query_v3_sig_output.json",
+			AtomicQueryV3InputsFromJson, nil, EnvConfig{}, "")
+	})
+
+	t.Run("AtomicQueryV3InputsFromJson - empty query", func(t *testing.T) {
+		defer httpmock.MockHTTPClient(t, map[string]string{
+			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld":                                                         "testdata/httpresp_kyc-v3.json-ld",
+			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld":                                             "testdata/httpresp_iden3credential_v2.json",
+			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/2376431481": "testdata/httpresp_rev_status_2376431481.json",
+			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/0":          "testdata/httpresp_rev_status_wuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU_0.json",
+		}, httpmock.IgnoreUntouchedURLs())()
+
+		doTest(t, "atomic_query_v3_sig_empty_query_inputs.json",
+			"atomic_query_v3_sig_empty_query_output.json",
 			AtomicQueryV3InputsFromJson, nil, EnvConfig{}, "")
 	})
 
@@ -984,19 +995,6 @@ func TestPreCacheVC(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestVerifierIDFromTxData(t *testing.T) {
-	in := txData{
-		ContractAddress: common.HexToAddress("0x199194Cb1884BF288757fac94B3349Cefef93629"),
-		ChainID:         80001,
-	}
-	id, err := verifierIDFromTxData(in)
-	require.NoError(t, err)
-	require.Equal(t, "wuL2hHjCC1L7GL9KpQZtBcFvsyqknxq6otmdWtmqs", id.String())
-	require.Equal(t,
-		"17966356888215056651324659145404695842840677593163532338422715818832826881",
-		id.BigInt().Text(10))
-}
-
 func TestNewGenesysID(t *testing.T) {
 	in := `{
   "claimsTreeRoot":"16306276920027997118951972513784102597349518910734830865369546877495436692483",
@@ -1080,7 +1078,89 @@ func TestNewGenesysID_DIDMethod_Error(t *testing.T) {
 	require.EqualError(t, err, "failed to build DID type: not supported network")
 }
 
+func bi(in string) *big.Int {
+	i, ok := new(big.Int).SetString(in, 10)
+	if !ok {
+		panic(in)
+	}
+	return i
+}
+
+func TestUnpackOperatorWithArgs(t *testing.T) {
+	op, vals, err := unpackOperatorWithArgs("$exists", true, ld.XSDString,
+		merklize.PoseidonHasher{})
+	require.NoError(t, err)
+	require.Equal(t, circuits.EXISTS, op)
+	require.Equal(t,
+		[]*big.Int{bi("18586133768512220936620570745912940619677854269274689475585506675881198879027")},
+		vals)
+}
+
+func TestDescribeID(t *testing.T) {
+	in := `{"id":"31Akw5AB2xBrwqmbDUA2XoSGCfTepz52q9jmFE4mXA"}`
+
+	ctx := context.Background()
+
+	cfgJSON := `{
+  "chainConfigs": {
+    "59140": {
+      "rpcUrl": "http://localhost:8545",
+      "stateContractAddr": "0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655"
+    }
+  },
+  "didMethods": [
+    {
+      "name": "polygonid",
+      "blockchain": "linea",
+      "network": "testnet",
+      "networkFlag": "0b01000011",
+      "methodByte": "0b00000010",
+      "chainID": "59140"
+    }
+  ]
+}`
+	cfg, err := NewEnvConfigFromJSON([]byte(cfgJSON))
+	require.NoError(t, err)
+
+	resp, err := DescribeID(ctx, cfg, []byte(in))
+	require.NoError(t, err)
+	wantResp := DescribeIDResponse{
+		DID:     "did:polygonid:linea:testnet:31Akw5AB2xBrwqmbDUA2XoSGCfTepz52q9jmFE4mXA",
+		ID:      "31Akw5AB2xBrwqmbDUA2XoSGCfTepz52q9jmFE4mXA",
+		IDAsInt: "24460059377712687587111979692736628604804094576108957842967948238113620738",
+	}
+	require.Equal(t, wantResp, resp)
+
+	in = `{"idAsInt":"24460059377712687587111979692736628604804094576108957842967948238113620738"}`
+	resp, err = DescribeID(ctx, cfg, []byte(in))
+	require.NoError(t, err)
+	require.Equal(t, wantResp, resp)
+
+	in = `{
+  "id":"31Akw5AB2xBrwqmbDUA2XoSGCfTepz52q9jmFE4mXA",
+  "idAsInt":"24460059377712687587111979692736628604804094576108957842967948238113620738"
+}`
+	resp, err = DescribeID(ctx, cfg, []byte(in))
+	require.NoError(t, err)
+	require.Equal(t, wantResp, resp)
+
+	in = `{
+  "idAsInt":"24460059377712687587111979692736628604804094576108957842967948238113620739"
+}`
+	_, err = DescribeID(ctx, cfg, []byte(in))
+	require.EqualError(t, err, "failed to create ID from int: IDFromBytes error: checksum error")
+
+	in = `{
+  "id":"2qMJFBiKaPx3XCKbu1Q45QNaUfdpzk9KkcmNaiyAxc",
+  "idAsInt":"24460059377712687587111979692736628604804094576108957842967948238113620738"
+}`
+	_, err = DescribeID(ctx, cfg, []byte(in))
+	require.EqualError(t, err, "id and idAsInt are different")
+}
+
 func TestMkVPObj(t *testing.T) {
+	const tp = "tp"
+
 	testCases := []struct {
 		in      []objEntry
 		want    jsonObj
@@ -1092,7 +1172,7 @@ func TestMkVPObj(t *testing.T) {
 		},
 		{
 			in:   []objEntry{},
-			want: jsonObj{},
+			want: jsonObj{"@type": tp},
 		},
 		{
 			in: []objEntry{
@@ -1131,7 +1211,7 @@ func TestMkVPObj(t *testing.T) {
 
 	for i, tc := range testCases {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
-			out, err := mkVPObj("tp", tc.in...)
+			out, err := mkVPObj(tp, tc.in...)
 			if tc.wantErr != "" {
 				require.EqualError(t, err, tc.wantErr)
 				return

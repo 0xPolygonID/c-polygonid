@@ -1042,11 +1042,8 @@ func AtomicQueryV3OnChainInputsFromJson(ctx context.Context, cfg EnvConfig,
 			return out, err
 		}
 		inpMarsh.VerifierID = &id
-	} else if obj.TxData != nil {
-		inpMarsh.VerifierID, err = verifierIDFromTxData(*obj.TxData)
-		if err != nil {
-			return out, err
-		}
+	} else {
+		inpMarsh.VerifierID = &core.ID{}
 	}
 
 	inpMarsh.NullifierSessionID, err = bigIntOrZeroByPath(obj.Request,
@@ -1130,6 +1127,8 @@ func AtomicQueryV3InputsFromJson(ctx context.Context, cfg EnvConfig,
 			return out, err
 		}
 		inpMarsh.VerifierID = &id
+	} else {
+		inpMarsh.VerifierID = &core.ID{}
 	}
 
 	inpMarsh.LinkNonce = obj.LinkNonce.BigInt()
@@ -1328,6 +1327,13 @@ func queryFromObjNonMerklized(ctx context.Context,
 
 	field, op, err := getQueryFieldAndOperator(requestObj)
 	if errors.As(err, &errPathNotFound{}) {
+		if circuitID == circuits.AtomicQueryMTPV2CircuitID ||
+			circuitID == circuits.AtomicQueryMTPV2OnChainCircuitID ||
+			circuitID == circuits.AtomicQuerySigV2CircuitID ||
+			circuitID == circuits.AtomicQuerySigV2OnChainCircuitID {
+			return out, nil, errors.New(
+				"credentialSubject field is not found in query")
+		}
 		out.Operator = circuits.NOOP
 		out.Values = []*big.Int{}
 		return out, nil, nil
@@ -1455,6 +1461,14 @@ func queryFromObjMerklized(ctx context.Context,
 	}
 	field, op, err := getQueryFieldAndOperator(requestObj)
 	if errors.As(err, &errPathNotFound{}) {
+
+		if circuitID == circuits.AtomicQueryV3CircuitID ||
+			circuitID == circuits.AtomicQueryV3OnChainCircuitID {
+			out.Operator = circuits.NOOP
+			out.Values = []*big.Int{}
+			return out, nil, nil
+		}
+
 		out.Operator = circuits.EQ
 		var path merklize.Path
 		path, err = merklize.NewPath(
@@ -1750,6 +1764,10 @@ func queriesFromObjMerklized(ctx context.Context,
 	return queries, verifiablePresentation, nil
 }
 
+var opDatatypeRedefine = map[int]string{
+	circuits.EXISTS: ld.XSDBoolean,
+}
+
 // Return int operator value by its name and arguments as big.Ints array.
 func unpackOperatorWithArgs(opStr string, opValue any,
 	datatype string, hasher merklize.Hasher) (int, []*big.Int, error) {
@@ -1765,6 +1783,10 @@ func unpackOperatorWithArgs(opStr string, opValue any,
 	op, ok := circuits.QueryOperators[opStr]
 	if !ok {
 		return 0, nil, errors.New("unknown operator")
+	}
+
+	if newDT, ok := opDatatypeRedefine[op]; ok {
+		datatype = newDT
 	}
 
 	var err error
@@ -2318,20 +2340,6 @@ func fmtPath(path merklize.Path) string {
 	return "[" + strings.Join(parts, ",") + "]"
 }
 
-func verifierIDFromTxData(txData txData) (*core.ID, error) {
-	genState := core.GenesisFromEthAddress(txData.ContractAddress)
-	blockchain, networkID, err := core.NetworkByChainID(txData.ChainID)
-	if err != nil {
-		return nil, err
-	}
-	tp, err := core.BuildDIDType(core.DIDMethodIden3, blockchain, networkID)
-	if err != nil {
-		return nil, err
-	}
-	id := core.NewID(tp, genState)
-	return &id, nil
-}
-
 type GenesysIDResponse struct {
 	DID     string `json:"did"`
 	ID      string `json:"id"`
@@ -2411,4 +2419,64 @@ func NewGenesysID(ctx context.Context, cfg EnvConfig,
 			IDAsInt: coreID.BigInt().String(),
 		},
 		nil
+}
+
+type DescribeIDResponse struct {
+	DID     string `json:"did"`
+	ID      string `json:"id"`
+	IDAsInt string `json:"idAsInt"`
+}
+
+func DescribeID(ctx context.Context, cfg EnvConfig,
+	in []byte) (DescribeIDResponse, error) {
+
+	var req struct {
+		ID      *core.ID         `json:"id"`
+		IDAsInt *JsonFieldIntStr `json:"idAsInt"`
+	}
+
+	if in == nil {
+		return DescribeIDResponse{}, errors.New("request is empty")
+	}
+
+	err := json.Unmarshal(in, &req)
+	if err != nil {
+		return DescribeIDResponse{},
+			fmt.Errorf("failed to unmarshal request: %w", err)
+	}
+
+	var id *core.ID
+	if req.ID != nil {
+		id = req.ID
+	}
+
+	if req.IDAsInt != nil {
+		newID, err := core.IDFromInt(req.IDAsInt.Int())
+		if err != nil {
+			return DescribeIDResponse{},
+				fmt.Errorf("failed to create ID from int: %w", err)
+		}
+		if id == nil {
+			id = &newID
+		} else if !id.Equal(&newID) {
+			return DescribeIDResponse{},
+				errors.New("id and idAsInt are different")
+		}
+	}
+
+	if id == nil {
+		return DescribeIDResponse{}, errors.New("id is not set in the request")
+	}
+
+	did, err := core.ParseDIDFromID(*id)
+	if err != nil {
+		return DescribeIDResponse{},
+			fmt.Errorf("failed to make DID from ID: %w", err)
+	}
+
+	return DescribeIDResponse{
+		DID:     did.String(),
+		ID:      id.String(),
+		IDAsInt: id.BigInt().String(),
+	}, nil
 }
