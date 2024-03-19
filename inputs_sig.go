@@ -1601,6 +1601,9 @@ func queriesFromObjMerklized(ctx context.Context,
 
 	var contextURL, contextType string
 	contextURL, contextType, err = getQuerySchemaAndType(requestObj)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	var queries = make([]*circuits.Query, circuits.LinkedMultiQueryLength)
 	var queryIndex = 0
