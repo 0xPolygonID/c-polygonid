@@ -1668,17 +1668,26 @@ func queriesFromObjMerklized(ctx context.Context,
 	var credSubjObj jsonObj
 	credSubjObj, err = objByBath(requestObj, "query.credentialSubject")
 	if errors.As(err, &errPathNotFound{}) {
-		var path merklize.Path
-		path, err = merklize.NewPath(iriCredentialSubject)
-		if err != nil {
-			return nil, nil, err
+
+		queries[0] = new(circuits.Query)
+
+		if circuitID == circuits.AtomicQueryV3CircuitID ||
+			circuitID == circuits.AtomicQueryV3OnChainCircuitID ||
+			circuitID == circuits.LinkedMultiQuery10CircuitID {
+			queries[0].Operator = circuits.NOOP
+			queries[0].Values = []*big.Int{}
+		} else {
+			var path merklize.Path
+			path, err = merklize.NewPath(iriCredentialSubject)
+			if err != nil {
+				return nil, nil, err
+			}
+			*queries[0], err = mkEqQuery(ctx, mz, path)
+			if err != nil {
+				return nil, nil, err
+			}
 		}
-		var query circuits.Query
-		query, err = mkEqQuery(ctx, mz, path)
-		if err != nil {
-			return nil, nil, err
-		}
-		queries[0] = &query
+
 		return queries, nil, nil
 	} else if err != nil {
 		return nil, nil,

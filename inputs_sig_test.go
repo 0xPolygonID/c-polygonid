@@ -91,6 +91,9 @@ func TestPrepareInputs(t *testing.T) {
 		fn PrepareInputsFn, wantVR map[string]any, cfg EnvConfig,
 		wantErr string) {
 
+		err := CleanCache()
+		require.NoError(t, err)
+
 		ctx := context.Background()
 		out, err := fn(ctx, cfg, readFixtureFile(inFile))
 		if wantErr != "" {
@@ -163,7 +166,7 @@ func TestPrepareInputs(t *testing.T) {
 			"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qFuKxq6iPem5w2U6T6druwGFjqTinE1kqNkSN7oo9/claims/revocation/status/380518664": "testdata/httpresp_rev_status_380518664.json",
 			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld":                                                 "testdata/httpresp_iden3credential_v2.json",
 			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld":                                                             "testdata/httpresp_kyc-v3.json-ld",
-		}, httpmock.IgnoreUntouchedURLs())()
+		})()
 
 		doTest(t, "atomic_query_mtp_v2_inputs.json",
 			"atomic_query_mtp_v2_output.json", AtomicQueryMtpV2InputsFromJson,
@@ -175,7 +178,7 @@ func TestPrepareInputs(t *testing.T) {
 			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld":                                                 "testdata/httpresp_iden3credential_v2.json",
 			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3-non-merklized.json-ld":                                               "testdata/httpresp_kyc-v3-non-merklized.json-ld",
 			"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qFuKxq6iPem5w2U6T6druwGFjqTinE1kqNkSN7oo9/claims/revocation/status/118023115": "testdata/httpresp_rev_status_118023115.json",
-		}, httpmock.IgnoreUntouchedURLs())()
+		})()
 
 		doTest(t, "atomic_query_mtp_v2_non_merklized_inputs.json",
 			"atomic_query_mtp_v2_non_merklized_output.json",
@@ -188,7 +191,7 @@ func TestPrepareInputs(t *testing.T) {
 				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld":                                                 "testdata/httpresp_iden3credential_v2.json",
 				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3-non-merklized.json-ld":                                               "testdata/httpresp_kyc-v3-non-merklized.json-ld",
 				"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qFuKxq6iPem5w2U6T6druwGFjqTinE1kqNkSN7oo9/claims/revocation/status/118023115": "testdata/httpresp_rev_status_118023115.json",
-			}, httpmock.IgnoreUntouchedURLs())()
+			})()
 
 			wantVerifiablePresentation := map[string]any{
 				"@context": []any{"https://www.w3.org/2018/credentials/v1"},
@@ -219,7 +222,7 @@ func TestPrepareInputs(t *testing.T) {
 			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld":                                             "testdata/httpresp_iden3credential_v2.json",
 			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/2376431481": "testdata/httpresp_rev_status_2376431481.json",
 			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/0":          "testdata/httpresp_rev_status_wuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU_0.json",
-		}, httpmock.IgnoreUntouchedURLs())()
+		})()
 
 		wantVerifiablePresentation := map[string]any{
 			"@context": []any{"https://www.w3.org/2018/credentials/v1"},
@@ -249,7 +252,7 @@ func TestPrepareInputs(t *testing.T) {
 			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld":                                             "testdata/httpresp_iden3credential_v2.json",
 			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/2376431481": "testdata/httpresp_rev_status_2376431481.json",
 			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/0":          "testdata/httpresp_rev_status_wuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU_0.json",
-		}, httpmock.IgnoreUntouchedURLs())()
+		})()
 
 		doTest(t, "atomic_query_sig_v2_merklized_inputs.json",
 			"atomic_query_sig_v2_merklized_output.json",
@@ -273,7 +276,7 @@ func TestPrepareInputs(t *testing.T) {
 			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld":                                             "testdata/httpresp_iden3credential_v2.json",
 			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/2376431481": "testdata/httpresp_rev_status_2376431481.json",
 			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/0":          "testdata/httpresp_rev_status_wuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU_0.json",
-		}, httpmock.IgnoreUntouchedURLs())()
+		})()
 
 		doTest(t, "atomic_query_sig_v2_merklized_ipfs_inputs.json",
 			"atomic_query_sig_v2_merklized_output.json",
@@ -287,7 +290,7 @@ func TestPrepareInputs(t *testing.T) {
 			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld":                                             "testdata/httpresp_iden3credential_v2.json",
 			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/2376431481": "testdata/httpresp_rev_status_2376431481.json",
 			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/0":          "testdata/httpresp_rev_status_wuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU_0.json",
-		}, httpmock.IgnoreUntouchedURLs())()
+		})()
 
 		doTest(t, "atomic_query_sig_v2_merklized_noop_inputs.json",
 			"atomic_query_sig_v2_merklized_noop_output.json",
@@ -297,7 +300,7 @@ func TestPrepareInputs(t *testing.T) {
 	t.Run("AtomicQuerySigV2InputsFromJson - revoked", func(t *testing.T) {
 		defer httpmock.MockHTTPClient(t, map[string]string{
 			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/105": "testdata/httpresp_rev_status_105.json",
-		}, httpmock.IgnoreUntouchedURLs())()
+		})()
 
 		doTest(t, "atomic_query_sig_v2_merklized_revoked_inputs.json", "",
 			AtomicQuerySigV2InputsFromJson, nil, EnvConfig{},
@@ -311,7 +314,7 @@ func TestPrepareInputs(t *testing.T) {
 				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld":                                      "testdata/httpresp_iden3credential_v2.json",
 				"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/0":   "testdata/httpresp_rev_status_wuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU_0.json",
 				"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/105": "testdata/httpresp_rev_status_105.json",
-			}, httpmock.IgnoreUntouchedURLs())()
+			})()
 
 			doTest(t,
 				"atomic_query_sig_v2_merklized_skip_revocation_check_inputs.json",
@@ -326,7 +329,7 @@ func TestPrepareInputs(t *testing.T) {
 			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3-non-merklized.json-ld":                                                "testdata/httpresp_kyc-v3-non-merklized.json-ld",
 			"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qDNRmjPHUrtnPWfXQ4kKwZfarfsSYoiFBxB9tDkui/claims/revocation/status/3878863870": "testdata/httpresp_rev_status_3878863870.json",
 			"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qDNRmjPHUrtnPWfXQ4kKwZfarfsSYoiFBxB9tDkui/claims/revocation/status/0":          "testdata/httpresp_rev_status_2qDNRmjPHUrtnPWfXQ4kKwZfarfsSYoiFBxB9tDkui_0.json",
-		}, httpmock.IgnoreUntouchedURLs())()
+		})()
 
 		doTest(t, "atomic_query_sig_v2_non_merklized_inputs.json",
 			"atomic_query_sig_v2_non_merklized_output.json",
@@ -338,7 +341,7 @@ func TestPrepareInputs(t *testing.T) {
 			defer httpmock.MockHTTPClient(t, map[string]string{
 				"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qDNRmjPHUrtnPWfXQ4kKwZfarfsSYoiFBxB9tDkui/claims/revocation/status/3878863870": "testdata/httpresp_rev_status_3878863870.json",
 				"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qDNRmjPHUrtnPWfXQ4kKwZfarfsSYoiFBxB9tDkui/claims/revocation/status/0":          "testdata/httpresp_rev_status_2qDNRmjPHUrtnPWfXQ4kKwZfarfsSYoiFBxB9tDkui_0.json",
-			}, httpmock.IgnoreUntouchedURLs())()
+			})()
 
 			doTest(t, "atomic_query_sig_v2_non_merklized_noop_inputs.json", "",
 				AtomicQuerySigV2InputsFromJson, nil, EnvConfig{}, "credentialSubject field is not found in query")
@@ -349,7 +352,9 @@ func TestPrepareInputs(t *testing.T) {
 			defer httpmock.MockHTTPClient(t, map[string]string{
 				"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qDNRmjPHUrtnPWfXQ4kKwZfarfsSYoiFBxB9tDkui/claims/revocation/status/3878863870": "testdata/httpresp_rev_status_3878863870.json",
 				"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qDNRmjPHUrtnPWfXQ4kKwZfarfsSYoiFBxB9tDkui/claims/revocation/status/0":          "testdata/httpresp_rev_status_2qDNRmjPHUrtnPWfXQ4kKwZfarfsSYoiFBxB9tDkui_0.json",
-			}, httpmock.IgnoreUntouchedURLs())()
+				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3-non-merklized.json-ld":                                                "testdata/httpresp_kyc-v3-non-merklized.json-ld",
+				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld":                                                  "testdata/httpresp_iden3credential_v2.json",
+			})()
 
 			wantVerifiablePresentation := map[string]any{
 				"@context": []any{"https://www.w3.org/2018/credentials/v1"},
@@ -381,7 +386,7 @@ func TestPrepareInputs(t *testing.T) {
 				"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qDnyCaxj4zdYmj6LbegYMjWSnkbKAyqtq31YeuyZV/claims/revocation/status/0":       "testdata/httpresp_rev_status_qDnyCaxj4zdYmj6LbegYMjWSnkbKAyqtq31YeuyZV_0.json",
 				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld":                                               "testdata/httpresp_iden3credential_v2.json",
 				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld":                                                           "testdata/httpresp_kyc-v3.json-ld",
-			}, httpmock.IgnoreUntouchedURLs())()
+			})()
 
 			doTest(t,
 				"atomic_query_sig_v2_on_chain_input.json",
@@ -395,7 +400,7 @@ func TestPrepareInputs(t *testing.T) {
 				"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qDnyCaxj4zdYmj6LbegYMjWSnkbKAyqtq31YeuyZV/claims/revocation/status/3972757": "testdata/httpresp_rev_status_3972757.json",
 				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld":                                               "testdata/httpresp_iden3credential_v2.json",
 				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld":                                                           "testdata/httpresp_kyc-v3.json-ld",
-			}, httpmock.IgnoreUntouchedURLs())()
+			})()
 
 			doTest(t,
 				"atomic_query_mtp_v2_on_chain_input.json",
@@ -403,15 +408,14 @@ func TestPrepareInputs(t *testing.T) {
 				AtomicQueryMtpV2OnChainInputsFromJson, nil, EnvConfig{}, "")
 		})
 
-	t.Run("AtomicQuerySigV2InputsFromJson - RHS - empty revocation tree",
+	t.Run("AtomicQuerySigV2InputsFromJson__RHS__empty_revocation_tree",
 		func(t *testing.T) {
 			defer httpmock.MockHTTPClient(t, map[string]string{
 				`http://localhost:8545%%%{"jsonrpc":"2.0","id":1,"method":"eth_call","params":[{"from":"0x0000000000000000000000000000000000000000","input":"0xb4bdea55000d5228592025eac998034e2c03f242819d84806687a3b0c95eefa295ca1202","to":"0x6f0a444df4d231d85f66e4836f836034f0fefe24"},"latest"]}`: "testdata/httpresp_eth_resp1.json",
 				"http://localhost:8003/node/8ef2ce21e01d86ec2376fe28bf6b47a84d08f8628d970474a2698cebf94bca1c":                "testdata/httpresp_rhs_8ef2ce21e01d86ec2376fe28bf6b47a84d08f8628d970474a2698cebf94bca1c.json",
-				"http://localhost:8003/node/8ef2e21e01d86ec2376fe28bf6b47a84d08f8628d970474a2698cebf94bca1c":                 "testdata/httpresp_rhs_8ef2ce21e01d86ec2376fe28bf6b47a84d08f8628d970474a2698cebf94bca1c.json",
 				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld":             "testdata/httpresp_kyc-v3.json-ld",
 				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld": "testdata/httpresp_iden3credential_v2.json",
-			}, httpmock.IgnoreUntouchedURLs())()
+			})()
 
 			cfg := EnvConfig{
 				ChainConfigs: map[core.ChainID]ChainConfig{
@@ -440,7 +444,7 @@ func TestPrepareInputs(t *testing.T) {
 				"http://localhost:8003/node/d543edb99a153f54e1338f3c9515bc49ccc4c468433de880c7299b1b0fc16017":                "testdata/httpresp_rhs_d543edb99a153f54e1338f3c9515bc49ccc4c468433de880c7299b1b0fc16017.json",
 				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld":             "testdata/httpresp_kyc-v3.json-ld",
 				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld": "testdata/httpresp_iden3credential_v2.json",
-			}, httpmock.IgnoreUntouchedURLs())()
+			})()
 
 			cfg := EnvConfig{
 				ChainConfigs: map[core.ChainID]ChainConfig{
@@ -465,7 +469,7 @@ func TestPrepareInputs(t *testing.T) {
 				"http://localhost:8003/node/a75cc7f84f279f758427e8f1ec26d2d7dcac0fd545098ef668dde0d2f90ca809": "testdata/httpresp_rhs_a75cc7f84f279f758427e8f1ec26d2d7dcac0fd545098ef668dde0d2f90ca809.json",
 				"http://localhost:8003/node/ce051a956948154312d91a406b52120fd689376c1b675699053cc1d7cafa4f04": "testdata/httpresp_rhs_ce051a956948154312d91a406b52120fd689376c1b675699053cc1d7cafa4f04.json",
 				"http://localhost:8003/node/3ecaca31559a389adb870fa1347b8487dee24406a7c9959334d3f36b65c3ba1d": "testdata/httpresp_rhs_3ecaca31559a389adb870fa1347b8487dee24406a7c9959334d3f36b65c3ba1d.json",
-			}, httpmock.IgnoreUntouchedURLs())()
+			})()
 
 			cfg := EnvConfig{
 				ChainConfigs: map[core.ChainID]ChainConfig{
@@ -498,7 +502,7 @@ func TestPrepareInputs(t *testing.T) {
 			"https://dev.polygonid.me/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qLPqvayNQz9TA2r5VPxUugoF18teGU583zJ859wfy/claims/revocation/status/214490175":  "testdata/httpresp_rev_status_214490175.json",
 			"https://dev.polygonid.me/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qLPqvayNQz9TA2r5VPxUugoF18teGU583zJ859wfy/claims/revocation/status/2575161389": "testdata/httpresp_rev_status_2575161389.json",
 			"https://schema.iden3.io/core/jsonld/iden3proofs.jsonld": "testdata/httpresp_iden3proofs.jsonld",
-		}, httpmock.IgnoreUntouchedURLs())()
+		})()
 
 		wantVerifiablePresentation := map[string]any{
 			"@context": []any{"https://www.w3.org/2018/credentials/v1"},
@@ -532,7 +536,7 @@ func TestPrepareInputs(t *testing.T) {
 			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld":                                             "testdata/httpresp_iden3credential_v2.json",
 			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/2376431481": "testdata/httpresp_rev_status_2376431481.json",
 			//"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/0":          "testdata/httpresp_rev_status_wuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU_0.json",
-		}, httpmock.IgnoreUntouchedURLs())()
+		})()
 
 		doTest(t, "atomic_query_v3_mtp_inputs.json",
 			"atomic_query_v3_mtp_output.json",
@@ -545,7 +549,7 @@ func TestPrepareInputs(t *testing.T) {
 			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld":                                             "testdata/httpresp_iden3credential_v2.json",
 			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/2376431481": "testdata/httpresp_rev_status_2376431481.json",
 			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/0":          "testdata/httpresp_rev_status_wuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU_0.json",
-		}, httpmock.IgnoreUntouchedURLs())()
+		})()
 
 		doTest(t, "atomic_query_v3_sig_inputs.json",
 			"atomic_query_v3_sig_output.json",
@@ -558,7 +562,7 @@ func TestPrepareInputs(t *testing.T) {
 			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld":                                             "testdata/httpresp_iden3credential_v2.json",
 			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/2376431481": "testdata/httpresp_rev_status_2376431481.json",
 			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/0":          "testdata/httpresp_rev_status_wuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU_0.json",
-		}, httpmock.IgnoreUntouchedURLs())()
+		})()
 
 		doTest(t, "atomic_query_v3_sig_empty_query_inputs.json",
 			"atomic_query_v3_sig_empty_query_output.json",
@@ -571,7 +575,7 @@ func TestPrepareInputs(t *testing.T) {
 			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld":                                                         "testdata/httpresp_kyc-v3.json-ld",
 			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld":                                             "testdata/httpresp_iden3credential_v2.json",
 			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/2376431481": "testdata/httpresp_rev_status_2376431481.json",
-		}, httpmock.IgnoreUntouchedURLs())()
+		})()
 
 		doTest(t, "atomic_query_v3_no_proof_type_both_have_inputs.json",
 			"atomic_query_v3_mtp_output.json",
@@ -585,7 +589,7 @@ func TestPrepareInputs(t *testing.T) {
 			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld":                                             "testdata/httpresp_iden3credential_v2.json",
 			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/2376431481": "testdata/httpresp_rev_status_2376431481.json",
 			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/0":          "testdata/httpresp_rev_status_wuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU_0.json",
-		}, httpmock.IgnoreUntouchedURLs())()
+		})()
 
 		doTest(t, "atomic_query_v3_no_proof_type_sig_only_inputs.json",
 			"atomic_query_v3_sig_output.json",
@@ -597,7 +601,7 @@ func TestPrepareInputs(t *testing.T) {
 			"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qDnyCaxj4zdYmj6LbegYMjWSnkbKAyqtq31YeuyZV/claims/revocation/status/3972757": "testdata/httpresp_rev_status_3972757.json",
 			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld":                                                           "testdata/httpresp_kyc-v3.json-ld",
 			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld":                                               "testdata/httpresp_iden3credential_v2.json",
-		}, httpmock.IgnoreUntouchedURLs())()
+		})()
 
 		doTest(t, "atomic_query_v3_on_chain_mtp_inputs.json",
 			"atomic_query_v3_on_chain_mtp_output.json",
@@ -610,7 +614,7 @@ func TestPrepareInputs(t *testing.T) {
 			"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qDnyCaxj4zdYmj6LbegYMjWSnkbKAyqtq31YeuyZV/claims/revocation/status/3972757": "testdata/httpresp_rev_status_3972757.json",
 			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld":                                                           "testdata/httpresp_kyc-v3.json-ld",
 			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld":                                               "testdata/httpresp_iden3credential_v2.json",
-		}, httpmock.IgnoreUntouchedURLs())()
+		})()
 
 		doTest(t, "atomic_query_v3_on_chain_sig_inputs.json",
 			"atomic_query_v3_on_chain_sig_output.json",
@@ -624,7 +628,7 @@ func TestPrepareInputs(t *testing.T) {
 			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld":                                             "testdata/httpresp_iden3credential_v2.json",
 			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/2376431481": "testdata/httpresp_rev_status_2376431481.json",
 			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/0":          "testdata/httpresp_rev_status_wuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU_0.json",
-		}, httpmock.IgnoreUntouchedURLs())()
+		})()
 
 		wantVerifiablePresentation := map[string]any{
 			"@context": []any{"https://www.w3.org/2018/credentials/v1"},
@@ -653,7 +657,7 @@ func TestPrepareInputs(t *testing.T) {
 			"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qDnyCaxj4zdYmj6LbegYMjWSnkbKAyqtq31YeuyZV/claims/revocation/status/3972757": "testdata/httpresp_rev_status_3972757.json",
 			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld":                                                           "testdata/httpresp_kyc-v3.json-ld",
 			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld":                                               "testdata/httpresp_iden3credential_v2.json",
-		}, httpmock.IgnoreUntouchedURLs())()
+		})()
 
 		doTest(t, "atomic_query_v3_on_chain_tx_data_inputs.json",
 			"atomic_query_v3_on_chain_tx_data_output.json",
@@ -662,18 +666,16 @@ func TestPrepareInputs(t *testing.T) {
 
 	t.Run("LinkedMultiQueryInputsFromJson", func(t *testing.T) {
 		defer httpmock.MockHTTPClient(t, map[string]string{
-			"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qDnyCaxj4zdYmj6LbegYMjWSnkbKAyqtq31YeuyZV/claims/revocation/status/3972757": "testdata/httpresp_rev_status_3972757.json",
-			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld":                                                           "testdata/httpresp_kyc-v3.json-ld",
-			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld":                                               "testdata/httpresp_iden3credential_v2.json",
-			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/2376431481":   "testdata/httpresp_rev_status_2376431481.json",
-			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/0":            "testdata/httpresp_rev_status_wuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU_0.json",
-		}, httpmock.IgnoreUntouchedURLs())()
+			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld":                                                         "testdata/httpresp_kyc-v3.json-ld",
+			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld":                                             "testdata/httpresp_iden3credential_v2.json",
+			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/2376431481": "testdata/httpresp_rev_status_2376431481.json",
+			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/0":          "testdata/httpresp_rev_status_wuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU_0.json",
+		})()
 
 		doTest(t, "linked_multi_query_inputs.json",
 			"linked_multi_query_output.json",
 			LinkedMultiQueryInputsFromJson, nil, EnvConfig{}, "")
 	})
-
 }
 
 func TestEnvConfig_UnmarshalJSON(t *testing.T) {
