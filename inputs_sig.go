@@ -419,7 +419,7 @@ func signatureProof(ctx context.Context, cfg EnvConfig,
 	out.IssuerAuthClaim = new(core.Claim)
 	err = out.IssuerAuthClaim.FromHex(proof.IssuerData.AuthCoreClaim)
 	if err != nil {
-		return
+		return out, err
 	}
 	out.IssuerAuthIncProof.TreeState, err = circuitsTreeStateFromSchemaState(proof.IssuerData.State)
 	if err != nil {
