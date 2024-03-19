@@ -664,7 +664,7 @@ func TestPrepareInputs(t *testing.T) {
 			AtomicQueryV3OnChainInputsFromJson, nil, EnvConfig{}, "")
 	})
 
-	t.Run("LinkedMultiQueryInputsFromJson", func(t *testing.T) {
+	t.Run("LinkedMultiQueryInputsFromJson_Merklized", func(t *testing.T) {
 		defer httpmock.MockHTTPClient(t, map[string]string{
 			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld":                                                         "testdata/httpresp_kyc-v3.json-ld",
 			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld":                                             "testdata/httpresp_iden3credential_v2.json",
@@ -675,6 +675,37 @@ func TestPrepareInputs(t *testing.T) {
 		doTest(t, "linked_multi_query_inputs.json",
 			"linked_multi_query_output.json",
 			LinkedMultiQueryInputsFromJson, nil, EnvConfig{}, "")
+	})
+
+	t.Run("LinkedMultiQueryInputsFromJson_NonMerklized", func(t *testing.T) {
+		defer httpmock.MockHTTPClient(t, map[string]string{
+			"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qDNRmjPHUrtnPWfXQ4kKwZfarfsSYoiFBxB9tDkui/claims/revocation/status/3878863870": "testdata/httpresp_rev_status_3878863870.json",
+			"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qDNRmjPHUrtnPWfXQ4kKwZfarfsSYoiFBxB9tDkui/claims/revocation/status/0":          "testdata/httpresp_rev_status_2qDNRmjPHUrtnPWfXQ4kKwZfarfsSYoiFBxB9tDkui_0.json",
+			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3-non-merklized.json-ld":                                                "testdata/httpresp_kyc-v3-non-merklized.json-ld",
+			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld":                                                  "testdata/httpresp_iden3credential_v2.json",
+		})()
+
+		wantVerifiablePresentation := map[string]any{
+			"@context": []any{"https://www.w3.org/2018/credentials/v1"},
+			"@type":    "VerifiablePresentation",
+			"verifiableCredential": map[string]any{
+				"@context": []any{
+					"https://www.w3.org/2018/credentials/v1",
+					"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3-non-merklized.json-ld",
+				},
+				"@type": []any{"VerifiableCredential", "KYCAgeCredential"},
+				"credentialSubject": map[string]any{
+					"@type":        "KYCAgeCredential",
+					"documentType": float64(99),
+				},
+			},
+		}
+
+		doTest(t,
+			"linked_multi_query_non_merklized_inputs.json",
+			"linked_multi_query_non_merklized_output.json",
+			LinkedMultiQueryInputsFromJson, wantVerifiablePresentation,
+			EnvConfig{}, "")
 	})
 }
 
