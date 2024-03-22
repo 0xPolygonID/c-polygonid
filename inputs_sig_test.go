@@ -1158,9 +1158,17 @@ func TestUnpackOperatorWithArgs(t *testing.T) {
 		merklize.PoseidonHasher{})
 	require.NoError(t, err)
 	require.Equal(t, circuits.EXISTS, op)
-	require.Equal(t,
-		[]*big.Int{bi("18586133768512220936620570745912940619677854269274689475585506675881198879027")},
-		vals)
+	require.Equal(t, []*big.Int{bi("1")}, vals)
+
+	op, vals, err = unpackOperatorWithArgs("$exists", false, ld.XSDString,
+		merklize.PoseidonHasher{})
+	require.NoError(t, err)
+	require.Equal(t, circuits.EXISTS, op)
+	require.Equal(t, []*big.Int{bi("0")}, vals)
+
+	_, _, err = unpackOperatorWithArgs("$exists", "true", ld.XSDString,
+		merklize.PoseidonHasher{})
+	require.EqualError(t, err, "$exists operator value is not a boolean")
 }
 
 func TestDescribeID(t *testing.T) {
