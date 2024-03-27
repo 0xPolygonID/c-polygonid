@@ -741,6 +741,69 @@ func TestPrepareInputs(t *testing.T) {
 			AtomicQueryV3InputsFromJson, nil, cfg, "")
 	})
 
+	t.Run("AtomicQuerySigV2Inputs Empty roots in state", func(t *testing.T) {
+		defer httpmock.MockHTTPClient(t, map[string]string{
+			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld":             "testdata/httpresp_kyc-v3.json-ld",
+			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld": "testdata/httpresp_iden3credential_v2.json",
+			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai" +
+				"%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/2376431481": "testdata" +
+				"/httpresp_rev_status_2376431481_empty_rev_root.json",
+			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/0": "testdata/httpresp_rev_status_wuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU_0_empty_roots.json",
+		}, httpmock.IgnoreUntouchedURLs())()
+
+		wantVerifiablePresentation := map[string]any{
+			"@context": []any{"https://www.w3.org/2018/credentials/v1"},
+			"@type":    "VerifiablePresentation",
+			"verifiableCredential": map[string]any{
+				"@context": []any{
+					"https://www.w3.org/2018/credentials/v1",
+					"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld",
+				},
+				"@type": []any{"VerifiableCredential", "KYCAgeCredential"},
+				"credentialSubject": map[string]any{
+					"@type":        "KYCAgeCredential",
+					"documentType": float64(2),
+				},
+			},
+		}
+
+		doTest(t, "atomic_query_sig_v2_merklized_disclosure_inputs.json",
+			"atomic_query_sig_v2_merklized_output.json",
+			AtomicQuerySigV2InputsFromJson, wantVerifiablePresentation,
+			EnvConfig{}, "")
+	})
+
+	t.Run("AtomicQueryMtpV2InputsFromJson Empty roots in state",
+		func(t *testing.T) {
+			defer httpmock.MockHTTPClient(t, map[string]string{
+				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld":                                                 "testdata/httpresp_iden3credential_v2.json",
+				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3-non-merklized.json-ld":                                               "testdata/httpresp_kyc-v3-non-merklized.json-ld",
+				"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qFuKxq6iPem5w2U6T6druwGFjqTinE1kqNkSN7oo9/claims/revocation/status/118023115": "testdata/httpresp_rev_status_118023115_empty_roots.json",
+			}, httpmock.IgnoreUntouchedURLs())()
+
+			wantVerifiablePresentation := map[string]any{
+				"@context": []any{"https://www.w3.org/2018/credentials/v1"},
+				"@type":    "VerifiablePresentation",
+				"verifiableCredential": map[string]any{
+					"@context": []any{
+						"https://www.w3.org/2018/credentials/v1",
+						"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3-non-merklized.json-ld",
+					},
+					"@type": []any{"VerifiableCredential", "KYCAgeCredential"},
+					"credentialSubject": map[string]any{
+						"@type":        "KYCAgeCredential",
+						"documentType": float64(99),
+					},
+				},
+			}
+
+			doTest(t,
+				"atomic_query_mtp_v2_non_merklized_disclosure_inputs.json",
+				"atomic_query_mtp_v2_non_merklized_output.json",
+				AtomicQueryMtpV2InputsFromJson, wantVerifiablePresentation,
+				EnvConfig{}, "")
+		})
+
 }
 
 func TestEnvConfig_UnmarshalJSON(t *testing.T) {

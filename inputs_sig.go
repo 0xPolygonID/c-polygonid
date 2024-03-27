@@ -260,6 +260,10 @@ func verifiableTreeStateToCircuitsTreeState(
 	var err error
 	var out circuits.TreeState
 
+	out.ClaimsRoot = &merkletree.HashZero
+	out.RootOfRoots = &merkletree.HashZero
+	out.RevocationRoot = &merkletree.HashZero
+
 	if s.State != nil {
 		out.State, err = stringToHash(*s.State)
 		if err != nil {
