@@ -272,6 +272,8 @@ func verifiableTreeStateToCircuitsTreeState(
 		if err != nil {
 			return out, fmt.Errorf("can't parse claims tree root: %w", err)
 		}
+	} else {
+		out.ClaimsRoot = &merkletree.HashZero
 	}
 
 	if s.RevocationTreeRoot != nil {
@@ -279,6 +281,8 @@ func verifiableTreeStateToCircuitsTreeState(
 		if err != nil {
 			return out, fmt.Errorf("can't parse revocation tree root: %w", err)
 		}
+	} else {
+		out.RevocationRoot = &merkletree.HashZero
 	}
 
 	if s.RootOfRoots != nil {
@@ -286,6 +290,8 @@ func verifiableTreeStateToCircuitsTreeState(
 		if err != nil {
 			return out, fmt.Errorf("can't parse root of roots tree root: %w", err)
 		}
+	} else {
+		out.RootOfRoots = &merkletree.HashZero
 	}
 
 	return out, nil

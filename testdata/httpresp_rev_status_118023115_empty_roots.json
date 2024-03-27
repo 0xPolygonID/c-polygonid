@@ -1,0 +1,11 @@
+{
+  "issuer": {
+    "state": "5d603fa7cf49b167ac5c7922f947e09e6fae450d5ae4b966a40ad46445c1d303",
+    "rootOfRoots": "3e92046ffe74a56fdd00e022c6c16d09c1d51e2893eaed483fee1cb0fc9f6217",
+    "claimsTreeRoot": "fde188c258af1cdbbe20b5d3533dbd62bc6272e284e3f84fb85ed7362cd5490d"
+  },
+  "mtp": {
+    "existence": false,
+    "siblings": []
+  }
+}
