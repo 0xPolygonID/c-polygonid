@@ -1,0 +1,133 @@
+{
+  "id": "2qFxHT9MSaJCtebmGKumTwy8DwuVtuVc3uiUpd55TS",
+  "profileNonce": "309551087329242797528867494378504098668188146678372651733290522425766376653",
+  "claimSubjectProfileNonce": "0",
+  "authClaim": [
+    "80551937543569765027552589160822318028",
+    "0",
+    "4171449880171922179953000706311240232125830426242846899721508824209851687017",
+    "14500742764723028776959908343362583962908547001323698888484012726294687416457",
+    "15930428023331155902",
+    "0",
+    "0",
+    "0"
+  ],
+  "authClaimIncMtp": {
+    "existence": true,
+    "siblings": []
+  },
+  "authClaimNonRevMtp": {
+    "existence": false,
+    "siblings": []
+  },
+  "gistProof": {
+    "root": "12418611251737804295569422141525196583413539330327786072828082443303703831517",
+    "proof": {
+      "existence": false,
+      "siblings": [
+        "18322679938522535919439058522861035997603473627212030853556452893422350344203",
+        "11942982736734986851948986145140231737283217100524366500004170081809651461080",
+        "1841452540740171976664611240096314351730239924082525759975865533347106478455",
+        "21738338219567067283455727220430856103415382749223907128451252484348654064122",
+        "10248304658887589221414557525469308733702985288736333443429191477904243586231",
+        "16046686316613501716253972055459742344006727092099468833860978790162690293004",
+        "5885878964566214101846384796010217965011065654213067948135048732708021904037",
+        "15972022201407398657085806487990617724002507189259867505657830331767772246932",
+        "3313684918497731127871183729910051452832536838193931185491439071851740835083",
+        "8149689409002490831929693042282878874821042810679325231276761719174724844796",
+        "20622611059900858481715476496392728807539084000131724572061936302437113126066",
+        "6061141835026483142159727065797976934980399438249727448251635090707495787423"
+      ]
+    }
+  },
+  "treeState": {
+    "state": "6860434661714791564964708878597544927702028603686661004182431934504324838115",
+    "claimsRoot": "13042327161192797453699947787027610043694323930159176304323111433681179984740",
+    "revocationRoot": "0",
+    "rootOfRoots": "0"
+  },
+  "verifiableCredentials": {
+    "id": "https://issuer-admin.polygonid.me/v1/credentials/1e1b6f1f-e852-11ee-9451-0242ac120007",
+    "@context": [
+      "https://www.w3.org/2018/credentials/v1",
+      "https://schema.iden3.io/core/jsonld/iden3proofs.jsonld",
+      "ipfs://QmcvoKLc742CyVH2Cnw6X95b4c8VdABqNPvTyAHEeaK1aP"
+    ],
+    "type": [
+      "VerifiableCredential",
+      "types123"
+    ],
+    "issuanceDate": "2024-03-22T13:43:08.514607928Z",
+    "credentialSubject": {
+      "id": "did:polygonid:polygon:mumbai:2qFxHT9MSaJCtebmGKumTwy8DwuVtuVc3uiUpd55TS",
+      "type": "types123",
+      "bol": true,
+      "double": 23.32,
+      "dt": "2024-03-16T15:42:38.640+02:00",
+      "string": "nice"
+    },
+    "credentialStatus": {
+      "id": "https://rhs-staging.polygonid.me/node?state=34f9500218a054d58347b848dae17d07602b9320143c79e2786ff3aa97254f29",
+      "revocationNonce": 625851252,
+      "type": "Iden3ReverseSparseMerkleTreeProof",
+      "statusIssuer": {
+        "id": "https://issuer-admin.polygonid.me/v1/credentials/revocation/status/625851252",
+        "revocationNonce": 625851252,
+        "type": "SparseMerkleTreeProof"
+      }
+    },
+    "issuer": "did:polygonid:polygon:mumbai:2qMLpQ5py1YzBTTuLEeX2yr6pDGQ7gyXAfygaPakzq",
+    "credentialSchema": {
+      "id": "ipfs://QmTRpn65HN3j6Y5ZC5WDU1orXnWPWMpoPr2qpep8eMCX6e",
+      "type": "JsonSchema2023"
+    },
+    "proof": [
+      {
+        "type": "BJJSignature2021",
+        "issuerData": {
+          "id": "did:polygonid:polygon:mumbai:2qMLpQ5py1YzBTTuLEeX2yr6pDGQ7gyXAfygaPakzq",
+          "state": {
+            "claimsTreeRoot": "68b46e3a40e2decd05fd3632885f3a754972d8ded5ef13e0f7afb36c35457817",
+            "value": "876586f318c37ef72c102dba7645cd4875da99ff1b418ae8715197f89ca95f19"
+          },
+          "authCoreClaim": "cca3371a6cb1b715004407e325bd993c0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000005c49836bc7a21a1b444df0427abde89ece4905cdf451701f8802d0e0e551e723d5a39e30958a7e0221cfa67fcb5606499f44658f9bdd1400402f95bbc35339170000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+          "mtp": {
+            "existence": true,
+            "siblings": []
+          },
+          "credentialStatus": {
+            "id": "https://rhs-staging.polygonid.me/node?state=876586f318c37ef72c102dba7645cd4875da99ff1b418ae8715197f89ca95f19",
+            "revocationNonce": 0,
+            "type": "Iden3ReverseSparseMerkleTreeProof",
+            "statusIssuer": {
+              "id": "https://self-hosted-platform.polygonid.me/v1/did%3Apolygonid%3Apolygon%3Amumbai%3A2qMLpQ5py1YzBTTuLEeX2yr6pDGQ7gyXAfygaPakzq/claims/revocation/status/0",
+              "revocationNonce": 0,
+              "type": "SparseMerkleTreeProof",
+              "statusIssuer": null
+            }
+          }
+        },
+        "coreClaim": "8943e7ca773792800881fcd3054e13792200000000000000000000000000000002124ccc6ad45a53f2bf18c57a1d8dfe733612d65a22e8ab6f50de2a0f3d0d00aaeb2bab00d1ec73fb8ecde28f29d5bdda8265c8dee7578b91683777c9b37917000000000000000000000000000000000000000000000000000000000000000074bb4d2500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "signature": "5d803f48fab9446a92be0596141855637255ea7162e780a84698f2a066193b96aff0231f7468c01bddfd55c4b55c806e0c47b6602d7f36cf744071c115a13103"
+      }
+    ]
+  },
+  "request": {
+    "id": 1711115116,
+    "circuitId": "credentialAtomicQueryV3-beta.1",
+    "query": {
+      "allowedIssuers": [
+        "*"
+      ],
+      "context": "ipfs://QmcvoKLc742CyVH2Cnw6X95b4c8VdABqNPvTyAHEeaK1aP",
+      "type": "types123",
+      "credentialSubject": {
+        "bol": {
+          "$exists": true
+        }
+      }
+    }
+  },
+  "verifierId": "did:polygonid:polygon:mumbai:2qH7TstpRRJHXNN4o49Fu9H2Qismku8hQeUxDVrjqT",
+  "linkNonce": "0"
+}
