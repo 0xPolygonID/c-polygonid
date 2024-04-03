@@ -659,6 +659,151 @@ func TestPrepareInputs(t *testing.T) {
 			AtomicQueryV3OnChainInputsFromJson, nil, EnvConfig{}, "")
 	})
 
+	t.Run("AtomicQueryV3InputsFromJson__Sig_exists_true", func(t *testing.T) {
+		ipfsURL := os.Getenv("IPFS_URL")
+		if ipfsURL == "" {
+			t.Skip("IPFS_URL is not set")
+		}
+
+		defer preserveIPFSHttpCli()()
+
+		cid := uploadIPFSFile(t, ipfsURL, "testdata/ipfs_QmcvoKLc742CyVH2Cnw6X95b4c8VdABqNPvTyAHEeaK1aP.json")
+		require.Equal(t, "QmcvoKLc742CyVH2Cnw6X95b4c8VdABqNPvTyAHEeaK1aP", cid)
+
+		defer httpmock.MockHTTPClient(t, map[string]string{
+			`http://127.0.0.1:8545%%%{"jsonrpc":"2.0","id":1,"method":"eth_call","params":[{"from":"0x0000000000000000000000000000000000000000","input":"0xb4bdea55000e02195fa99cf8975171e88a411bff99da7548cd4576ba2d102cf77ec31202","to":"0x134b1be34911e39a8397ec6289782989729807a4"},"latest"]}`: "testdata/httpresp_eth_resp3.json",
+			"https://rhs-staging.polygonid.me/node/34f9500218a054d58347b848dae17d07602b9320143c79e2786ff3aa97254f29": "testdata/httpresp_rhs_34f9500218a054d58347b848dae17d07602b9320143c79e2786ff3aa97254f29.json",
+			"https://rhs-staging.polygonid.me/node/d469d1307ba23faae8eef13d90031c981e4d2c36977b0422e669e5ef7b891205": "testdata/httpresp_rhs_d469d1307ba23faae8eef13d90031c981e4d2c36977b0422e669e5ef7b891205.json",
+			"https://rhs-staging.polygonid.me/node/20b66d667fe760963e023546deaec3550e51cf371c5b03e9eb751b7455601225": "testdata/httpresp_rhs_20b66d667fe760963e023546deaec3550e51cf371c5b03e9eb751b7455601225.json",
+			"https://rhs-staging.polygonid.me/node/81e7bed726f2bd88390e9537975e88835094176ad1d350b716d9d3eaaa4da128": "testdata/httpresp_rhs_81e7bed726f2bd88390e9537975e88835094176ad1d350b716d9d3eaaa4da128.json",
+			"https://rhs-staging.polygonid.me/node/0aab94d5a794dbb99bcd1ab80e91fef9afb2f9d667244b04ab6820c77dabeb23": "testdata/httpresp_rhs_0aab94d5a794dbb99bcd1ab80e91fef9afb2f9d667244b04ab6820c77dabeb23.json",
+			"https://rhs-staging.polygonid.me/node/003177fe2a5c4a9356894d6abb4f0a6da2fb19095e47d2447127edb8f7d01729": "testdata/httpresp_rhs_003177fe2a5c4a9356894d6abb4f0a6da2fb19095e47d2447127edb8f7d01729.json",
+			"https://rhs-staging.polygonid.me/node/adb8edf5bffb7168171e33696399d8766a03802624225ce20005cf61753d0611": "testdata/httpresp_rhs_adb8edf5bffb7168171e33696399d8766a03802624225ce20005cf61753d0611.json",
+			"https://rhs-staging.polygonid.me/node/c5b8691380634bd9c0f928da490f684579a2b51de1ee52028b74d83f461d0208": "testdata/httpresp_rhs_c5b8691380634bd9c0f928da490f684579a2b51de1ee52028b74d83f461d0208.json",
+			"https://rhs-staging.polygonid.me/node/1aefa6dd321a42685112bf762d7dc17a6fb51e5521a819f6d5c8a09681932913": "testdata/httpresp_rhs_1aefa6dd321a42685112bf762d7dc17a6fb51e5521a819f6d5c8a09681932913.json",
+			"https://rhs-staging.polygonid.me/node/d2e4c97c4fc3e83521a8b7910765ac62a7171f9120be3c3b854d48cd510e6f0a": "testdata/httpresp_rhs_d2e4c97c4fc3e83521a8b7910765ac62a7171f9120be3c3b854d48cd510e6f0a.json",
+		}, httpmock.IgnoreUntouchedURLs())()
+
+		cfg := EnvConfig{
+			IPFSNodeURL: ipfsURL,
+			ChainConfigs: map[core.ChainID]ChainConfig{
+				80001: {
+					RPCUrl: "http://127.0.0.1:8545",
+					StateContractAddr: common.HexToAddress(
+						"0x134B1BE34911E39A8397ec6289782989729807a4"),
+				},
+			},
+		}
+
+		doTest(t, "atomic_query_v3_sig_exists_true_inputs.json",
+			"atomic_query_v3_sig_exists_true_output.json",
+			AtomicQueryV3InputsFromJson, nil, cfg, "")
+	})
+
+	t.Run("AtomicQueryV3InputsFromJson__Sig_exists_false", func(t *testing.T) {
+		ipfsURL := os.Getenv("IPFS_URL")
+		if ipfsURL == "" {
+			t.Skip("IPFS_URL is not set")
+		}
+
+		defer preserveIPFSHttpCli()()
+
+		cid := uploadIPFSFile(t, ipfsURL, "testdata/ipfs_QmcvoKLc742CyVH2Cnw6X95b4c8VdABqNPvTyAHEeaK1aP.json")
+		require.Equal(t, "QmcvoKLc742CyVH2Cnw6X95b4c8VdABqNPvTyAHEeaK1aP", cid)
+
+		defer httpmock.MockHTTPClient(t, map[string]string{
+			`http://127.0.0.1:8545%%%{"jsonrpc":"2.0","id":1,"method":"eth_call","params":[{"from":"0x0000000000000000000000000000000000000000","input":"0xb4bdea55000e02195fa99cf8975171e88a411bff99da7548cd4576ba2d102cf77ec31202","to":"0x134b1be34911e39a8397ec6289782989729807a4"},"latest"]}`: "testdata/httpresp_eth_resp3.json",
+			"https://rhs-staging.polygonid.me/node/34f9500218a054d58347b848dae17d07602b9320143c79e2786ff3aa97254f29": "testdata/httpresp_rhs_34f9500218a054d58347b848dae17d07602b9320143c79e2786ff3aa97254f29.json",
+			"https://rhs-staging.polygonid.me/node/d469d1307ba23faae8eef13d90031c981e4d2c36977b0422e669e5ef7b891205": "testdata/httpresp_rhs_d469d1307ba23faae8eef13d90031c981e4d2c36977b0422e669e5ef7b891205.json",
+			"https://rhs-staging.polygonid.me/node/20b66d667fe760963e023546deaec3550e51cf371c5b03e9eb751b7455601225": "testdata/httpresp_rhs_20b66d667fe760963e023546deaec3550e51cf371c5b03e9eb751b7455601225.json",
+			"https://rhs-staging.polygonid.me/node/81e7bed726f2bd88390e9537975e88835094176ad1d350b716d9d3eaaa4da128": "testdata/httpresp_rhs_81e7bed726f2bd88390e9537975e88835094176ad1d350b716d9d3eaaa4da128.json",
+			"https://rhs-staging.polygonid.me/node/0aab94d5a794dbb99bcd1ab80e91fef9afb2f9d667244b04ab6820c77dabeb23": "testdata/httpresp_rhs_0aab94d5a794dbb99bcd1ab80e91fef9afb2f9d667244b04ab6820c77dabeb23.json",
+			"https://rhs-staging.polygonid.me/node/003177fe2a5c4a9356894d6abb4f0a6da2fb19095e47d2447127edb8f7d01729": "testdata/httpresp_rhs_003177fe2a5c4a9356894d6abb4f0a6da2fb19095e47d2447127edb8f7d01729.json",
+			"https://rhs-staging.polygonid.me/node/adb8edf5bffb7168171e33696399d8766a03802624225ce20005cf61753d0611": "testdata/httpresp_rhs_adb8edf5bffb7168171e33696399d8766a03802624225ce20005cf61753d0611.json",
+			"https://rhs-staging.polygonid.me/node/c5b8691380634bd9c0f928da490f684579a2b51de1ee52028b74d83f461d0208": "testdata/httpresp_rhs_c5b8691380634bd9c0f928da490f684579a2b51de1ee52028b74d83f461d0208.json",
+			"https://rhs-staging.polygonid.me/node/1aefa6dd321a42685112bf762d7dc17a6fb51e5521a819f6d5c8a09681932913": "testdata/httpresp_rhs_1aefa6dd321a42685112bf762d7dc17a6fb51e5521a819f6d5c8a09681932913.json",
+			"https://rhs-staging.polygonid.me/node/d2e4c97c4fc3e83521a8b7910765ac62a7171f9120be3c3b854d48cd510e6f0a": "testdata/httpresp_rhs_d2e4c97c4fc3e83521a8b7910765ac62a7171f9120be3c3b854d48cd510e6f0a.json",
+		}, httpmock.IgnoreUntouchedURLs())()
+
+		cfg := EnvConfig{
+			IPFSNodeURL: ipfsURL,
+			ChainConfigs: map[core.ChainID]ChainConfig{
+				80001: {
+					RPCUrl: "http://127.0.0.1:8545",
+					StateContractAddr: common.HexToAddress(
+						"0x134B1BE34911E39A8397ec6289782989729807a4"),
+				},
+			},
+		}
+
+		doTest(t, "atomic_query_v3_sig_exists_false_inputs.json",
+			"atomic_query_v3_sig_exists_false_output.json",
+			AtomicQueryV3InputsFromJson, nil, cfg, "")
+	})
+
+	t.Run("AtomicQuerySigV2Inputs Empty roots in state", func(t *testing.T) {
+		defer httpmock.MockHTTPClient(t, map[string]string{
+			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld":             "testdata/httpresp_kyc-v3.json-ld",
+			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld": "testdata/httpresp_iden3credential_v2.json",
+			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai" +
+				"%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/2376431481": "testdata" +
+				"/httpresp_rev_status_2376431481_empty_rev_root.json",
+			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/0": "testdata/httpresp_rev_status_wuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU_0_empty_roots.json",
+		}, httpmock.IgnoreUntouchedURLs())()
+
+		wantVerifiablePresentation := map[string]any{
+			"@context": []any{"https://www.w3.org/2018/credentials/v1"},
+			"@type":    "VerifiablePresentation",
+			"verifiableCredential": map[string]any{
+				"@context": []any{
+					"https://www.w3.org/2018/credentials/v1",
+					"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld",
+				},
+				"@type": []any{"VerifiableCredential", "KYCAgeCredential"},
+				"credentialSubject": map[string]any{
+					"@type":        "KYCAgeCredential",
+					"documentType": float64(2),
+				},
+			},
+		}
+
+		doTest(t, "atomic_query_sig_v2_merklized_disclosure_inputs.json",
+			"atomic_query_sig_v2_merklized_output.json",
+			AtomicQuerySigV2InputsFromJson, wantVerifiablePresentation,
+			EnvConfig{}, "")
+	})
+
+	t.Run("AtomicQueryMtpV2InputsFromJson Empty roots in state",
+		func(t *testing.T) {
+			defer httpmock.MockHTTPClient(t, map[string]string{
+				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld":                                                 "testdata/httpresp_iden3credential_v2.json",
+				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3-non-merklized.json-ld":                                               "testdata/httpresp_kyc-v3-non-merklized.json-ld",
+				"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qFuKxq6iPem5w2U6T6druwGFjqTinE1kqNkSN7oo9/claims/revocation/status/118023115": "testdata/httpresp_rev_status_118023115_empty_roots.json",
+			}, httpmock.IgnoreUntouchedURLs())()
+
+			wantVerifiablePresentation := map[string]any{
+				"@context": []any{"https://www.w3.org/2018/credentials/v1"},
+				"@type":    "VerifiablePresentation",
+				"verifiableCredential": map[string]any{
+					"@context": []any{
+						"https://www.w3.org/2018/credentials/v1",
+						"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3-non-merklized.json-ld",
+					},
+					"@type": []any{"VerifiableCredential", "KYCAgeCredential"},
+					"credentialSubject": map[string]any{
+						"@type":        "KYCAgeCredential",
+						"documentType": float64(99),
+					},
+				},
+			}
+
+			doTest(t,
+				"atomic_query_mtp_v2_non_merklized_disclosure_inputs.json",
+				"atomic_query_mtp_v2_non_merklized_output.json",
+				AtomicQueryMtpV2InputsFromJson, wantVerifiablePresentation,
+				EnvConfig{}, "")
+		})
+
 }
 
 func TestEnvConfig_UnmarshalJSON(t *testing.T) {
@@ -1076,9 +1221,17 @@ func TestUnpackOperatorWithArgs(t *testing.T) {
 		merklize.PoseidonHasher{})
 	require.NoError(t, err)
 	require.Equal(t, circuits.EXISTS, op)
-	require.Equal(t,
-		[]*big.Int{bi("18586133768512220936620570745912940619677854269274689475585506675881198879027")},
-		vals)
+	require.Equal(t, []*big.Int{bi("1")}, vals)
+
+	op, vals, err = unpackOperatorWithArgs("$exists", false, ld.XSDString,
+		merklize.PoseidonHasher{})
+	require.NoError(t, err)
+	require.Equal(t, circuits.EXISTS, op)
+	require.Equal(t, []*big.Int{bi("0")}, vals)
+
+	_, _, err = unpackOperatorWithArgs("$exists", "true", ld.XSDString,
+		merklize.PoseidonHasher{})
+	require.EqualError(t, err, "$exists operator value is not a boolean")
 }
 
 func TestDescribeID(t *testing.T) {

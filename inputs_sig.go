@@ -260,6 +260,10 @@ func verifiableTreeStateToCircuitsTreeState(
 	var err error
 	var out circuits.TreeState
 
+	out.ClaimsRoot = &merkletree.HashZero
+	out.RootOfRoots = &merkletree.HashZero
+	out.RevocationRoot = &merkletree.HashZero
+
 	if s.State != nil {
 		out.State, err = stringToHash(*s.State)
 		if err != nil {
@@ -1445,13 +1449,26 @@ func queryFromObjMerklized(ctx context.Context,
 	return out, verifiablePresentation, nil
 }
 
-var opDatatypeRedefine = map[int]string{
-	circuits.EXISTS: ld.XSDBoolean,
-}
-
 // Return int operator value by its name and arguments as big.Ints array.
 func unpackOperatorWithArgs(opStr string, opValue any,
 	datatype string, hasher merklize.Hasher) (int, []*big.Int, error) {
+
+	op, ok := circuits.QueryOperators[opStr]
+	if !ok {
+		return 0, nil, errors.New("unknown operator")
+	}
+
+	if op == circuits.EXISTS {
+		var existsVal bool
+		existsVal, ok = opValue.(bool)
+		if !ok {
+			return 0, nil, errors.New("$exists operator value is not a boolean")
+		}
+		if existsVal {
+			return op, []*big.Int{big.NewInt(1)}, nil
+		}
+		return op, []*big.Int{big.NewInt(0)}, nil
+	}
 
 	hashFn := func(val any) (*big.Int, error) {
 		if hasher == nil {
@@ -1459,15 +1476,6 @@ func unpackOperatorWithArgs(opStr string, opValue any,
 		} else {
 			return merklize.HashValueWithHasher(hasher, datatype, val)
 		}
-	}
-
-	op, ok := circuits.QueryOperators[opStr]
-	if !ok {
-		return 0, nil, errors.New("unknown operator")
-	}
-
-	if newDT, ok := opDatatypeRedefine[op]; ok {
-		datatype = newDT
 	}
 
 	var err error
