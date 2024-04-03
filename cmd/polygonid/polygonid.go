@@ -806,6 +806,15 @@ func PLGNFreeStatus(status *C.PLGNStatus) {
 	C.free(unsafe.Pointer(status))
 }
 
+//PLGNFreeCString frees the memory allocated by Golang(using C.CString() ) for the given C string.
+//It ensures a consistent and controlled memory management within Go code.
+//export PLGNFreeCString 
+func PLGNFreeCString(str *C.char) {
+	// Note: We do not perform a null check here as C's free function can handle null safely.
+    C.free(unsafe.Pointer(str))
+}
+
+
 //export PLGNCleanCache
 func PLGNCleanCache(status **C.PLGNStatus) bool {
 	_, cancel := logAPITime()
