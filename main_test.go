@@ -15,7 +15,7 @@ var catchUnusedHttpresp = flag.Bool("find-unused-httpresp", false,
 func TestMain(m *testing.M) {
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
 		AddSource:   true,
-		Level:       slog.LevelDebug,
+		Level:       slog.LevelInfo,
 		ReplaceAttr: nil,
 	})))
 
