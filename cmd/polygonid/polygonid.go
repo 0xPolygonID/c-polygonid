@@ -790,6 +790,20 @@ func PLGNAtomicQueryV3OnChainInputs(jsonResponse **C.char, in *C.char,
 		jsonResponse, in, cfg, status)
 }
 
+// PLGNALinkedMultiQueryInputs returns the inputs for the
+// linkedMultiQuery10-beta.1 circuit.
+//
+//export PLGNALinkedMultiQueryInputs
+func PLGNALinkedMultiQueryInputs(jsonResponse **C.char, in *C.char,
+	cfg *C.char, status **C.PLGNStatus) bool {
+
+	ctx, cancel := logAPITime()
+	defer cancel()
+
+	return prepareInputs(ctx, c_polygonid.LinkedMultiQueryInputsFromJson,
+		jsonResponse, in, cfg, status)
+}
+
 //export PLGNFreeStatus
 func PLGNFreeStatus(status *C.PLGNStatus) {
 	_, cancel := logAPITime()
