@@ -1197,6 +1197,17 @@ func buildQueryPath(ctx context.Context, contextURL string, contextType string,
 	return
 }
 
+func datatypeFromContext(contextURL string, contextType string, field string,
+	documentLoader ld.DocumentLoader, hasher merklize.Hasher) (string, error) {
+
+	return merklize.Options{
+		Hasher:         hasher,
+		DocumentLoader: documentLoader,
+	}.TypeFromContext(
+		[]byte(`{"@context":"`+contextURL+`"}`),
+		contextType+"."+field)
+}
+
 func querySkipRevocation(requestObj jsonObj) (bool, error) {
 	result, err := getByPath(requestObj, "query.skipClaimRevocationCheck")
 	if errors.As(err, &errPathNotFound{}) {
@@ -1510,16 +1521,14 @@ func mkValueProof(ctx context.Context, mz *merklize.Merklizer,
 		return nil, err
 	}
 
-	if !existenceProof.Existence {
-		return nil, fmt.Errorf(
-			"value not found in verifiable credential by path %v",
-			fmtPath(path))
-	}
-
 	var valueEntry *big.Int
-	valueEntry, err = mzValue.MtEntry()
-	if err != nil {
-		return nil, err
+	if existenceProof.Existence {
+		valueEntry, err = mzValue.MtEntry()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		valueEntry = big.NewInt(0)
 	}
 
 	var pathEntry *big.Int
@@ -1707,7 +1716,12 @@ func queriesFromObjMerklized(ctx context.Context,
 				val := ops[op]
 
 				var fieldDatatype string
-				fieldDatatype, err = mz.JSONLDType(path)
+				if valueProof.MTP.Existence {
+					fieldDatatype, err = mz.JSONLDType(path)
+				} else {
+					fieldDatatype, err = datatypeFromContext(contextURL,
+						contextType, field, documentLoader, mz.Hasher())
+				}
 				if err != nil {
 					return nil, nil, err
 				}
