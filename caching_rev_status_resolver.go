@@ -148,6 +148,9 @@ func resolveRevStatusAndCache(ctx context.Context, db *badger.DB,
 
 	var newRevTreeRoot merkletree.Hash
 	newRevTreeRoot, err = toHash(revStatus.Issuer.RevocationTreeRoot)
+	if err != nil {
+		return verifiable.RevocationStatus{}, err
+	}
 
 	if hasOldState && newRevTreeRoot != oldRevTreeRoot {
 		err = removeExpiredRevStatusFromCache(db, oldRevTreeRoot)
@@ -196,13 +199,6 @@ func removeExpiredRevStatusFromCache(db *badger.DB,
 		}
 		return txn.Delete([]byte(treeEntriesKey))
 	})
-}
-
-type treeState struct {
-	state              merkletree.Hash
-	rootOfRoots        merkletree.Hash
-	claimsTreeRoot     merkletree.Hash
-	revocationTreeRoot merkletree.Hash
 }
 
 func putRevProofToCache(db *badger.DB, revTreeRoot merkletree.Hash,

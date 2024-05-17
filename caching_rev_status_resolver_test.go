@@ -109,7 +109,7 @@ func TestCachedResolve(t *testing.T) {
 	states := map[string]verifiable.TreeState{}
 	trees := map[merkletree.Hash]*merkletree.MerkleTree{}
 
-	revStatus, err := cachedResolve(ctx, PerChainConfig{}, issuerDID,
+	_, err = cachedResolve(ctx, PerChainConfig{}, issuerDID,
 		credStatus, regBuilder(states, trees))
 	require.EqualError(t, err, "issuer state not found")
 
@@ -126,7 +126,7 @@ func TestCachedResolve(t *testing.T) {
 	}
 	states[issuerDID.String()] = issuerState
 	trees[*revTree.Root()] = revTree
-	revStatus, err = cachedResolve(ctx, PerChainConfig{}, issuerDID,
+	revStatus, err := cachedResolve(ctx, PerChainConfig{}, issuerDID,
 		credStatus, regBuilder(states, trees))
 	require.NoError(t, err)
 	wantRevStatus0 := `{
@@ -248,6 +248,7 @@ func expireTreeStateCache(t testing.TB, cacheDB *badger.DB, key string) {
 		require.NoError(t, json.Unmarshal(entryVal, &stateEntry))
 		stateEntry.CreatedAt = time.Now().Add(-issuerStateTTL - time.Second)
 		entryVal, err = json.Marshal(stateEntry)
+		require.NoError(t, err)
 		require.NoError(t, txn.Set([]byte(key), entryVal))
 		return nil
 	})
