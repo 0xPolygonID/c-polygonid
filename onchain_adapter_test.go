@@ -12,7 +12,7 @@ import (
 )
 
 func TestW3CCredentialFromOnchainHex(t *testing.T) {
-	defer mockBadgerLog(t)()
+	mockBadgerLog(t)
 
 	doTest := func(t testing.TB, inFile, wantOutFile string, cfg EnvConfig) {
 		ctx := context.Background()
