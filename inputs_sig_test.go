@@ -81,7 +81,7 @@ func removeIdFromEthBody(body []byte) []byte {
 }
 
 func TestPrepareInputs(t *testing.T) {
-	defer mockBadgerLog(t)()
+	mockBadgerLog(t)
 
 	type PrepareInputsFn func(
 		ctx context.Context, cfg EnvConfig, in []byte) (
@@ -1047,16 +1047,8 @@ func stringFromJsonObj(obj map[string]any, key string) string {
 	return ""
 }
 
-func flushCacheDB() {
-	db, cleanup, err := getCacheDB()
-	if err != nil {
-		panic(err)
-	}
-	defer cleanup()
-	err = db.DropAll()
-	if err != nil {
-		panic(err)
-	}
+func flushCacheDB(t testing.TB) {
+	require.NoError(t, getTestCacheDB(t).DropAll())
 }
 
 type countingDocumentLoader struct {
@@ -1086,8 +1078,8 @@ func (c *countingDocumentLoader) reset() {
 }
 
 func TestMerklizeCred(t *testing.T) {
-	defer mockBadgerLog(t)()
-	flushCacheDB()
+	mockBadgerLog(t)
+	flushCacheDB(t)
 
 	defer httpmock.MockHTTPClient(t, map[string]string{
 		"https://schema.iden3.io/core/jsonld/iden3proofs.jsonld":                                         "testdata/httpresp_iden3proofs.jsonld",
@@ -1118,7 +1110,7 @@ func TestMerklizeCred(t *testing.T) {
 	require.Equal(t, wantRoot, mz.Root().BigInt().String())
 	require.Equal(t, 0, documentLoader.counter())
 
-	flushCacheDB()
+	flushCacheDB(t)
 }
 
 func vcCredChecksum(in []byte) []byte {
@@ -1147,9 +1139,8 @@ func vcCredChecksum(in []byte) []byte {
 }
 
 func TestPreCacheVC(t *testing.T) {
-	defer mockBadgerLog(t)()
-
-	flushCacheDB()
+	mockBadgerLog(t)
+	flushCacheDB(t)
 
 	defer httpmock.MockHTTPClient(t, map[string]string{
 		"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld": "testdata/httpresp_iden3credential_v2.json",
@@ -1161,9 +1152,7 @@ func TestPreCacheVC(t *testing.T) {
 	err := PreCacheVC(context.Background(), cfg, in)
 	require.NoError(t, err)
 
-	db, closeCache, err := getCacheDB()
-	require.NoError(t, err)
-	t.Cleanup(closeCache)
+	db := getTestCacheDB(t)
 
 	cacheKey := vcCredChecksum(in)
 	mz, _, err :=

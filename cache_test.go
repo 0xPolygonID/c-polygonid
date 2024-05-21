@@ -67,12 +67,12 @@ func (t *testBadgerLogger) Debugf(s string, i ...interface{}) {
 	t.t.Logf("[BADGER DEBUG]"+s, i...)
 }
 
-func mockBadgerLog(t testing.TB) func() {
+func mockBadgerLog(t testing.TB) {
 	orig := badgerLogger
 	badgerLogger = &testBadgerLogger{t, true}
-	return func() {
+	t.Cleanup(func() {
 		badgerLogger = orig
-	}
+	})
 }
 
 func BenchmarkBadgerWithOpening(b *testing.B) {
@@ -99,7 +99,7 @@ func BenchmarkBadgerWithoutOpening(b *testing.B) {
 }
 
 func TestBadger(t *testing.T) {
-	defer mockBadgerLog(t)()
+	mockBadgerLog(t)
 
 	dbPath, err := getBadgerPath()
 	require.NoError(t, err)
@@ -114,7 +114,7 @@ func TestBadger(t *testing.T) {
 }
 
 func TestGetCacheDB(t *testing.T) {
-	defer mockBadgerLog(t)()
+	mockBadgerLog(t)
 	db1, close1, err := getCacheDB()
 	require.NoError(t, err)
 	db2, close2, err := getCacheDB()
@@ -179,7 +179,7 @@ func set(db *badger.DB, key string, value string) {
 }
 
 func TestCleanCache(t *testing.T) {
-	defer mockBadgerLog(t)()
+	mockBadgerLog(t)
 	db1, close1, err := getCacheDB()
 	require.NoError(t, err)
 
@@ -214,7 +214,7 @@ func TestCleanCache(t *testing.T) {
 }
 
 func TestMultipleCleanup(t *testing.T) {
-	defer mockBadgerLog(t)()
+	mockBadgerLog(t)
 	_, close1, err := getCacheDB()
 	require.NoError(t, err)
 

@@ -314,24 +314,13 @@ func buildAndValidateCredentialStatus(ctx context.Context, cfg EnvConfig,
 	credStatus jsonObj, issuerDID *w3c.DID,
 	skipClaimRevocationCheck bool) (circuits.MTProof, error) {
 
-	resolversRegistry, registryCleanupFn, err := getResolversRegistry(ctx, cfg.ChainConfigs)
-	if err != nil {
-		return circuits.MTProof{}, err
-	}
-	defer registryCleanupFn()
-
 	credStatus2, err := credStatusFromJsonObj(credStatus)
 	if err != nil {
 		return circuits.MTProof{}, err
 	}
 
-	resolver, err := resolversRegistry.Get(credStatus2.Type)
-	if err != nil {
-		return circuits.MTProof{}, err
-	}
-
-	ctx = verifiable.WithIssuerDID(ctx, issuerDID)
-	revStatus, err := resolver.Resolve(ctx, credStatus2)
+	revStatus, err := cachedResolve(ctx, cfg.ChainConfigs, issuerDID,
+		credStatus2, getResolversRegistry)
 	if err != nil {
 		return circuits.MTProof{},
 			fmt.Errorf("error resolving revocation status: %w", err)

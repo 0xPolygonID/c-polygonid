@@ -10,8 +10,8 @@ import (
 )
 
 func TestGetPubRemoteDocument(t *testing.T) {
-	defer mockBadgerLog(t)()
-	flushCacheDB()
+	mockBadgerLog(t)
+	flushCacheDB(t)
 
 	cacheEng, err := newBadgerCacheEngine()
 	require.NoError(t, err)
