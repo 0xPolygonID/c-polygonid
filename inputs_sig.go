@@ -32,6 +32,9 @@ import (
 	"github.com/iden3/go-schema-processor/v2/merklize"
 	"github.com/iden3/go-schema-processor/v2/processor"
 	"github.com/iden3/go-schema-processor/v2/verifiable"
+	"github.com/iden3/iden3comm/v2"
+	"github.com/iden3/iden3comm/v2/packers"
+	i3cResolvers "github.com/iden3/iden3comm/v2/resolvers"
 	"github.com/iden3/merkletree-proof/resolvers"
 	"github.com/piprate/json-gold/ld"
 )
@@ -185,17 +188,44 @@ func claimWithSigProofFromObj(ctx context.Context, cfg EnvConfig,
 	if !ok {
 		return out, errors.New("not a json object")
 	}
-	out.NonRevProof, err = buildAndValidateCredentialStatus(ctx, cfg,
-		credStatus, issuerDID, skipClaimRevocationCheck)
+	userDID, err := userDIDFromCred(w3cCred)
 	if err != nil {
 		return out, err
 	}
-	out.SignatureProof, err = signatureProof(ctx, cfg, *proof, issuerDID)
+
+	out.NonRevProof, err = buildAndValidateCredentialStatus(ctx, cfg,
+		credStatus, issuerDID, userDID, skipClaimRevocationCheck)
+	if err != nil {
+		return out, err
+	}
+	out.SignatureProof, err = signatureProof(ctx, cfg, *proof, issuerDID,
+		userDID)
 	if err != nil {
 		return out, err
 	}
 
 	return out, nil
+}
+
+// returned DID maybe nil if we do not find it in the credential
+func userDIDFromCred(w3cCred verifiable.W3CCredential) (*w3c.DID, error) {
+	if userDIDi, ok := w3cCred.CredentialSubject["id"]; ok {
+		var userDIDs string
+		userDIDs, ok = userDIDi.(string)
+		if ok {
+			userDID, err := w3c.ParseDID(userDIDs)
+			if err != nil {
+				return nil, fmt.Errorf(
+					"error parsing user DID from credentialSubject.id field: %w",
+					err)
+			}
+			return userDID, nil
+		} else {
+			return nil, errors.New(
+				"credentialSubject.id field supposed to be a string type and in DID format")
+		}
+	}
+	return nil, nil
 }
 
 func getResolversRegistry(ctx context.Context,
@@ -209,6 +239,7 @@ func getResolversRegistry(ctx context.Context,
 		registry.Delete(verifiable.SparseMerkleTreeProof)
 		registry.Delete(verifiable.Iden3ReverseSparseMerkleTreeProof)
 		registry.Delete(verifiable.Iden3OnchainSparseMerkleTreeProof2023)
+		registry.Delete(verifiable.Iden3commRevocationStatusV1)
 
 		for _, cli := range ethClients {
 			cli.Close()
@@ -244,6 +275,16 @@ func getResolversRegistry(ctx context.Context,
 		stateContractAddresses)
 	registry.Register(verifiable.Iden3OnchainSparseMerkleTreeProof2023,
 		onChainRHSResolver)
+
+	pm := iden3comm.NewPackageManager()
+	err := pm.RegisterPackers(&packers.PlainMessagePacker{})
+	if err != nil {
+		cleanupFn()
+		return nil, nil, err
+	}
+	iden3comResolver := i3cResolvers.NewAgentResolver(
+		i3cResolvers.AgentResolverConfig{PackageManager: pm})
+	registry.Register(verifiable.Iden3commRevocationStatusV1, iden3comResolver)
 
 	return registry, cleanupFn, nil
 }
@@ -311,7 +352,7 @@ func revStatusToCircuitsMTPProof(
 }
 
 func buildAndValidateCredentialStatus(ctx context.Context, cfg EnvConfig,
-	credStatus jsonObj, issuerDID *w3c.DID,
+	credStatus jsonObj, issuerDID, userDID *w3c.DID,
 	skipClaimRevocationCheck bool) (circuits.MTProof, error) {
 
 	credStatus2, err := credStatusFromJsonObj(credStatus)
@@ -319,7 +360,7 @@ func buildAndValidateCredentialStatus(ctx context.Context, cfg EnvConfig,
 		return circuits.MTProof{}, err
 	}
 
-	revStatus, err := cachedResolve(ctx, cfg.ChainConfigs, issuerDID,
+	revStatus, err := cachedResolve(ctx, cfg.ChainConfigs, issuerDID, userDID,
 		credStatus2, getResolversRegistry)
 	if err != nil {
 		return circuits.MTProof{},
@@ -403,8 +444,8 @@ func sigFromHex(sigHex string) (*babyjub.Signature, error) {
 }
 
 func signatureProof(ctx context.Context, cfg EnvConfig,
-	proof verifiable.BJJSignatureProof2021,
-	issuerDID *w3c.DID) (out circuits.BJJSignatureProof, err error) {
+	proof verifiable.BJJSignatureProof2021, issuerDID,
+	userDID *w3c.DID) (out circuits.BJJSignatureProof, err error) {
 
 	out.Signature, err = sigFromHex(proof.Signature)
 	if err != nil {
@@ -425,7 +466,8 @@ func signatureProof(ctx context.Context, cfg EnvConfig,
 		return out, errors.New("credential status is not of object type")
 	}
 	out.IssuerAuthNonRevProof, err =
-		buildAndValidateCredentialStatus(ctx, cfg, credStatus, issuerDID, false)
+		buildAndValidateCredentialStatus(ctx, cfg, credStatus, issuerDID,
+			userDID, false)
 	if err != nil {
 		return out, err
 	}
@@ -1872,6 +1914,11 @@ func claimWithMtpProofFromObj(ctx context.Context, cfg EnvConfig,
 		return out, errProofNotFound(verifiable.Iden3SparseMerkleTreeProofType)
 	}
 
+	userDID, err := userDIDFromCred(w3cCred)
+	if err != nil {
+		return out, err
+	}
+
 	issuerID, err := core.IDFromDID(*issuerDID)
 	if err != nil {
 		return out, err
@@ -1893,7 +1940,7 @@ func claimWithMtpProofFromObj(ctx context.Context, cfg EnvConfig,
 	}
 
 	out.NonRevProof, err = buildAndValidateCredentialStatus(ctx, cfg,
-		credStatus, issuerDID, skipClaimRevocationCheck)
+		credStatus, issuerDID, userDID, skipClaimRevocationCheck)
 	if err != nil {
 		return out, err
 	}

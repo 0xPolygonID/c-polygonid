@@ -14,6 +14,7 @@ import (
 	"github.com/iden3/go-iden3-core/v2/w3c"
 	"github.com/iden3/go-merkletree-sql/v2"
 	"github.com/iden3/go-schema-processor/v2/verifiable"
+	"github.com/iden3/iden3comm/v2/resolvers"
 )
 
 var revStatusCacheMutex sync.RWMutex
@@ -93,13 +94,18 @@ type registryBuilder func(ctx context.Context, cfg PerChainConfig) (
 	*verifiable.CredentialStatusResolverRegistry, func(), error)
 
 func resolveRevStatus(ctx context.Context, chainCfg PerChainConfig,
-	issuerDID *w3c.DID, credStatus verifiable.CredentialStatus,
+	issuerDID, userDID *w3c.DID, credStatus verifiable.CredentialStatus,
 	regBuilder registryBuilder) (verifiable.RevocationStatus, error) {
 
 	if regBuilder == nil {
 		return verifiable.RevocationStatus{},
 			errors.New("registry builder is null")
 	}
+
+	if userDID == nil {
+		return verifiable.RevocationStatus{}, errors.New("user DID is null")
+	}
+
 	resolversRegistry, registryCleanupFn, err := regBuilder(ctx,
 		chainCfg)
 	if err != nil {
@@ -113,16 +119,17 @@ func resolveRevStatus(ctx context.Context, chainCfg PerChainConfig,
 	}
 
 	ctx = verifiable.WithIssuerDID(ctx, issuerDID)
+	ctx = resolvers.WithSenderDID(ctx, userDID)
 	return resolver.Resolve(ctx, credStatus)
 }
 
 func resolveRevStatusAndCache(ctx context.Context, db *badger.DB,
-	chainCfg PerChainConfig, issuerDID *w3c.DID,
+	chainCfg PerChainConfig, issuerDID, userDID *w3c.DID,
 	credStatus verifiable.CredentialStatus,
 	regBuilder registryBuilder) (verifiable.RevocationStatus, error) {
 
-	revStatus, err := resolveRevStatus(ctx, chainCfg, issuerDID, credStatus,
-		regBuilder)
+	revStatus, err := resolveRevStatus(ctx, chainCfg, issuerDID, userDID,
+		credStatus, regBuilder)
 	if err != nil {
 		return verifiable.RevocationStatus{}, err
 	}
@@ -263,13 +270,13 @@ func getRevProofFromCache(db *badger.DB, revTreeRoot merkletree.Hash,
 }
 
 func cachedResolve(ctx context.Context, chainCfg PerChainConfig,
-	issuerDID *w3c.DID, credStatus verifiable.CredentialStatus,
+	issuerDID, userDID *w3c.DID, credStatus verifiable.CredentialStatus,
 	regBuilder registryBuilder) (verifiable.RevocationStatus, error) {
 
 	cache, cacheCleanup, err := getCacheDB()
 	if err != nil {
 		// Cache engine is not available, so resolve without cache
-		return resolveRevStatus(ctx, chainCfg, issuerDID, credStatus,
+		return resolveRevStatus(ctx, chainCfg, issuerDID, userDID, credStatus,
 			regBuilder)
 	}
 	defer cacheCleanup()
@@ -283,7 +290,7 @@ func cachedResolve(ctx context.Context, chainCfg PerChainConfig,
 	revStatus.Issuer, createdAt, err = getIssuerStateFromCache(cache, issuerDID)
 	if errors.Is(err, badger.ErrKeyNotFound) || (err == nil && createdAt.Before(time.Now().Add(-issuerStateTTL))) {
 		return resolveRevStatusAndCache(ctx, cache, chainCfg, issuerDID,
-			credStatus, regBuilder)
+			userDID, credStatus, regBuilder)
 	} else if err != nil {
 		return verifiable.RevocationStatus{}, err
 	}
@@ -297,7 +304,7 @@ func cachedResolve(ctx context.Context, chainCfg PerChainConfig,
 	revStatus.MTP, err = getRevProofFromCache(cache, revTreeRoot, credStatus)
 	if errors.Is(err, badger.ErrKeyNotFound) {
 		return resolveRevStatusAndCache(ctx, cache, chainCfg, issuerDID,
-			credStatus, regBuilder)
+			userDID, credStatus, regBuilder)
 	} else if err != nil {
 		return verifiable.RevocationStatus{}, err
 	}
