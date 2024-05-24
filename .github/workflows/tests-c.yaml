@@ -33,7 +33,7 @@ jobs:
           # without this line `git status` does not work on containers
           # 1.19.5 and upper
           git config --global --add safe.directory `pwd`
-          go build -buildmode=c-archive -o ios/libpolygonid.a ./cmd/polygonid
+          go build -tags no_jwz -buildmode=c-archive -o ios/libpolygonid.a ./cmd/polygonid
           cp ios/libpolygonid.h ios/libpolygonid-darwin-arm64.h
           mkdir examples/build
           cd examples/build
@@ -59,7 +59,7 @@ jobs:
             ${{ runner.os }}-go-
       - name: Run ctests
         run: |
-          go build -buildmode=c-archive -o ios/libpolygonid.a ./cmd/polygonid
+          go build -tags no_jwz -buildmode=c-archive -o ios/libpolygonid.a ./cmd/polygonid
           cp ios/libpolygonid.h ios/libpolygonid-darwin-arm64.h
           brew install cjson
           mkdir examples/build

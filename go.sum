@@ -186,8 +186,8 @@ github.com/iden3/go-rapidsnark/witness/wazero v0.0.0-20230524142950-0986cf057d4e
 github.com/iden3/go-rapidsnark/witness/wazero v0.0.0-20230524142950-0986cf057d4e/go.mod h1:UEBifEzw62T6VzIHJeHuUgeLg2U/J9ttf7hOwQEqnYk=
 github.com/iden3/go-schema-processor/v2 v2.3.4 h1:zWE9NrY7dm9Il8c0u3XcJfenptmxbvIaNDOqkq5uQ0A=
 github.com/iden3/go-schema-processor/v2 v2.3.4/go.mod h1:tuz/iuqU13NdpCY1Ovsh7n6KTZnJnfhqjB0MUgxbcA4=
-github.com/iden3/iden3comm/v2 v2.3.3 h1:lH2v/hZeZYvKQAgfpi/hyzugDjvCTxJo/Y0pyMVWHFQ=
-github.com/iden3/iden3comm/v2 v2.3.3/go.mod h1:14aZgYjCi0XIZ/wkQrWIhLkQT20nwQMyWEIeLXY0Klg=
+github.com/iden3/iden3comm/v2 v2.3.4-0.20240524090357-f348cd28df8c h1:MKEvtiDyk/ByXHhQoIsQuXSy74oQgHOmJtHQFfF2EVw=
+github.com/iden3/iden3comm/v2 v2.3.4-0.20240524090357-f348cd28df8c/go.mod h1:14aZgYjCi0XIZ/wkQrWIhLkQT20nwQMyWEIeLXY0Klg=
 github.com/iden3/merkletree-proof v0.1.1 h1:NwuaW/t0HTwZpmxWSxqeh/hYRjAQt/uIvw5QeW5GE8I=
 github.com/iden3/merkletree-proof v0.1.1/go.mod h1:ul0HDU6/eVNX++u/PWScY7pTXiFjqM5kA6vl1wEoTUU=
 github.com/jackpal/go-nat-pmp v1.0.2 h1:KzKSgb7qkJvOUTqYl9/Hg/me3pWgBmERKrTGD7BdWus=
