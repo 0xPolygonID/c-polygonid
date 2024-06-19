@@ -5,14 +5,14 @@ go 1.22
 require (
 	github.com/dgraph-io/badger/v4 v4.2.0
 	github.com/ethereum/go-ethereum v1.14.3
-	github.com/iden3/go-circuits/v2 v2.2.1
-	github.com/iden3/go-iden3-core/v2 v2.1.1
+	github.com/iden3/go-circuits/v2 v2.3.0
+	github.com/iden3/go-iden3-core/v2 v2.2.0
 	github.com/iden3/go-iden3-crypto v0.0.16
 	github.com/iden3/go-merkletree-sql/v2 v2.0.6
 	github.com/iden3/go-onchain-credential-adapter v0.0.0-20240425110009-4004ac8da50c
-	github.com/iden3/go-schema-processor/v2 v2.3.4
-	github.com/iden3/iden3comm/v2 v2.4.0
-	github.com/iden3/merkletree-proof v0.1.1
+	github.com/iden3/go-schema-processor/v2 v2.4.0
+	github.com/iden3/iden3comm/v2 v2.5.1
+	github.com/iden3/merkletree-proof v0.2.0
 	github.com/piprate/json-gold v0.5.1-0.20230111113000-6ddbe6e6f19f
 	github.com/stretchr/testify v1.9.0
 )
@@ -49,7 +49,7 @@ require (
 	github.com/iden3/contracts-abi/onchain-credential-status-resolver/go/abi v0.0.0-20230911113809-c58b7e7a69b0 // indirect
 	github.com/iden3/contracts-abi/onchain-non-merklized-issuer-base/v0/go/abi v0.0.0-20240222110004-06aa097d1318 // indirect
 	github.com/iden3/contracts-abi/state/go/abi v0.0.0-20230405152923-4a25f6f1f0f4 // indirect
-	github.com/iden3/go-jwz/v2 v2.0.3 // indirect
+	github.com/iden3/go-jwz/v2 v2.1.1 // indirect
 	github.com/iden3/go-rapidsnark/prover v0.0.10 // indirect
 	github.com/iden3/go-rapidsnark/types v0.0.3 // indirect
 	github.com/iden3/go-rapidsnark/verifier v0.0.5 // indirect
