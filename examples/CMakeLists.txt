@@ -21,7 +21,7 @@ endif()
 # include_directories(${cJSON_SOURCE_DIR})
 # add_executable(json_functions_tests json_functions_tests.c ${cJSON_SOURCE_DIR}/cJSON.c)
 
-## Compaly with system installed cJSON
+## Compile with system installed cJSON
 
 find_package(cJSON REQUIRED)
 include_directories(${CJSON_INCLUDE_DIRS})

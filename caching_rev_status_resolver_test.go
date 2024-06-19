@@ -84,7 +84,7 @@ func TestCachedResolve(t *testing.T) {
 	flushCacheDB(t)
 
 	ctx := context.Background()
-	_, err := cachedResolve(ctx, PerChainConfig{}, nil,
+	_, err := cachedResolve(ctx, PerChainConfig{}, nil, nil,
 		verifiable.CredentialStatus{}, nil)
 	require.EqualError(t, err, "issuer DID is null")
 
@@ -95,7 +95,7 @@ func TestCachedResolve(t *testing.T) {
 	issuerDID, err := core.NewDIDFromIdenState(typ, big.NewInt(1))
 	require.NoError(t, err)
 
-	_, err = cachedResolve(ctx, PerChainConfig{}, issuerDID,
+	_, err = cachedResolve(ctx, PerChainConfig{}, issuerDID, nil,
 		verifiable.CredentialStatus{}, nil)
 	require.EqualError(t, err, "registry builder is null")
 
@@ -109,7 +109,14 @@ func TestCachedResolve(t *testing.T) {
 	states := map[string]verifiable.TreeState{}
 	trees := map[merkletree.Hash]*merkletree.MerkleTree{}
 
-	_, err = cachedResolve(ctx, PerChainConfig{}, issuerDID,
+	_, err = cachedResolve(ctx, PerChainConfig{}, issuerDID, nil,
+		verifiable.CredentialStatus{}, regBuilder(states, trees))
+	require.EqualError(t, err, "user DID is null")
+
+	userDID, err := core.NewDIDFromIdenState(typ, big.NewInt(2))
+	require.NoError(t, err)
+
+	_, err = cachedResolve(ctx, PerChainConfig{}, issuerDID, userDID,
 		credStatus, regBuilder(states, trees))
 	require.EqualError(t, err, "issuer state not found")
 
@@ -126,7 +133,7 @@ func TestCachedResolve(t *testing.T) {
 	}
 	states[issuerDID.String()] = issuerState
 	trees[*revTree.Root()] = revTree
-	revStatus, err := cachedResolve(ctx, PerChainConfig{}, issuerDID,
+	revStatus, err := cachedResolve(ctx, PerChainConfig{}, issuerDID, userDID,
 		credStatus, regBuilder(states, trees))
 	require.NoError(t, err)
 	wantRevStatus0 := `{
@@ -170,7 +177,7 @@ func TestCachedResolve(t *testing.T) {
 
 	// check state in cache
 	t.Run("got old state from cache", func(t *testing.T) {
-		revStatus, err = cachedResolve(ctx, PerChainConfig{}, issuerDID,
+		revStatus, err = cachedResolve(ctx, PerChainConfig{}, issuerDID, nil,
 			credStatus, regBuilder(states, trees))
 		require.NoError(t, err)
 		require.JSONEq(t, wantRevStatus0, toJson(revStatus))
@@ -193,7 +200,7 @@ func TestCachedResolve(t *testing.T) {
 
 	t.Run("got new rev status", func(t *testing.T) {
 		revStatus, err = cachedResolve(ctx, PerChainConfig{}, issuerDID,
-			credStatus, regBuilder(states, trees))
+			userDID, credStatus, regBuilder(states, trees))
 		require.NoError(t, err)
 		require.JSONEq(t, wantRevStatus1, toJson(revStatus))
 	})
@@ -221,7 +228,7 @@ func TestCachedResolve(t *testing.T) {
 		credStatus2 := credStatus
 		credStatus2.RevocationNonce += 1
 		revStatus, err = cachedResolve(ctx, PerChainConfig{}, issuerDID,
-			credStatus2, regBuilder(states, trees))
+			userDID, credStatus2, regBuilder(states, trees))
 		require.NoError(t, err)
 		require.JSONEq(t, wantRevStatus2, toJson(revStatus))
 
