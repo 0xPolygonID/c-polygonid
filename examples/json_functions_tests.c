@@ -88,6 +88,12 @@ TEST testCases[] = {
     .cfg = "testdata/new_genesis_id_cfg.json",
     .out = "testdata/new_genesis_id_out.json",
     .fn2 = &PLGNNewGenesisID
+  },
+  {
+    .in = "testdata/new_genesis_id_from_eth_in.json",
+    .cfg = "testdata/new_genesis_id_cfg.json",
+    .out = "testdata/new_genesis_id_from_eth_out.json",
+    .fn2 = &PLGNNewGenesisIDFromEth
   }
   // timestamp is different on each call, so we can't just compare output for equality
   // this test is failed because ec2-34-243-185-133.eu-west-1.compute.amazonaws.com:8888 is down

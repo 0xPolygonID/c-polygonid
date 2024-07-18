@@ -1400,3 +1400,23 @@ func TestMkVPObj(t *testing.T) {
 		})
 	}
 }
+
+func TestNewGenesysIDFromEth(t *testing.T) {
+	in := `{
+  "ethAddress":"0x850174569F4FeDEdFFF12F112602d3FDAcb9e21B",
+  "blockchain":"polygon",
+  "network":"mumbai",
+  "method":"polygonid"
+}`
+
+	ctx := context.Background()
+
+	resp, err := NewGenesysIDFromEth(ctx, EnvConfig{}, []byte(in))
+	require.NoError(t, err)
+	wantResp := GenesysIDResponse{
+		DID:     "did:polygonid:polygon:mumbai:2qCU58EJgrELzewx3jhSWLDDdunCaWCAuKVgz7GmyK",
+		ID:      "2qCU58EJgrELzewx3jhSWLDDdunCaWCAuKVgz7GmyK",
+		IDAsInt: "18925340278420228466712879433563154448903652530982176890458034425491886594",
+	}
+	require.Equal(t, wantResp, resp)
+}
