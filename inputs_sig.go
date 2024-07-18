@@ -2430,6 +2430,71 @@ func NewGenesysID(ctx context.Context, cfg EnvConfig,
 		nil
 }
 
+func NewGenesysIDFromEth(ctx context.Context, cfg EnvConfig,
+	in []byte) (GenesysIDResponse, error) {
+
+	var req struct {
+		EthAddr    *common.Address  `json:"ethAddress"`
+		Blockchain *core.Blockchain `json:"blockchain"`
+		Network    *core.NetworkID  `json:"network"`
+		Method     *core.DIDMethod  `json:"method"`
+	}
+
+	if in == nil {
+		return GenesysIDResponse{}, errors.New("request is empty")
+	}
+
+	err := json.Unmarshal(in, &req)
+	if err != nil {
+		return GenesysIDResponse{},
+			fmt.Errorf("failed to unmarshal request: %w", err)
+	}
+
+	if req.EthAddr == nil {
+		return GenesysIDResponse{},
+			errors.New("ethereum address is not set in the request")
+	}
+
+	if req.Blockchain == nil {
+		return GenesysIDResponse{},
+			errors.New("blockchain is not set in the request")
+	}
+
+	if req.Network == nil {
+		return GenesysIDResponse{},
+			errors.New("network is not set in the request")
+	}
+
+	if req.Method == nil {
+		// for backward compatibility, if method is not set, use polygon
+		var m = core.DIDMethodPolygonID
+		req.Method = &m
+	}
+
+	typ, err := core.BuildDIDType(*req.Method, *req.Blockchain,
+		*req.Network)
+	if err != nil {
+		return GenesysIDResponse{},
+			fmt.Errorf("failed to build DID type: %w", err)
+	}
+
+	genesis := core.GenesisFromEthAddress(*req.EthAddr)
+	coreID := core.NewID(typ, genesis)
+
+	did, err := core.ParseDIDFromID(coreID)
+	if err != nil {
+		return GenesysIDResponse{},
+			fmt.Errorf("failed to make DID from ID: %w", err)
+	}
+
+	return GenesysIDResponse{
+			DID:     did.String(),
+			ID:      coreID.String(),
+			IDAsInt: coreID.BigInt().String(),
+		},
+		nil
+}
+
 type DescribeIDResponse struct {
 	DID     string `json:"did"`
 	ID      string `json:"id"`

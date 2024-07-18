@@ -254,36 +254,16 @@ func PLGNCalculateGenesisID(jsonResponse **C.char, in *C.char,
 func PLGNNewGenesisID(jsonResponse **C.char, in *C.char, cfg *C.char,
 	status **C.PLGNStatus) bool {
 
-	ctx, cancel := logAPITime()
-	defer cancel()
+	return callGenericFn(c_polygonid.NewGenesysID, jsonResponse, in, cfg,
+		status)
+}
 
-	if in == nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_NIL_POINTER,
-			"pointer to request is nil")
-		return false
-	}
+//export PLGNNewGenesisIDFromEth
+func PLGNNewGenesisIDFromEth(jsonResponse **C.char, in *C.char, cfg *C.char,
+	status **C.PLGNStatus) bool {
 
-	envCfg, err := createEnvConfig(cfg)
-	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
-		return false
-	}
-
-	inStr := C.GoString(in)
-	resp, err := c_polygonid.NewGenesysID(ctx, envCfg, []byte(inStr))
-	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
-		return false
-	}
-
-	respB, err := json.Marshal(resp)
-	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
-		return false
-	}
-
-	*jsonResponse = C.CString(string(respB))
-	return true
+	return callGenericFn(c_polygonid.NewGenesysIDFromEth, jsonResponse, in, cfg,
+		status)
 }
 
 //export PLGNCreateClaim
@@ -1027,6 +1007,43 @@ func prepareInputs(ctx context.Context, fn atomicQueryInputsFn,
 	return true
 }
 
+func callGenericFn[R any](
+	fn func(context.Context, c_polygonid.EnvConfig, []byte) (R, error),
+	jsonResponse **C.char, in *C.char, cfg *C.char,
+	status **C.PLGNStatus) bool {
+
+	ctx, cancel := logAPITime(withSkipFrames(1))
+	defer cancel()
+
+	if in == nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_NIL_POINTER,
+			"pointer to request is nil")
+		return false
+	}
+
+	envCfg, err := createEnvConfig(cfg)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		return false
+	}
+
+	inStr := C.GoString(in)
+	resp, err := fn(ctx, envCfg, []byte(inStr))
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		return false
+	}
+
+	respB, err := json.Marshal(resp)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		return false
+	}
+
+	*jsonResponse = C.CString(string(respB))
+	return true
+}
+
 const debug = false
 const tracing = false
 
@@ -1042,15 +1059,32 @@ func getFuncName(skip int) string {
 	return parts[len(parts)-1]
 }
 
-func logAPITime() (context.Context, func()) {
+type logAPITimeOptions struct {
+	skipMoreFrames int
+}
+
+func withSkipFrames(skip int) logAPITimeOption {
+	return func(o *logAPITimeOptions) {
+		o.skipMoreFrames = skip
+	}
+}
+
+type logAPITimeOption func(*logAPITimeOptions)
+
+func logAPITime(optFns ...logAPITimeOption) (context.Context, func()) {
 	ctx := context.Background()
 
 	if !debug && !tracing {
 		return ctx, func() {}
 	}
 
+	var opts logAPITimeOptions
+	for _, optFn := range optFns {
+		optFn(&opts)
+	}
+
 	var taskCanceler interface{ End() }
-	funcName := getFuncName(2)
+	funcName := getFuncName(2 + opts.skipMoreFrames)
 
 	if tracing {
 		ctx, taskCanceler = trace.NewTask(ctx, funcName)
@@ -1066,7 +1100,7 @@ func logAPITime() (context.Context, func()) {
 			taskCanceler.End()
 		}
 
-		if start.IsZero() {
+		if !start.IsZero() {
 			fmt.Printf("[%v] API call took %v\n", funcName,
 				time.Since(start))
 		}

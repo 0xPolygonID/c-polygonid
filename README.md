@@ -103,7 +103,14 @@ After each build target there will be an `ios/libpolygonid.h` header file.
 
 ## Run tests
 
-The library build be built with previous command.
+The library build be built with previous command. And copy it to `ios/libpolygonid.a` file.
+For example.
+```shell
+make darwin-arm64
+cp ios/libpolygonid-darwin-arm64.a ios/libpolygonid.a
+```
+
+Then you can build and run tests.
 
 ```shell
 mkdir examples/build
