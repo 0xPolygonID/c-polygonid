@@ -11,7 +11,7 @@ jobs:
     strategy:
       matrix:
         containers:
-          - 1.21.4-bullseye
+          - 1.22.5-bookworm
     runs-on: ubuntu-20.04
     container: golang:${{ matrix.containers }}
     env:
