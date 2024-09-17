@@ -88,7 +88,7 @@ func TestCachedResolve(t *testing.T) {
 		verifiable.CredentialStatus{}, nil)
 	require.EqualError(t, err, "issuer DID is null")
 
-	typ, err := core.BuildDIDType(core.DIDMethodPolygonID, core.ZkEVM,
+	typ, err := core.BuildDIDType(core.DIDMethodPolygonID, core.Privado,
 		core.Main)
 	require.NoError(t, err)
 
