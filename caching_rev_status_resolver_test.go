@@ -97,7 +97,7 @@ func TestCachedResolve(t *testing.T) {
 
 	_, err = cachedResolve(ctx, PerChainConfig{}, issuerDID, nil,
 		verifiable.CredentialStatus{}, nil)
-	require.EqualError(t, err, "registry builder is null")
+	require.EqualError(t, err, "[assertion] registry builder is null")
 
 	credStatus := verifiable.CredentialStatus{
 		ID:              "id1",
