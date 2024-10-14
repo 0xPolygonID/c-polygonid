@@ -47,7 +47,10 @@ The configuration object is a JSON document with the following structure:
       "rpcUrl": "http://localhost:8545",
       "stateContractAddr": "0xEA9aF2088B4a9770fC32A12fD42E61BDD317E655"
     }
-  }
+  },
+  // Directory to cache time-consuming operations.
+  // If empty, use the default one in user's HOME directory.
+  "cacheDir": "/tmp/polygonid"
 }
 ```
 
