@@ -778,7 +778,7 @@ func PLGNCleanCache(status **C.PLGNStatus) bool {
 
 	err := c_polygonid.CleanCache("")
 	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
 		return false
 	}
 
@@ -792,7 +792,7 @@ func PLGNCleanCache2(cfg *C.char, status **C.PLGNStatus) bool {
 
 	envCfg, err := createEnvConfig(cfg)
 	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
 		return false
 	}
 
