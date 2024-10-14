@@ -17,6 +17,14 @@ import (
 	"github.com/iden3/iden3comm/v2/resolvers"
 )
 
+type CredentialStatusOwner uint8
+
+const (
+	CredentialStatusOwnerUnset  CredentialStatusOwner = iota
+	CredentialStatusOwnerIssuer CredentialStatusOwner = iota
+	CredentialStatusOwnerUser   CredentialStatusOwner = iota
+)
+
 var revStatusCacheMutex sync.RWMutex
 
 const issuerStateTTL = 5 * time.Minute
@@ -99,15 +107,14 @@ func resolveRevStatus(ctx context.Context, chainCfg PerChainConfig,
 
 	if regBuilder == nil {
 		return verifiable.RevocationStatus{},
-			errors.New("registry builder is null")
+			errors.New("[assertion] registry builder is null")
 	}
 
 	if userDID == nil {
 		return verifiable.RevocationStatus{}, errors.New("user DID is null")
 	}
 
-	resolversRegistry, registryCleanupFn, err := regBuilder(ctx,
-		chainCfg)
+	resolversRegistry, registryCleanupFn, err := regBuilder(ctx, chainCfg)
 	if err != nil {
 		return verifiable.RevocationStatus{}, err
 	}

@@ -158,7 +158,7 @@ func TestPrepareInputs(t *testing.T) {
 
 		doTest(t, "atomic_query_mtp_v2_on_chain_status_inputs.json", "",
 			AtomicQueryMtpV2InputsFromJson, nil, cfg,
-			"error resolving revocation status: GetRevocationProof smart contract call [GetRevocationStatus]: roots were not saved to identity tree store")
+			"credential status error: credential status resolve error: GetRevocationProof smart contract call [GetRevocationStatus]: roots were not saved to identity tree store")
 	})
 
 	t.Run("AtomicQueryMtpV2InputsFromJson", func(t *testing.T) {
@@ -304,7 +304,7 @@ func TestPrepareInputs(t *testing.T) {
 
 		doTest(t, "atomic_query_sig_v2_merklized_revoked_inputs.json", "",
 			AtomicQuerySigV2InputsFromJson, nil, EnvConfig{},
-			"credential is revoked")
+			"credential status error: credential is revoked")
 	})
 
 	t.Run("AtomicQuerySigV2InputsFromJson - skip revocation check",
@@ -482,7 +482,7 @@ func TestPrepareInputs(t *testing.T) {
 			}
 			doTest(t, "atomic_query_sig_v2_merklized_rhs_revoked_inputs.json",
 				"", AtomicQuerySigV2InputsFromJson, nil, cfg,
-				"credential is revoked")
+				"credential status error: credential is revoked")
 		})
 
 	t.Run("AtomicQuerySigV2InputsFromJson Nested Disclosure", func(t *testing.T) {
