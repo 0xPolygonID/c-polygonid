@@ -196,7 +196,10 @@ func claimWithSigProofFromObj(ctx context.Context, cfg EnvConfig,
 	out.NonRevProof, err = buildAndValidateCredentialStatus(ctx, cfg,
 		credStatus, issuerDID, userDID, skipClaimRevocationCheck)
 	if err != nil {
-		return out, err
+		return out, ErrCredentialStatus{
+			err:   err,
+			owner: CredentialStatusOwnerUser,
+		}
 	}
 	out.SignatureProof, err = signatureProof(ctx, cfg, *proof, issuerDID,
 		userDID)
@@ -357,20 +360,18 @@ func buildAndValidateCredentialStatus(ctx context.Context, cfg EnvConfig,
 
 	credStatus2, err := credStatusFromJsonObj(credStatus)
 	if err != nil {
-		return circuits.MTProof{}, err
+		return circuits.MTProof{}, ErrCredentialStatusExtract{err: err}
 	}
 
 	revStatus, err := cachedResolve(ctx, cfg, issuerDID, userDID,
 		credStatus2, getResolversRegistry)
 	if err != nil {
-		return circuits.MTProof{},
-			fmt.Errorf("error resolving revocation status: %w", err)
+		return circuits.MTProof{}, ErrCredentialStatusResolve{err: err}
 	}
 
 	cProof, err := revStatusToCircuitsMTPProof(revStatus)
 	if err != nil {
-		return circuits.MTProof{}, fmt.Errorf(
-			"error converting revocation status to circuits MTP proof: %w", err)
+		return circuits.MTProof{}, ErrCredentialStatusTreeBuild{err: err}
 	}
 
 	if skipClaimRevocationCheck {
@@ -380,10 +381,18 @@ func buildAndValidateCredentialStatus(ctx context.Context, cfg EnvConfig,
 	treeStateOk, err := validateTreeState(cProof.TreeState)
 	if err != nil {
 		return circuits.MTProof{},
-			fmt.Errorf("tree state validation failed: %w", err)
+			ErrCredentialStatusTreeState{
+				msg: "tree state validation failed",
+				err: err,
+			}
 	}
 	if !treeStateOk {
-		return circuits.MTProof{}, errors.New("invalid tree state")
+		return circuits.MTProof{},
+			ErrCredentialStatusTreeState{
+				msg: "invalid tree state",
+				err: err,
+			}
+
 	}
 
 	revNonce := new(big.Int).SetUint64(credStatus2.RevocationNonce)
@@ -391,12 +400,13 @@ func buildAndValidateCredentialStatus(ctx context.Context, cfg EnvConfig,
 	proofValid := merkletree.VerifyProof(cProof.TreeState.RevocationRoot,
 		cProof.Proof, revNonce, big.NewInt(0))
 	if !proofValid {
-		return circuits.MTProof{},
-			fmt.Errorf("proof validation failed. revNonce=%d", revNonce)
+		return circuits.MTProof{}, ErrCredentialStatusTreeState{
+			msg: "proof validation failed",
+		}
 	}
 
 	if cProof.Proof.Existence {
-		return circuits.MTProof{}, errors.New("credential is revoked")
+		return circuits.MTProof{}, ErrCredentialStatusRevoked
 	}
 
 	return cProof, nil
@@ -469,7 +479,10 @@ func signatureProof(ctx context.Context, cfg EnvConfig,
 		buildAndValidateCredentialStatus(ctx, cfg, credStatus, issuerDID,
 			userDID, false)
 	if err != nil {
-		return out, err
+		return out, ErrCredentialStatus{
+			err:   err,
+			owner: CredentialStatusOwnerIssuer,
+		}
 	}
 
 	return out, nil
@@ -1907,9 +1920,6 @@ func claimWithMtpProofFromObj(ctx context.Context, cfg EnvConfig,
 		if err != nil {
 			return out, err
 		}
-
-	} else if proofI = findProofByType(w3cCred, verifiable.ProofType(verifiable.Iden3OnchainSparseMerkleTreeProof2023)); proofI != nil {
-
 	} else {
 		return out, errProofNotFound(verifiable.Iden3SparseMerkleTreeProofType)
 	}
@@ -1942,7 +1952,10 @@ func claimWithMtpProofFromObj(ctx context.Context, cfg EnvConfig,
 	out.NonRevProof, err = buildAndValidateCredentialStatus(ctx, cfg,
 		credStatus, issuerDID, userDID, skipClaimRevocationCheck)
 	if err != nil {
-		return out, err
+		return out, ErrCredentialStatus{
+			err:   err,
+			owner: CredentialStatusOwnerUser,
+		}
 	}
 
 	return out, nil

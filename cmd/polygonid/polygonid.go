@@ -8,6 +8,22 @@ typedef enum
 {
 	PLGNSTATUSCODE_ERROR,
 	PLGNSTATUSCODE_NIL_POINTER,
+	// error extracting credential status from verifiable credential
+	PLGNSTATUSCODE_USER_CREDENTIAL_STATUS_EXTRACTION_ERROR,
+	// error resolving credential status (e.g. getting the status from chain of DHS)
+	PLGNSTATUSCODE_USER_CREDENTIAL_STATUS_RESOLVE_ERROR,
+	// error getting merkletree proof from credential status
+	PLGNSTATUSCODE_USER_CREDENTIAL_STATUS_MT_BUILD_ERROR,
+	// merkletree proof is invalid
+	PLGNSTATUSCODE_USER_CREDENTIAL_STATUS_MT_STATE_ERROR,
+	// credential is revoked
+	PLGNSTATUSCODE_USER_CREDENTIAL_STATUS_REVOKED_ERROR,
+	// the same as above but for issuer credential (for signature proofs)
+	PLGNSTATUSCODE_ISSUER_CREDENTIAL_STATUS_EXTRACTION_ERROR,
+	PLGNSTATUSCODE_ISSUER_CREDENTIAL_STATUS_RESOLVE_ERROR,
+	PLGNSTATUSCODE_ISSUER_CREDENTIAL_STATUS_MT_BUILD_ERROR,
+	PLGNSTATUSCODE_ISSUER_CREDENTIAL_STATUS_MT_STATE_ERROR,
+	PLGNSTATUSCODE_ISSUER_CREDENTIAL_STATUS_REVOKED_ERROR,
 } PLGNStatusCode;
 
 typedef struct _PLGNStatus
@@ -22,6 +38,7 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/big"
 	"runtime"
@@ -157,7 +174,7 @@ func PLGNAuthV2InputsMarshal(jsonResponse **C.char, in *C.char,
 	var obj map[string]any
 	err := json.Unmarshal([]byte(C.GoString(in)), &obj)
 	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
 		return false
 	}
 
@@ -236,13 +253,13 @@ func PLGNCalculateGenesisID(jsonResponse **C.char, in *C.char,
 	resp, err := c_polygonid.NewGenesysID(ctx, c_polygonid.EnvConfig{},
 		[]byte(inStr))
 	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
 		return false
 	}
 
 	respB, err := json.Marshal(resp)
 	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
 		return false
 	}
 
@@ -297,7 +314,7 @@ func PLGNCreateClaim(jsonResponse **C.char, in *C.char,
 
 	err := json.Unmarshal([]byte(C.GoString(in)), &req)
 	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
 		return false
 	}
 
@@ -312,7 +329,7 @@ func PLGNCreateClaim(jsonResponse **C.char, in *C.char,
 
 	c, err := core.NewClaim(schema)
 	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
 		return false
 	}
 
@@ -327,7 +344,7 @@ func PLGNCreateClaim(jsonResponse **C.char, in *C.char,
 	if req.IndexMerklizedRoot != nil {
 		err = c.SetIndexMerklizedRoot(req.IndexMerklizedRoot.Int())
 		if err != nil {
-			maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+			maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
 			return false
 		}
 	}
@@ -335,7 +352,7 @@ func PLGNCreateClaim(jsonResponse **C.char, in *C.char,
 	if req.ValueMerklizedRoot != nil {
 		err = c.SetValueMerklizedRoot(req.ValueMerklizedRoot.Int())
 		if err != nil {
-			maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+			maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
 			return false
 		}
 	}
@@ -372,7 +389,7 @@ func PLGNCreateClaim(jsonResponse **C.char, in *C.char,
 		}
 		err = c.SetIndexDataInts(slotA, slotB)
 		if err != nil {
-			maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+			maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
 			return false
 		}
 	}
@@ -388,14 +405,14 @@ func PLGNCreateClaim(jsonResponse **C.char, in *C.char,
 		}
 		err = c.SetValueDataInts(slotA, slotB)
 		if err != nil {
-			maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+			maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
 			return false
 		}
 	}
 
 	respB, err := json.Marshal(c)
 	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
 		return false
 	}
 
@@ -423,19 +440,19 @@ func PLGNIDToInt(jsonResponse **C.char, in *C.char,
 	var idStr string
 	err := json.Unmarshal([]byte(C.GoString(in)), &idStr)
 	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
 		return false
 	}
 
 	id, err := core.IDFromString(idStr)
 	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
 		return false
 	}
 
 	resp, err := json.Marshal(id.BigInt().Text(10))
 	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
 		return false
 	}
 
@@ -459,13 +476,13 @@ func PLGNProofFromSmartContract(jsonResponse **C.char, in *C.char,
 	var scProof c_polygonid.SmartContractProof
 	err := json.Unmarshal([]byte(C.GoString(in)), &scProof)
 	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
 		return false
 	}
 
 	proof, root, err := c_polygonid.ProofFromSmartContract(scProof)
 	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
 		return false
 	}
 
@@ -478,7 +495,7 @@ func PLGNProofFromSmartContract(jsonResponse **C.char, in *C.char,
 	}
 	respB, err := json.Marshal(resp)
 	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
 		return false
 	}
 
@@ -506,31 +523,31 @@ func PLGNProfileID(jsonResponse **C.char, in *C.char,
 
 	err := json.Unmarshal([]byte(C.GoString(in)), &req)
 	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
 		return false
 	}
 
 	did, err := w3c.ParseDID(req.GenesisDID)
 	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
 		return false
 	}
 
 	id, err := core.IDFromDID(*did)
 	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
 		return false
 	}
 
 	id, err = core.ProfileID(id, req.Nonce.BigInt())
 	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
 		return false
 	}
 
 	profileDID, err := core.ParseDIDFromID(id)
 	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
 		return false
 	}
 
@@ -583,33 +600,8 @@ func PLGNSigV2Inputs(jsonResponse **C.char, in *C.char,
 	ctx, cancel := logAPITime()
 	defer cancel()
 
-	if jsonResponse == nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_NIL_POINTER,
-			"jsonResponse pointer is nil")
-		return false
-	}
-
-	ctx, ctxCancel := context.WithTimeout(ctx, defaultTimeout)
-	defer ctxCancel()
-
-	inData := C.GoBytes(unsafe.Pointer(in), C.int(C.strlen(in)))
-
-	aqInpResp, err := c_polygonid.AtomicQuerySigV2InputsFromJson(ctx,
-		c_polygonid.EnvConfig{}, inData)
-	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
-		return false
-	}
-
-	resp, err := marshalInputsResponse(aqInpResp)
-	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR,
-			"error marshalling atomic query inputs: %v", err)
-		return false
-	}
-
-	*jsonResponse = C.CString(resp)
-	return true
+	return prepareInputs(ctx, c_polygonid.AtomicQuerySigV2InputsFromJson,
+		jsonResponse, in, nil, status)
 }
 
 func marshalInputsResponse(
@@ -671,33 +663,8 @@ func PLGNMtpV2Inputs(jsonResponse **C.char, in *C.char,
 	ctx, cancel := logAPITime()
 	defer cancel()
 
-	ctx, ctxCancel := context.WithTimeout(ctx, defaultTimeout)
-	defer ctxCancel()
-
-	if jsonResponse == nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_NIL_POINTER,
-			"jsonResponse pointer is nil")
-		return false
-	}
-
-	inData := C.GoBytes(unsafe.Pointer(in), C.int(C.strlen(in)))
-
-	aqInpResp, err := c_polygonid.AtomicQueryMtpV2InputsFromJson(ctx,
-		c_polygonid.EnvConfig{}, inData)
-	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
-		return false
-	}
-
-	resp, err := marshalInputsResponse(aqInpResp)
-	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR,
-			"error marshalling atomic query inputs: %v", err)
-		return false
-	}
-
-	*jsonResponse = C.CString(resp)
-	return true
+	return prepareInputs(ctx, c_polygonid.AtomicQueryMtpV2InputsFromJson,
+		jsonResponse, in, nil, status)
 }
 
 // PLGNAtomicQuerySigV2OnChainInputs returns the inputs for the
@@ -831,7 +798,7 @@ func PLGNCleanCache2(cfg *C.char, status **C.PLGNStatus) bool {
 
 	err = c_polygonid.CleanCache(envCfg.CacheDir)
 	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
 		return false
 	}
 
@@ -850,13 +817,13 @@ func PLGNCacheCredentials(in *C.char, cfg *C.char, status **C.PLGNStatus) bool {
 
 	envCfg, err := createEnvConfig(cfg)
 	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
 		return false
 	}
 
 	err = c_polygonid.PreCacheVC(ctx, envCfg, inData)
 	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
 		return false
 	}
 
@@ -903,7 +870,7 @@ func PLGNW3CCredentialFromOnchainHex(jsonResponse **C.char, in *C.char,
 
 	envCfg, err := createEnvConfig(cfg)
 	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
 		return false
 	}
 
@@ -913,13 +880,13 @@ func PLGNW3CCredentialFromOnchainHex(jsonResponse **C.char, in *C.char,
 		inData,
 	)
 	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
 		return false
 	}
 
 	credentialJSON, err := json.Marshal(credential)
 	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
 		return false
 	}
 
@@ -960,20 +927,20 @@ func PLGNDescribeID(jsonResponse **C.char, in *C.char, cfg *C.char,
 
 	envCfg, err := createEnvConfig(cfg)
 	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
 		return false
 	}
 
 	inStr := C.GoString(in)
 	resp, err := c_polygonid.DescribeID(ctx, envCfg, []byte(inStr))
 	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
 		return false
 	}
 
 	respB, err := json.Marshal(resp)
 	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
 		return false
 	}
 
@@ -1010,13 +977,14 @@ func prepareInputs(ctx context.Context, fn atomicQueryInputsFn,
 
 	envCfg, err := createEnvConfig(cfg)
 	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
 		return false
 	}
 
 	aqInpResp, err := fn(ctx, envCfg, inData)
 	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		statusCode, errorMsg := statusFromError(err)
+		maybeCreateStatus(status, statusCode, "%s", errorMsg)
 		return false
 	}
 
@@ -1029,6 +997,61 @@ func prepareInputs(ctx context.Context, fn atomicQueryInputsFn,
 
 	*jsonResponse = C.CString(resp)
 	return true
+}
+
+func statusFromError(err error) (C.PLGNStatusCode, string) {
+	if err == nil {
+		return C.PLGNSTATUSCODE_ERROR, ""
+	}
+
+	var csErr c_polygonid.ErrCredentialStatus
+	if errors.As(err, &csErr) {
+		err2 := csErr.Unwrap()
+		var errExtract c_polygonid.ErrCredentialStatusExtract
+		var errResolve c_polygonid.ErrCredentialStatusResolve
+		var errTreeBuild c_polygonid.ErrCredentialStatusTreeBuild
+		var errTreeState c_polygonid.ErrCredentialStatusTreeState
+		switch csErr.Owner() {
+		case c_polygonid.CredentialStatusOwnerUser:
+			if errors.As(err2, &errExtract) {
+				return C.PLGNSTATUSCODE_USER_CREDENTIAL_STATUS_EXTRACTION_ERROR,
+					err.Error()
+			} else if errors.As(err2, &errResolve) {
+				return C.PLGNSTATUSCODE_USER_CREDENTIAL_STATUS_RESOLVE_ERROR,
+					err.Error()
+			} else if errors.As(err2, &errTreeBuild) {
+				return C.PLGNSTATUSCODE_USER_CREDENTIAL_STATUS_MT_BUILD_ERROR,
+					err.Error()
+			} else if errors.As(err2, &errTreeState) {
+				return C.PLGNSTATUSCODE_USER_CREDENTIAL_STATUS_MT_STATE_ERROR,
+					err.Error()
+			} else if errors.Is(err2, c_polygonid.ErrCredentialStatusRevoked) {
+				return C.PLGNSTATUSCODE_USER_CREDENTIAL_STATUS_REVOKED_ERROR,
+					err.Error()
+			}
+		case c_polygonid.CredentialStatusOwnerIssuer:
+			if errors.As(err2, &errExtract) {
+				return C.PLGNSTATUSCODE_ISSUER_CREDENTIAL_STATUS_EXTRACTION_ERROR,
+					err.Error()
+			} else if errors.As(err2, &errResolve) {
+				return C.PLGNSTATUSCODE_ISSUER_CREDENTIAL_STATUS_RESOLVE_ERROR,
+					err.Error()
+			} else if errors.As(err2, &errTreeBuild) {
+				return C.PLGNSTATUSCODE_ISSUER_CREDENTIAL_STATUS_MT_BUILD_ERROR,
+					err.Error()
+			} else if errors.As(err2, &errTreeState) {
+				return C.PLGNSTATUSCODE_ISSUER_CREDENTIAL_STATUS_MT_STATE_ERROR,
+					err.Error()
+			} else if errors.Is(err2, c_polygonid.ErrCredentialStatusRevoked) {
+				return C.PLGNSTATUSCODE_ISSUER_CREDENTIAL_STATUS_REVOKED_ERROR,
+					err.Error()
+			}
+		default:
+			// lint error bypass
+		}
+	}
+
+	return C.PLGNSTATUSCODE_ERROR, err.Error()
 }
 
 func callGenericFn[R any](
@@ -1047,20 +1070,20 @@ func callGenericFn[R any](
 
 	envCfg, err := createEnvConfig(cfg)
 	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
 		return false
 	}
 
 	inStr := C.GoString(in)
 	resp, err := fn(ctx, envCfg, []byte(inStr))
 	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
 		return false
 	}
 
 	respB, err := json.Marshal(resp)
 	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
 		return false
 	}
 
