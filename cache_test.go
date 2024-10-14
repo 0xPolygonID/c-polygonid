@@ -2,6 +2,9 @@ package c_polygonid
 
 import (
 	"errors"
+	"os"
+	"path"
+	"path/filepath"
 	"sync"
 	"testing"
 	"time"
@@ -78,7 +81,7 @@ func mockBadgerLog(t testing.TB) {
 func BenchmarkBadgerWithOpening(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		func() {
-			db, cleanup, err := getCacheDB()
+			db, cleanup, err := getCacheDB("")
 			require.NoError(b, err)
 			defer cleanup()
 			doWithBadger(b, db)
@@ -87,7 +90,7 @@ func BenchmarkBadgerWithOpening(b *testing.B) {
 }
 
 func BenchmarkBadgerWithoutOpening(b *testing.B) {
-	db, cleanup, err := getCacheDB()
+	db, cleanup, err := getCacheDB("")
 	require.NoError(b, err)
 	b.Cleanup(cleanup)
 
@@ -101,12 +104,7 @@ func BenchmarkBadgerWithoutOpening(b *testing.B) {
 func TestBadger(t *testing.T) {
 	mockBadgerLog(t)
 
-	dbPath, err := getBadgerPath()
-	require.NoError(t, err)
-
-	t.Log(dbPath)
-
-	db, cleanup, err := getCacheDB()
+	db, cleanup, err := getCacheDB("")
 	require.NoError(t, err)
 	defer cleanup()
 
@@ -115,18 +113,28 @@ func TestBadger(t *testing.T) {
 
 func TestGetCacheDB(t *testing.T) {
 	mockBadgerLog(t)
-	db1, close1, err := getCacheDB()
+	db1, close1, err := getCacheDB("")
 	require.NoError(t, err)
-	db2, close2, err := getCacheDB()
+	db2, close2, err := getCacheDB("")
 	require.NoError(t, err)
 
 	require.Equal(t, db1, db2)
 
+	require.Len(t, openedDBs, 1)
+	dbCond.L.Lock()
+	pth := func() string {
+		for k := range openedDBs {
+			return k
+		}
+		return ""
+	}()
+	dbCond.L.Unlock()
+
 	func() {
 		dbCond.L.Lock()
 		defer dbCond.L.Unlock()
-		require.Equal(t, 2, dbCnt)
-		require.NotNil(t, globalDB)
+		require.Equal(t, 2, openedDBsCnts[pth])
+		require.NotNil(t, openedDBs[pth])
 	}()
 
 	close1()
@@ -134,8 +142,8 @@ func TestGetCacheDB(t *testing.T) {
 	func() {
 		dbCond.L.Lock()
 		defer dbCond.L.Unlock()
-		require.Equal(t, 1, dbCnt)
-		require.NotNil(t, globalDB)
+		require.Equal(t, 1, openedDBsCnts[pth])
+		require.NotNil(t, openedDBs[pth])
 	}()
 
 	close2()
@@ -143,8 +151,8 @@ func TestGetCacheDB(t *testing.T) {
 	func() {
 		dbCond.L.Lock()
 		defer dbCond.L.Unlock()
-		require.Equal(t, 0, dbCnt)
-		require.Nil(t, globalDB)
+		require.Len(t, openedDBsCnts, 0)
+		require.Len(t, openedDBs, 0)
 	}()
 }
 
@@ -180,7 +188,7 @@ func set(db *badger.DB, key string, value string) {
 
 func TestCleanCache(t *testing.T) {
 	mockBadgerLog(t)
-	db1, close1, err := getCacheDB()
+	db1, close1, err := getCacheDB("")
 	require.NoError(t, err)
 
 	set(db1, "key1", "val1")
@@ -189,7 +197,7 @@ func TestCleanCache(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err2 := CleanCache()
+		err2 := CleanCache("")
 		if err2 != nil {
 			t.Error(err2)
 		}
@@ -197,7 +205,7 @@ func TestCleanCache(t *testing.T) {
 
 	time.Sleep(10 * time.Millisecond)
 
-	db2, close2, err := getCacheDB()
+	db2, close2, err := getCacheDB("")
 	require.NoError(t, err)
 	require.Equal(t, "val1", get(db2, "key1"))
 
@@ -205,7 +213,7 @@ func TestCleanCache(t *testing.T) {
 	close2()
 	time.Sleep(10 * time.Millisecond)
 
-	db3, close3, err := getCacheDB()
+	db3, close3, err := getCacheDB("")
 	require.NoError(t, err)
 	require.Equal(t, "", get(db3, "key1"))
 	close3()
@@ -215,17 +223,73 @@ func TestCleanCache(t *testing.T) {
 
 func TestMultipleCleanup(t *testing.T) {
 	mockBadgerLog(t)
-	_, close1, err := getCacheDB()
+	_, close1, err := getCacheDB("")
 	require.NoError(t, err)
 
-	require.Equal(t, 1, dbCnt)
-	require.NotNil(t, globalDB)
-
-	close1()
-	close1()
 	dbCond.L.Lock()
-	defer dbCond.L.Unlock()
+	pth := func() string {
+		for k := range openedDBs {
+			return k
+		}
+		return ""
+	}()
+	require.Equal(t, 1, openedDBsCnts[pth])
+	require.NotNil(t, openedDBs[pth])
+	dbCond.L.Unlock()
 
-	require.Equal(t, 0, dbCnt)
-	require.Nil(t, globalDB)
+	close1()
+	close1()
+
+	dbCond.L.Lock()
+	require.Len(t, openedDBsCnts, 0)
+	require.Len(t, openedDBs, 0)
+	dbCond.L.Unlock()
+}
+
+func TestCreateNormalizedCacheDir(t *testing.T) {
+	tmpdir, err := os.MkdirTemp("", "cache")
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		err = os.RemoveAll(tmpdir)
+		require.NoError(t, err)
+	})
+
+	dir2path := path.Join(tmpdir, "dir1", "dir2")
+	dir3path := path.Join(tmpdir, "dir1", "dir3")
+	dir4path := path.Join(tmpdir, "dir1", "dir2", "dir4")
+	err = os.MkdirAll(dir2path, 0755)
+	require.NoError(t, err)
+	err = os.Symlink(dir2path, dir3path)
+	require.NoError(t, err)
+
+	err = os.Symlink("../dir3", dir4path)
+	require.NoError(t, err)
+
+	sep := string(os.PathSeparator)
+	weirdPath := tmpdir +
+		sep + "dir1" +
+		sep + sep + ".." +
+		sep + "dir1" +
+		sep + "dir2" +
+		sep + ".." +
+		sep + "dir3" +
+		sep + ".." +
+		sep + "dir2" +
+		sep + ".." +
+		sep + "dir3" +
+		sep + "dir4" +
+		sep + "dir5" + sep
+
+	normPath, err := createNormalizedCacheDir(weirdPath)
+	require.NoError(t, err)
+
+	normTmpDir, err := filepath.EvalSymlinks(tmpdir)
+	require.NoError(t, err)
+
+	wantPath := normTmpDir + sep + "dir1" + sep + "dir2" + sep + "dir5"
+	require.Equal(t, wantPath, normPath)
+
+	err = os.WriteFile(normPath+sep+"file1", []byte("file1"), 0644)
+	require.NoError(t, err)
 }

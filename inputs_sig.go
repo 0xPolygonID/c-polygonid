@@ -360,7 +360,7 @@ func buildAndValidateCredentialStatus(ctx context.Context, cfg EnvConfig,
 		return circuits.MTProof{}, err
 	}
 
-	revStatus, err := cachedResolve(ctx, cfg.ChainConfigs, issuerDID, userDID,
+	revStatus, err := cachedResolve(ctx, cfg, issuerDID, userDID,
 		credStatus2, getResolversRegistry)
 	if err != nil {
 		return circuits.MTProof{},
@@ -2131,7 +2131,7 @@ func merklizeCred(ctx context.Context, w3cCred verifiable.W3CCredential,
 
 	cacheKey := sha256.Sum256(credentialBytes)
 
-	db, cleanup, err := getCacheDB()
+	db, cleanup, err := getCacheDB("")
 	if err != nil {
 		if !ignoreCacheErrors {
 			return nil, err

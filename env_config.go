@@ -15,6 +15,7 @@ type EnvConfig struct {
 	DIDMethods   []MethodConfig
 	ChainConfigs PerChainConfig
 	IPFSNodeURL  string
+	CacheDir     string
 
 	// backward incompatible fields, it's an error to use them
 	EthereumURL       string
@@ -131,7 +132,8 @@ func (cfg EnvConfig) documentLoader() ld.DocumentLoader {
 	cacheEngine, err := newBadgerCacheEngine(
 		withEmbeddedDocumentBytes(
 			"https://www.w3.org/2018/credentials/v1",
-			credentialsV1JsonLDBytes))
+			credentialsV1JsonLDBytes),
+		withCacheDir(cfg.CacheDir))
 	if err == nil {
 		opts = append(opts, loaders.WithCacheEngine(cacheEngine))
 	}
