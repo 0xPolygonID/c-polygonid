@@ -79,3 +79,12 @@ func TestNewEnvConfigFromJSON(t *testing.T) {
 	require.Equal(t, core.Blockchain("ethereum"), blockchain)
 	require.Equal(t, core.NetworkID("mainnet"), networkID)
 }
+
+func TestNewEnvConfigFromJSON_cacheDir(t *testing.T) {
+	cfgJSON := `{
+  "cacheDir": "/var/cache"
+}`
+	cfg, err := NewEnvConfigFromJSON([]byte(cfgJSON))
+	require.NoError(t, err)
+	require.Equal(t, "/var/cache", cfg.CacheDir)
+}

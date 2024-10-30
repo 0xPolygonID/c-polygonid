@@ -276,15 +276,15 @@ func getRevProofFromCache(db *badger.DB, revTreeRoot merkletree.Hash,
 	return revProof, nil
 }
 
-func cachedResolve(ctx context.Context, chainCfg PerChainConfig,
+func cachedResolve(ctx context.Context, cfg EnvConfig,
 	issuerDID, userDID *w3c.DID, credStatus verifiable.CredentialStatus,
 	regBuilder registryBuilder) (verifiable.RevocationStatus, error) {
 
-	cache, cacheCleanup, err := getCacheDB()
+	cache, cacheCleanup, err := getCacheDB(cfg.CacheDir)
 	if err != nil {
 		// Cache engine is not available, so resolve without cache
-		return resolveRevStatus(ctx, chainCfg, issuerDID, userDID, credStatus,
-			regBuilder)
+		return resolveRevStatus(ctx, cfg.ChainConfigs, issuerDID, userDID,
+			credStatus, regBuilder)
 	}
 	defer cacheCleanup()
 
@@ -295,8 +295,10 @@ func cachedResolve(ctx context.Context, chainCfg PerChainConfig,
 	var revStatus verifiable.RevocationStatus
 	var createdAt time.Time
 	revStatus.Issuer, createdAt, err = getIssuerStateFromCache(cache, issuerDID)
-	if errors.Is(err, badger.ErrKeyNotFound) || (err == nil && createdAt.Before(time.Now().Add(-issuerStateTTL))) {
-		return resolveRevStatusAndCache(ctx, cache, chainCfg, issuerDID,
+	if errors.Is(err, badger.ErrKeyNotFound) ||
+		(err == nil && createdAt.Before(time.Now().Add(-issuerStateTTL))) {
+
+		return resolveRevStatusAndCache(ctx, cache, cfg.ChainConfigs, issuerDID,
 			userDID, credStatus, regBuilder)
 	} else if err != nil {
 		return verifiable.RevocationStatus{}, err
@@ -310,7 +312,7 @@ func cachedResolve(ctx context.Context, chainCfg PerChainConfig,
 
 	revStatus.MTP, err = getRevProofFromCache(cache, revTreeRoot, credStatus)
 	if errors.Is(err, badger.ErrKeyNotFound) {
-		return resolveRevStatusAndCache(ctx, cache, chainCfg, issuerDID,
+		return resolveRevStatusAndCache(ctx, cache, cfg.ChainConfigs, issuerDID,
 			userDID, credStatus, regBuilder)
 	} else if err != nil {
 		return verifiable.RevocationStatus{}, err

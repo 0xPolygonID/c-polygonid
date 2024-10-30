@@ -18,6 +18,7 @@ type cachedRemoteDocument struct {
 
 type badgerCacheEngine struct {
 	embedDocs map[string]*ld.RemoteDocument
+	cacheDir  string
 }
 
 func (m *badgerCacheEngine) Get(
@@ -30,7 +31,7 @@ func (m *badgerCacheEngine) Get(
 		}
 	}
 
-	db, cleanup, err := getCacheDB()
+	db, cleanup, err := getCacheDB(m.cacheDir)
 	if err != nil {
 		slog.Error("can't get cache database", "err", err)
 		return nil, time.Time{}, loaders.ErrCacheMiss
@@ -78,7 +79,7 @@ func (m *badgerCacheEngine) Set(key string, doc *ld.RemoteDocument,
 		}
 	}
 
-	db, cleanup, err := getCacheDB()
+	db, cleanup, err := getCacheDB(m.cacheDir)
 	if err != nil {
 		slog.Error("can't get cache database", "err", err)
 		return nil
@@ -118,6 +119,13 @@ func withEmbeddedDocumentBytes(u string, doc []byte) badgerCacheEngineOption {
 		}
 
 		engine.embedDocs[u] = rd
+		return nil
+	}
+}
+
+func withCacheDir(cacheDir string) badgerCacheEngineOption {
+	return func(engine *badgerCacheEngine) error {
+		engine.cacheDir = cacheDir
 		return nil
 	}
 }

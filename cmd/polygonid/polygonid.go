@@ -767,12 +767,36 @@ func PLGNFreeStatus(status *C.PLGNStatus) {
 	C.free(unsafe.Pointer(status))
 }
 
+// Deprecated: Use PLGNCleanCache2 instead. We need to support consistent path
+// to the cache directory. This function supposed the cache directory is empty
+// and should be calculated based on user's $HOME directory.
+//
 //export PLGNCleanCache
 func PLGNCleanCache(status **C.PLGNStatus) bool {
 	_, cancel := logAPITime()
 	defer cancel()
 
-	err := c_polygonid.CleanCache()
+	err := c_polygonid.CleanCache("")
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
+		return false
+	}
+
+	return true
+}
+
+//export PLGNCleanCache2
+func PLGNCleanCache2(cfg *C.char, status **C.PLGNStatus) bool {
+	_, cancel := logAPITime()
+	defer cancel()
+
+	envCfg, err := createEnvConfig(cfg)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
+		return false
+	}
+
+	err = c_polygonid.CleanCache(envCfg.CacheDir)
 	if err != nil {
 		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
 		return false

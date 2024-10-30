@@ -91,7 +91,7 @@ func TestPrepareInputs(t *testing.T) {
 		fn PrepareInputsFn, wantVR map[string]any, cfg EnvConfig,
 		wantErr string) {
 
-		err := CleanCache()
+		err := CleanCache("")
 		require.NoError(t, err)
 
 		ctx := context.Background()
