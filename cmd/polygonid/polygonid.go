@@ -948,6 +948,46 @@ func PLGNDescribeID(jsonResponse **C.char, in *C.char, cfg *C.char,
 	return true
 }
 
+//export PLGNBabyJubJubSignPoseidon
+func PLGNBabyJubJubSignPoseidon(jsonResponse **C.char, in *C.char, cfg *C.char,
+	status **C.PLGNStatus) bool {
+
+	return callGenericFn(c_polygonid.BabyJubJubSignPoseidon, jsonResponse, in,
+		cfg, status)
+}
+
+//export PLGNBabyJubJubVerifyPoseidon
+func PLGNBabyJubJubVerifyPoseidon(jsonResponse **C.char, in *C.char,
+	cfg *C.char, status **C.PLGNStatus) bool {
+
+	return callGenericFn(c_polygonid.BabyJubJubVerifyPoseidon, jsonResponse, in,
+		cfg, status)
+}
+
+//export PLGNBabyJubJubPrivate2Public
+func PLGNBabyJubJubPrivate2Public(jsonResponse **C.char, in *C.char,
+	cfg *C.char, status **C.PLGNStatus) bool {
+
+	return callGenericFn(c_polygonid.BabyJubJubPrivate2Public, jsonResponse, in,
+		cfg, status)
+}
+
+//export PLGNBabyJubJubPublicUncompress
+func PLGNBabyJubJubPublicUncompress(jsonResponse **C.char, in *C.char,
+	cfg *C.char, status **C.PLGNStatus) bool {
+
+	return callGenericFn(c_polygonid.BabyJubJubPublicUncompress, jsonResponse,
+		in, cfg, status)
+}
+
+//export PLGNBabyJubJubPublicCompress
+func PLGNBabyJubJubPublicCompress(jsonResponse **C.char, in *C.char,
+	cfg *C.char, status **C.PLGNStatus) bool {
+
+	return callGenericFn(c_polygonid.BabyJubJubPublicCompress, jsonResponse,
+		in, cfg, status)
+}
+
 // createEnvConfig returns empty config if input json is nil.
 func createEnvConfig(cfgJson *C.char) (c_polygonid.EnvConfig, error) {
 	var cfgData []byte
