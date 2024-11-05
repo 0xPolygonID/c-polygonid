@@ -1,10 +1,13 @@
 package c_polygonid
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"math/big"
+	"strconv"
 	"testing"
 
+	"github.com/iden3/go-iden3-crypto/babyjub"
 	"github.com/stretchr/testify/require"
 )
 
@@ -82,6 +85,57 @@ func TestJsonByte_UnmarshalJSON(t *testing.T) {
 			}
 			require.NoError(t, err)
 			require.Equal(t, jsonByte(tc.want), jb)
+		})
+	}
+}
+
+func TestJsonBJJPrivateKey_UnmarshalJSON(t *testing.T) {
+	type tp struct {
+		Jp *JsonBJJPrivateKey `json:"key"`
+	}
+
+	keyFromHex := func(s string) *babyjub.PrivateKey {
+		b, err := hex.DecodeString(s)
+		require.NoError(t, err)
+		var k babyjub.PrivateKey
+		copy(k[:], b)
+		return &k
+	}
+
+	testCases := []struct {
+		in      string
+		wantErr string
+		want    *babyjub.PrivateKey
+	}{
+		{
+			in:      `{"key":"0x123"}`,
+			wantErr: `invalid private key length`,
+		},
+		{
+			in:   `{"key":"e3addb905b705a89d849adef89227eb6664a9785823df48451300754c91f42cd"}`,
+			want: keyFromHex(`e3addb905b705a89d849adef89227eb6664a9785823df48451300754c91f42cd`),
+		},
+		{
+			in:      `{"key":"e3addb905b705a89d849adef89227eb6664a9785823df48451300754c91f42cx"}`,
+			wantErr: "encoding/hex: invalid byte: U+0078 'x'",
+		},
+		{
+			in:   `{}`,
+			want: nil,
+		},
+	}
+	for idx, tc := range testCases {
+		t.Run(strconv.Itoa(idx), func(t *testing.T) {
+			var j tp
+			err := json.Unmarshal([]byte(tc.in), &j)
+			if tc.wantErr != "" {
+				require.EqualError(t, err, tc.wantErr)
+				return
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.want, (*babyjub.PrivateKey)(j.Jp))
+			}
+			require.NoError(t, err)
 		})
 	}
 }

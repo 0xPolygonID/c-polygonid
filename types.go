@@ -192,3 +192,113 @@ func (d *coreDID) UnmarshalJSON(bytes []byte) error {
 	*d = coreDID(*did)
 	return nil
 }
+
+type JsonBJJPrivateKey babyjub.PrivateKey
+
+func (i *JsonBJJPrivateKey) PrivateKey() *babyjub.PrivateKey {
+	return (*babyjub.PrivateKey)(i)
+}
+
+func (i *JsonBJJPrivateKey) UnmarshalJSON(bytes []byte) error {
+	var s *string
+	err := json.Unmarshal(bytes, &s)
+	if err != nil {
+		return err
+	}
+
+	if s == nil {
+		return fmt.Errorf("private key is not set")
+	}
+
+	if len(*s) != len(*((*babyjub.PrivateKey)(i)))*2 {
+		return fmt.Errorf("invalid private key length")
+	}
+
+	n, err := hex.Decode((*i)[:], []byte(*s))
+	if err != nil {
+		return err
+	}
+	if n != len(*((*babyjub.PrivateKey)(i))) {
+		return fmt.Errorf("can't fully decode private key")
+	}
+
+	return nil
+}
+
+type JsonBJJPublicKey babyjub.PublicKey
+
+func (i *JsonBJJPublicKey) PublicKey() *babyjub.PublicKey {
+	return (*babyjub.PublicKey)(i)
+}
+
+func (i *JsonBJJPublicKey) UnmarshalJSON(bytes []byte) error {
+	var s *string
+	err := json.Unmarshal(bytes, &s)
+	if err != nil {
+		return err
+	}
+
+	if s == nil {
+		return fmt.Errorf("public key is not set")
+	}
+
+	var pk babyjub.PublicKeyComp
+	if len(*s) != len(pk)*2 {
+		return fmt.Errorf("invalid public key length")
+	}
+
+	n, err := hex.Decode(pk[:], []byte(*s))
+	if err != nil {
+		return err
+	}
+	if n != len(pk) {
+		return fmt.Errorf("can't fully decode public key")
+	}
+
+	pkp, err := pk.Decompress()
+	if err != nil {
+		return err
+	}
+
+	*(*babyjub.PublicKey)(i) = *pkp
+	return nil
+}
+
+type JsonBJJSignature babyjub.Signature
+
+func (i *JsonBJJSignature) Signature() *babyjub.Signature {
+	return (*babyjub.Signature)(i)
+}
+
+func (i *JsonBJJSignature) UnmarshalJSON(bytes []byte) error {
+	var s *string
+	err := json.Unmarshal(bytes, &s)
+	if err != nil {
+		return err
+	}
+
+	if s == nil {
+		return fmt.Errorf("signature is not set")
+	}
+
+	var sigComp babyjub.SignatureComp
+	if len(*s) != len(sigComp)*2 {
+		return fmt.Errorf("invalid signature length")
+	}
+
+	n, err := hex.Decode(sigComp[:], []byte(*s))
+	if err != nil {
+		return err
+	}
+	if n != len(sigComp) {
+		return fmt.Errorf("can't fully decode signature")
+	}
+
+	sig, err := sigComp.Decompress()
+	if err != nil {
+		return err
+	}
+
+	*(*babyjub.Signature)(i) = *sig
+	return nil
+}
