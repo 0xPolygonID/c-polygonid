@@ -751,6 +751,20 @@ func PLGNALinkedMultiQueryInputs(jsonResponse **C.char, in *C.char,
 		jsonResponse, in, cfg, status)
 }
 
+// PLGNAQueryInputs returns the inputs for the circuit based on the
+// request.circuitId field.
+//
+//export PLGNAQueryInputs
+func PLGNAQueryInputs(jsonResponse **C.char, in *C.char,
+	cfg *C.char, status **C.PLGNStatus) bool {
+
+	ctx, cancel := logAPITime()
+	defer cancel()
+
+	return prepareInputs(ctx, c_polygonid.GenericQueryInputsFromJson,
+		jsonResponse, in, cfg, status)
+}
+
 //export PLGNFreeStatus
 func PLGNFreeStatus(status *C.PLGNStatus) {
 	_, cancel := logAPITime()

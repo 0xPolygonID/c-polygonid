@@ -1134,6 +1134,39 @@ func AtomicQueryV3InputsFromJson(ctx context.Context, cfg EnvConfig,
 	return out, nil
 }
 
+func GenericQueryInputsFromJson(ctx context.Context, cfg EnvConfig,
+	in []byte) (AtomicQueryInputsResponse, error) {
+	var req struct {
+		Request struct {
+			CircuitID circuits.CircuitID `json:"circuitId"`
+		} `json:"request"`
+	}
+
+	err := json.Unmarshal(in, &req)
+	if err != nil {
+		return AtomicQueryInputsResponse{}, err
+	}
+
+	switch req.Request.CircuitID {
+	case circuits.AtomicQueryMTPV2CircuitID:
+		return AtomicQueryMtpV2InputsFromJson(ctx, cfg, in)
+	case circuits.AtomicQuerySigV2CircuitID:
+		return AtomicQuerySigV2InputsFromJson(ctx, cfg, in)
+	case circuits.AtomicQueryMTPV2OnChainCircuitID:
+		return AtomicQueryMtpV2OnChainInputsFromJson(ctx, cfg, in)
+	case circuits.AtomicQuerySigV2OnChainCircuitID:
+		return AtomicQuerySigV2OnChainInputsFromJson(ctx, cfg, in)
+	case circuits.AtomicQueryV3CircuitID:
+		return AtomicQueryV3InputsFromJson(ctx, cfg, in)
+	case circuits.AtomicQueryV3OnChainCircuitID:
+		return AtomicQueryV3OnChainInputsFromJson(ctx, cfg, in)
+	case circuits.LinkedMultiQuery10CircuitID:
+		return LinkedMultiQueryInputsFromJson(ctx, cfg, in)
+	}
+
+	return AtomicQueryInputsResponse{}, errors.New("unknown circuit")
+}
+
 func LinkedMultiQueryInputsFromJson(ctx context.Context, cfg EnvConfig,
 	in []byte) (AtomicQueryInputsResponse, error) {
 
