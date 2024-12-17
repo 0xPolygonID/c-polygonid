@@ -90,8 +90,6 @@ github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e/go.mod h1:cIg4er
 github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da h1:oI5xCqsCo564l8iNU+DwB5epxmsaqB+rhGL0m5jtYqE=
 github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da/go.mod h1:cIg4eruTrX1D+g88fzRXU5OdNfaM+9IcxsU14FzY7Hc=
 github.com/golang/mock v1.1.1/go.mod h1:oTYuIxOrZwtPieC+H1uAHpcLFnEyAGVDL/k47Jfbm0A=
-github.com/golang/mock v1.6.0 h1:ErTB+efbowRARo13NNdxyJji2egdxLGQhRaY+DUumQc=
-github.com/golang/mock v1.6.0/go.mod h1:p6yTPP+5HYm5mzsMV8JkE6ZKdX+/wYM6Hr+LicevLPs=
 github.com/golang/protobuf v1.2.0/go.mod h1:6lQm79b+lXiMfvg/cZm0SGofjICqVBUtrP5yJMmIC1U=
 github.com/golang/protobuf v1.3.2/go.mod h1:6lQm79b+lXiMfvg/cZm0SGofjICqVBUtrP5yJMmIC1U=
 github.com/golang/protobuf v1.4.0-rc.1/go.mod h1:ceaxUfeHdC40wWswd/P6IGgMaK3YpKi5j83Wpe3EHw8=
@@ -139,8 +137,6 @@ github.com/iden3/contracts-abi/onchain-non-merklized-issuer-base/v0/go/abi v0.0.
 github.com/iden3/contracts-abi/onchain-non-merklized-issuer-base/v0/go/abi v0.0.0-20240222110004-06aa097d1318/go.mod h1:vMgeBNntJeIDZrIDY0d6sZQU+JigUo4h+m95qeU03ew=
 github.com/iden3/contracts-abi/state/go/abi v1.0.1 h1:FsaLJSy3NSyJl5k1yfDxc5DhUHRY7Z/UCj0/1YueMrY=
 github.com/iden3/contracts-abi/state/go/abi v1.0.1/go.mod h1:TxgIrXCvxms3sbOdsy8kTvffUCIpEEifNy0fSXdkU4w=
-github.com/iden3/driver-did-iden3 v0.0.5 h1:N3B9S3CBZHqWIZWspAiq2JFaLyq0eLZf26sN3ZEMAhQ=
-github.com/iden3/driver-did-iden3 v0.0.5/go.mod h1:TcEG6fkExW6hgafjrU4ObOQ/HZqIRPQoL3TMU+URbS0=
 github.com/iden3/go-circuits/v2 v2.4.0 h1:m+7uYtrvJKuc+gVhbXDXl1BJQyK7sWdW7OWttM3R/8I=
 github.com/iden3/go-circuits/v2 v2.4.0/go.mod h1:k0uYx/ZdZPiDEIy7kI3MAixnREKcc7NdCKDRw8Q+iFA=
 github.com/iden3/go-iden3-core/v2 v2.3.1 h1:ytQqiclnVAIWyRKR2LF31hfz4DGRBD6nMjiPILXGSKk=
@@ -165,8 +161,8 @@ github.com/iden3/go-rapidsnark/witness/wazero v0.0.0-20230524142950-0986cf057d4e
 github.com/iden3/go-rapidsnark/witness/wazero v0.0.0-20230524142950-0986cf057d4e/go.mod h1:UEBifEzw62T6VzIHJeHuUgeLg2U/J9ttf7hOwQEqnYk=
 github.com/iden3/go-schema-processor/v2 v2.6.0 h1:5KWXtzwER/ftuTofuLJNEoQqRoX2UlnrmLvFmprgycs=
 github.com/iden3/go-schema-processor/v2 v2.6.0/go.mod h1:MYrkk55aEx3ZBKz0d/0rfxa7lBH4x9TfKGI1T/WBlpw=
-github.com/iden3/iden3comm/v2 v2.9.0 h1:LoD9/1A6L/HO1roWjjzTooka1m1y2SGSgRvcq+UMJS0=
-github.com/iden3/iden3comm/v2 v2.9.0/go.mod h1:l8t+BkbHU3ri7kiExZYc4CTY6erkzkcBbYXw416nwhA=
+github.com/iden3/iden3comm/v2 v2.7.0 h1:VTFCUQXywXepB+3ylamHFibmOEU1yplBx9Q9zC1MQbA=
+github.com/iden3/iden3comm/v2 v2.7.0/go.mod h1:ZRnfFg4geX336Bp9+29ZQdSqchbsBoVcd7ARn6JXH5Y=
 github.com/iden3/merkletree-proof v0.3.0 h1:NVlvtUBEgn4Etxxn+RsOmXP/qlI+85BdN8oUDTf3mxI=
 github.com/iden3/merkletree-proof v0.3.0/go.mod h1:+E2sBxMqhcn/fcu0LDGjmk3us+Vr+fxQUiZMxdpbgUE=
 github.com/jackpal/go-nat-pmp v1.0.2 h1:KzKSgb7qkJvOUTqYl9/Hg/me3pWgBmERKrTGD7BdWus=
