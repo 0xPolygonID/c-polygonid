@@ -137,7 +137,7 @@ func TestPrepareInputs(t *testing.T) {
 			nil, cfg, "")
 	})
 
-	t.Run("GenericQueryInputsFromJson — AtomicQueryMtpV2Onchain", func(t *testing.T) {
+	t.Run("GenericInputsFromJson — AtomicQueryMtpV2Onchain", func(t *testing.T) {
 		defer httpmock.MockHTTPClient(t,
 			map[string]string{
 				`http://localhost:8545%%%{"jsonrpc":"2.0","method":"eth_call","params":[{"from":"0x0000000000000000000000000000000000000000","input":"0xb4bdea55000e5102b2f7a54e61db03f6c656f65062f4b11b9dd52a1702c2bfdc379d1202","to":"0x134b1be34911e39a8397ec6289782989729807a4"},"latest"]}`:                                                                 "testdata/httpresp_eth_state_2qKc2ns18nV6uDSfaR1RVd7zF1Nm9vfeNZuvuEXQ3X.json",
@@ -159,7 +159,7 @@ func TestPrepareInputs(t *testing.T) {
 
 		doTest(t, "atomic_query_mtp_v2_on_chain_status_inputs.json",
 			"atomic_query_mtp_v2_on_chain_status_output.json",
-			GenericQueryInputsFromJson,
+			GenericInputsFromJson,
 			nil, cfg, "")
 	})
 
@@ -1105,7 +1105,6 @@ func (c *countingDocumentLoader) reset() {
 
 func TestMerklizeCred(t *testing.T) {
 	mockBadgerLog(t)
-	flushCacheDB(t)
 
 	defer httpmock.MockHTTPClient(t, map[string]string{
 		"https://schema.iden3.io/core/jsonld/iden3proofs.jsonld":                                         "testdata/httpresp_iden3proofs.jsonld",
@@ -1120,7 +1119,11 @@ func TestMerklizeCred(t *testing.T) {
 	}
 	ctx := context.Background()
 
-	mz, err := merklizeCred(ctx, w3cCred, documentLoader, true)
+	cacheDir, err := os.MkdirTemp("", "")
+	require.NoError(t, err)
+	defer os.RemoveAll(cacheDir)
+
+	mz, err := merklizeCred(ctx, w3cCred, documentLoader, true, cacheDir)
 	require.NoError(t, err)
 	require.Equal(t, wantRoot, mz.Root().BigInt().String())
 
@@ -1131,12 +1134,10 @@ func TestMerklizeCred(t *testing.T) {
 	// test that following call to merklizeCred does not make any HTTP calls
 	documentLoader.reset()
 
-	mz, err = merklizeCred(ctx, w3cCred, documentLoader, true)
+	mz, err = merklizeCred(ctx, w3cCred, documentLoader, true, cacheDir)
 	require.NoError(t, err)
 	require.Equal(t, wantRoot, mz.Root().BigInt().String())
 	require.Equal(t, 0, documentLoader.counter())
-
-	flushCacheDB(t)
 }
 
 func vcCredChecksum(in []byte) []byte {

@@ -605,7 +605,7 @@ func AtomicQueryMtpV2InputsFromJson(ctx context.Context, cfg EnvConfig,
 			start := time.Now()
 			inpMarsh.Query, out.VerifiablePresentation, queryErr = queryFromObj(
 				ctx, w3cCred, obj.Request, claim, cfg.documentLoader(),
-				circuitID)
+				circuitID, cfg.CacheDir)
 			slog.Debug("query done in", "time", time.Since(start))
 		}()
 	}
@@ -761,7 +761,8 @@ func AtomicQuerySigV2InputsFromJson(ctx context.Context, cfg EnvConfig,
 	}
 
 	inpMarsh.Query, out.VerifiablePresentation, err = queryFromObj(ctx, w3cCred,
-		obj.Request, inpMarsh.Claim.Claim, cfg.documentLoader(), circuitID)
+		obj.Request, inpMarsh.Claim.Claim, cfg.documentLoader(), circuitID,
+		cfg.CacheDir)
 	if err != nil {
 		return out, err
 	}
@@ -845,7 +846,7 @@ func AtomicQueryMtpV2OnChainInputsFromJson(ctx context.Context, cfg EnvConfig,
 			defer wg.Done()
 			inpMarsh.Query, out.VerifiablePresentation, queryErr = queryFromObj(
 				ctx, w3cCred, obj.Request, claim, cfg.documentLoader(),
-				circuitID)
+				circuitID, cfg.CacheDir)
 		}()
 	}
 
@@ -938,7 +939,8 @@ func AtomicQuerySigV2OnChainInputsFromJson(ctx context.Context, cfg EnvConfig,
 	}
 
 	inpMarsh.Query, out.VerifiablePresentation, err = queryFromObj(ctx, w3cCred,
-		obj.Request, inpMarsh.Claim.Claim, cfg.documentLoader(), circuitID)
+		obj.Request, inpMarsh.Claim.Claim, cfg.documentLoader(), circuitID,
+		cfg.CacheDir)
 	if err != nil {
 		return out, err
 	}
@@ -1024,7 +1026,8 @@ func AtomicQueryV3OnChainInputsFromJson(ctx context.Context, cfg EnvConfig,
 	}
 
 	inpMarsh.Query, out.VerifiablePresentation, err = queryFromObj(ctx, w3cCred,
-		obj.Request, inpMarsh.Claim.Claim, cfg.documentLoader(), circuitID)
+		obj.Request, inpMarsh.Claim.Claim, cfg.documentLoader(), circuitID,
+		cfg.CacheDir)
 	if err != nil {
 		return out, err
 	}
@@ -1104,7 +1107,8 @@ func AtomicQueryV3InputsFromJson(ctx context.Context, cfg EnvConfig,
 	}
 
 	inpMarsh.Query, out.VerifiablePresentation, err = queryFromObj(ctx, w3cCred,
-		obj.Request, inpMarsh.Claim.Claim, cfg.documentLoader(), circuitID)
+		obj.Request, inpMarsh.Claim.Claim, cfg.documentLoader(), circuitID,
+		cfg.CacheDir)
 	if err != nil {
 		return out, err
 	}
@@ -1134,7 +1138,7 @@ func AtomicQueryV3InputsFromJson(ctx context.Context, cfg EnvConfig,
 	return out, nil
 }
 
-func GenericQueryInputsFromJson(ctx context.Context, cfg EnvConfig,
+func GenericInputsFromJson(ctx context.Context, cfg EnvConfig,
 	in []byte) (AtomicQueryInputsResponse, error) {
 	var req struct {
 		Request struct {
@@ -1162,6 +1166,8 @@ func GenericQueryInputsFromJson(ctx context.Context, cfg EnvConfig,
 		return AtomicQueryV3OnChainInputsFromJson(ctx, cfg, in)
 	case circuits.LinkedMultiQuery10CircuitID:
 		return LinkedMultiQueryInputsFromJson(ctx, cfg, in)
+	case circuits.AuthV2CircuitID:
+		return AuthV2InputsFromJson(ctx, cfg, in)
 	}
 
 	return AtomicQueryInputsResponse{}, errors.New("unknown circuit")
@@ -1212,7 +1218,8 @@ func LinkedMultiQueryInputsFromJson(ctx context.Context, cfg EnvConfig,
 	inpMarsh.Claim = claim.Claim
 
 	inpMarsh.Query, out.VerifiablePresentation, err = queriesFromObj(ctx,
-		w3cCred, obj.Request, inpMarsh.Claim, cfg.documentLoader(), circuitID)
+		w3cCred, obj.Request, inpMarsh.Claim, cfg.documentLoader(), circuitID,
+		cfg.CacheDir)
 	if err != nil {
 		return out, err
 	}
@@ -1303,7 +1310,7 @@ func querySkipRevocation(requestObj jsonObj) (bool, error) {
 
 func queryFromObj(ctx context.Context, w3cCred verifiable.W3CCredential,
 	requestObj jsonObj, claim *core.Claim, documentLoader ld.DocumentLoader,
-	circuitID circuits.CircuitID) (out circuits.Query,
+	circuitID circuits.CircuitID, cacheDir string) (out circuits.Query,
 	verifiablePresentation jsonObj, err error) {
 
 	merklizePosition, err := claim.GetMerklizedPosition()
@@ -1315,10 +1322,10 @@ func queryFromObj(ctx context.Context, w3cCred verifiable.W3CCredential,
 	var vp jsonObj
 	if merklizePosition == core.MerklizedRootPositionNone {
 		queries, vp, err = queriesFromObjNonMerklized(ctx, w3cCred, requestObj,
-			documentLoader, circuitID)
+			documentLoader, circuitID, cacheDir)
 	} else {
 		queries, vp, err = queriesFromObjMerklized(ctx, w3cCred, requestObj,
-			documentLoader, circuitID, claim)
+			documentLoader, circuitID, claim, cacheDir)
 	}
 	if err != nil {
 		return circuits.Query{}, nil, err
@@ -1341,7 +1348,7 @@ func queryFromObj(ctx context.Context, w3cCred verifiable.W3CCredential,
 
 func queriesFromObj(ctx context.Context, w3cCred verifiable.W3CCredential,
 	requestObj jsonObj, claim *core.Claim, documentLoader ld.DocumentLoader,
-	circuitID circuits.CircuitID) ([]*circuits.Query, jsonObj, error) {
+	circuitID circuits.CircuitID, cacheDir string) ([]*circuits.Query, jsonObj, error) {
 
 	merklizePosition, err := claim.GetMerklizedPosition()
 	if err != nil {
@@ -1350,21 +1357,21 @@ func queriesFromObj(ctx context.Context, w3cCred verifiable.W3CCredential,
 
 	if merklizePosition == core.MerklizedRootPositionNone {
 		return queriesFromObjNonMerklized(ctx, w3cCred, requestObj,
-			documentLoader, circuitID)
+			documentLoader, circuitID, cacheDir)
 	}
 
 	return queriesFromObjMerklized(ctx, w3cCred, requestObj, documentLoader,
-		circuitID, claim)
+		circuitID, claim, cacheDir)
 }
 
 func wrapMerklizeWithRegion(ctx context.Context,
-	w3cCred verifiable.W3CCredential,
-	documentLoader ld.DocumentLoader) (*merklize.Merklizer, error) {
+	w3cCred verifiable.W3CCredential, documentLoader ld.DocumentLoader,
+	cacheDir string) (*merklize.Merklizer, error) {
 
 	var mz *merklize.Merklizer
 	var err error
 	trace.WithRegion(ctx, "merklize", func() {
-		mz, err = merklizeCred(ctx, w3cCred, documentLoader, true)
+		mz, err = merklizeCred(ctx, w3cCred, documentLoader, true, cacheDir)
 	})
 	return mz, err
 }
@@ -1397,8 +1404,8 @@ func opName(opID int) string {
 
 func queriesFromObjNonMerklized(ctx context.Context,
 	w3cCred verifiable.W3CCredential, requestObj jsonObj,
-	documentLoader ld.DocumentLoader,
-	circuitID circuits.CircuitID) ([]*circuits.Query, jsonObj, error) {
+	documentLoader ld.DocumentLoader, circuitID circuits.CircuitID,
+	cacheDir string) ([]*circuits.Query, jsonObj, error) {
 
 	var err error
 
@@ -1440,7 +1447,7 @@ func queriesFromObjNonMerklized(ctx context.Context,
 	}
 
 	var mz *merklize.Merklizer
-	mz, err = wrapMerklizeWithRegion(ctx, w3cCred, documentLoader)
+	mz, err = wrapMerklizeWithRegion(ctx, w3cCred, documentLoader, cacheDir)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -1666,12 +1673,12 @@ func sortedKeys(m jsonObj) []string {
 func queriesFromObjMerklized(ctx context.Context,
 	w3cCred verifiable.W3CCredential, requestObj jsonObj,
 	documentLoader ld.DocumentLoader, circuitID circuits.CircuitID,
-	claim *core.Claim) ([]*circuits.Query, jsonObj, error) {
+	claim *core.Claim, cacheDir string) ([]*circuits.Query, jsonObj, error) {
 
 	region := trace.StartRegion(ctx, "queryFromObjMerklized")
 	defer region.End()
 
-	mz, err := wrapMerklizeWithRegion(ctx, w3cCred, documentLoader)
+	mz, err := wrapMerklizeWithRegion(ctx, w3cCred, documentLoader, cacheDir)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -2166,8 +2173,8 @@ func newChainIDFromString(in string) (core.ChainID, error) {
 }
 
 func merklizeCred(ctx context.Context, w3cCred verifiable.W3CCredential,
-	documentLoader ld.DocumentLoader,
-	ignoreCacheErrors bool) (*merklize.Merklizer, error) {
+	documentLoader ld.DocumentLoader, ignoreCacheErrors bool,
+	cacheDir string) (*merklize.Merklizer, error) {
 
 	w3cCred.Proof = nil
 	credentialBytes, err := json.Marshal(w3cCred)
@@ -2177,7 +2184,7 @@ func merklizeCred(ctx context.Context, w3cCred verifiable.W3CCredential,
 
 	cacheKey := sha256.Sum256(credentialBytes)
 
-	db, cleanup, err := getCacheDB("")
+	db, cleanup, err := getCacheDB(cacheDir)
 	if err != nil {
 		if !ignoreCacheErrors {
 			return nil, err
@@ -2383,7 +2390,8 @@ func PreCacheVC(ctx context.Context, cfg EnvConfig, in []byte) error {
 		return err
 	}
 
-	_, err = merklizeCred(ctx, w3cCred, cfg.documentLoader(), false)
+	_, err = merklizeCred(ctx, w3cCred, cfg.documentLoader(), false,
+		cfg.CacheDir)
 	return err
 }
 
@@ -2599,4 +2607,53 @@ func DescribeID(ctx context.Context, cfg EnvConfig,
 		ID:      id.String(),
 		IDAsInt: id.BigInt().String(),
 	}, nil
+}
+
+// AuthV2InputsFromJson converts JSON input to AuthV2Inputs response.
+func AuthV2InputsFromJson(_ context.Context, _ EnvConfig,
+	in []byte) (AtomicQueryInputsResponse, error) {
+
+	var out AtomicQueryInputsResponse
+
+	var obj map[string]any
+	err := json.Unmarshal(in, &obj)
+	if err != nil {
+		return out, err
+	}
+
+	didI, ok := obj["genesisDID"]
+	if !ok {
+		return out, errors.New("no genesisDID field found")
+	}
+
+	didS, ok := didI.(string)
+	if !ok {
+		return out, errors.New("genesisDID is not a string")
+	}
+
+	did, err := w3c.ParseDID(didS)
+	if err != nil {
+		return out, fmt.Errorf("failed to parse genesisDID: %w", err)
+	}
+
+	id, err := core.IDFromDID(*did)
+	if err != nil {
+		return out, fmt.Errorf("failed to get ID from genesisDID: %w", err)
+	}
+	obj["genesisID"] = id.String()
+
+	authV2InputsData, err := json.Marshal(obj)
+	if err != nil {
+		return out, fmt.Errorf("failed to marshal data: %w", err)
+	}
+
+	var inputs circuits.AuthV2Inputs
+	err = json.Unmarshal(authV2InputsData, &inputs)
+	if err != nil {
+		return out, fmt.Errorf("failed to re-unmarshal authV2 inputs: %w", err)
+	}
+
+	out.Inputs = inputs
+
+	return out, nil
 }

@@ -5,7 +5,7 @@ go 1.22
 require (
 	github.com/dgraph-io/badger/v4 v4.5.0
 	github.com/ethereum/go-ethereum v1.14.12
-	github.com/iden3/go-circuits/v2 v2.4.0
+	github.com/iden3/go-circuits/v2 v2.4.1-0.20250107112156-39609341164c
 	github.com/iden3/go-iden3-core/v2 v2.3.1
 	github.com/iden3/go-iden3-crypto v0.0.17
 	github.com/iden3/go-merkletree-sql/v2 v2.0.6
