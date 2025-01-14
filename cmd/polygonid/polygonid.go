@@ -615,7 +615,7 @@ func marshalInputsResponse(
 	var resp struct {
 		Inputs                 json.RawMessage `json:"inputs"`
 		VerifiablePresentation any             `json:"verifiablePresentation,omitempty"`
-		StatesInfo             json.RawMessage `json:"statesInfo,omitempty"`
+		PublicStatesInfo       json.RawMessage `json:"publicStatesInfo,omitempty"`
 	}
 	if inputsResponse.VerifiablePresentation != nil {
 		resp.VerifiablePresentation = inputsResponse.VerifiablePresentation
@@ -626,13 +626,13 @@ func marshalInputsResponse(
 		return "", err
 	}
 
-	i, ok := inputsResponse.Inputs.(circuits.StatesInfoProvider)
+	i, ok := inputsResponse.Inputs.(circuits.PublicStatesInfoProvider)
 	if ok {
-		statesInfo, err := i.GetStatesInfo()
+		publicStatesInfo, err := i.GetPublicStatesInfo()
 		if err != nil {
 			return "", err
 		}
-		resp.StatesInfo, err = json.Marshal(statesInfo)
+		resp.PublicStatesInfo, err = json.Marshal(publicStatesInfo)
 		if err != nil {
 			return "", err
 		}
