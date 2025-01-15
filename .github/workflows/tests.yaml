@@ -21,7 +21,9 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: ${{ matrix.go_version }}
+      - run: pwd
       - run: go test -v -race -timeout=60s -find-unused-httpresp ./...
+      - run: go test -v -race -timeout=60s -find-unused-httpresp ./cmd/polygonid/...
     services:
       ipfs:
         image: ipfs/kubo:v0.26.0
