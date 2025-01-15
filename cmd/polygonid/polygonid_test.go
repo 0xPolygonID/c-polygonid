@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
+	"flag"
+	"log/slog"
 	"math/big"
 	"math/rand"
 	"os"
@@ -17,6 +19,28 @@ import (
 	"github.com/iden3/go-iden3-crypto/poseidon"
 	"github.com/stretchr/testify/require"
 )
+
+var catchUnusedHttpresp = flag.Bool("find-unused-httpresp", false,
+	"fail if there are unused httpresp_* files")
+
+func TestMain(m *testing.M) {
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+		AddSource:   true,
+		Level:       slog.LevelInfo,
+		ReplaceAttr: nil,
+	})))
+
+	retCode := m.Run()
+	flag.Parse()
+
+	if *catchUnusedHttpresp {
+		if !httpmock.CheckForRedundantHttpresps("testdata", "httpresp_") {
+			os.Exit(1)
+		}
+	}
+
+	os.Exit(retCode)
+}
 
 func TestGenerateAuthClaimData(t *testing.T) {
 	t.Skip("generate auth claim data")
