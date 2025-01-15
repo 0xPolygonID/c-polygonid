@@ -22,8 +22,14 @@ jobs:
         with:
           go-version: ${{ matrix.go_version }}
       - run: pwd
+      - run: ls
       - run: go test -v -race -timeout=60s -find-unused-httpresp ./...
-      - run: go test -v -race -timeout=60s -find-unused-httpresp ./cmd/polygonid/...
+      - run: pwd
+        working-directory: cmd/polygonid
+      - run: ls
+        working-directory: cmd/polygonid
+      - run: go test -v -race -timeout=60s -find-unused-httpresp ./...
+        working-directory: cmd/polygonid
     services:
       ipfs:
         image: ipfs/kubo:v0.26.0
