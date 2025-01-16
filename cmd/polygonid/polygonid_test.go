@@ -1,18 +1,46 @@
 package main
 
 import (
+	"context"
 	"encoding/hex"
 	"encoding/json"
+	"flag"
+	"log/slog"
 	"math/big"
 	"math/rand"
+	"os"
 	"strings"
 	"testing"
 	"time"
 
+	c_polygonid "github.com/0xPolygonID/c-polygonid"
+	httpmock "github.com/0xPolygonID/c-polygonid/testing"
 	core "github.com/iden3/go-iden3-core/v2"
 	"github.com/iden3/go-iden3-crypto/poseidon"
 	"github.com/stretchr/testify/require"
 )
+
+var catchUnusedHttpresp = flag.Bool("find-unused-httpresp", false,
+	"fail if there are unused httpresp_* files")
+
+func TestMain(m *testing.M) {
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+		AddSource:   true,
+		Level:       slog.LevelInfo,
+		ReplaceAttr: nil,
+	})))
+
+	retCode := m.Run()
+	flag.Parse()
+
+	if *catchUnusedHttpresp {
+		if !httpmock.CheckForRedundantHttpresps("testdata", "httpresp_") {
+			os.Exit(1)
+		}
+	}
+
+	os.Exit(retCode)
+}
 
 func TestGenerateAuthClaimData(t *testing.T) {
 	t.Skip("generate auth claim data")
@@ -126,4 +154,87 @@ func TestCreateClaimAllFields2(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log(string(cBytes))
+}
+
+func readFixtureFile(name string) []byte {
+	fileBytes, err := os.ReadFile("testdata/" + name)
+	if err != nil {
+		panic(err)
+	}
+	return fileBytes
+}
+
+func TestGenrateInputs(t *testing.T) {
+	type PrepareInputsFn func(
+		ctx context.Context, cfg c_polygonid.EnvConfig, in []byte) (
+		c_polygonid.AtomicQueryInputsResponse, error)
+
+	cacheDir, err := os.MkdirTemp("", "")
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		err := os.RemoveAll(cacheDir)
+		require.NoError(t, err)
+	})
+
+	doTest := func(t testing.TB, inFile, wantOutFile string,
+		fn PrepareInputsFn, wantVR map[string]any, cfg c_polygonid.EnvConfig,
+		wantErr string) {
+
+		err := c_polygonid.CleanCache(cacheDir)
+		require.NoError(t, err)
+
+		ctx := context.Background()
+		out, err := fn(ctx, cfg, readFixtureFile(inFile))
+		if wantErr != "" {
+			require.EqualError(t, err, wantErr)
+			return
+		}
+		require.NoError(t, err)
+
+		resp, err := marshalInputsResponse(out)
+		require.NoError(t, err)
+
+		assertEqualWithoutTimestamp(t, wantOutFile, resp)
+	}
+
+	env := c_polygonid.EnvConfig{CacheDir: cacheDir}
+	t.Run("atomic_query_v3_on_chain_mtp_inputs", func(t *testing.T) {
+		defer httpmock.MockHTTPClient(t, map[string]string{
+			"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qDnyCaxj4zdYmj6LbegYMjWSnkbKAyqtq31YeuyZV/claims/revocation/status/3972757": "../../testdata/httpresp_rev_status_3972757.json",
+			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld":                                                           "../../testdata/httpresp_kyc-v3.json-ld",
+			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld":                                               "../../testdata/httpresp_iden3credential_v2.json",
+		})()
+
+		doTest(t, "atomic_query_v3_on_chain_mtp_inputs.json",
+			"atomic_query_v3_on_chain_mtp_output.json",
+			c_polygonid.AtomicQueryV3OnChainInputsFromJson, nil, env, "")
+	})
+	t.Run("auth_v2_inputs", func(t *testing.T) {
+		doTest(t, "auth_v2_inputs_in.json", "auth_v2_inputs_out.json",
+			c_polygonid.AuthV2InputsFromJson, nil, env, "")
+	})
+
+}
+
+func assertEqualWithoutTimestamp(t testing.TB, wantFName string,
+	actual string) {
+
+	jsonWant := readFixtureFile(wantFName)
+	var wantObj map[string]any
+	err := json.Unmarshal(jsonWant, &wantObj)
+	require.NoError(t, err)
+
+	var actualObj map[string]any
+	err = json.Unmarshal([]byte(actual), &actualObj)
+	require.NoError(t, err)
+
+	actualInputsObj, ok := actualObj["inputs"].(map[string]any)
+	require.True(t, ok)
+
+	if ts, ok := actualInputsObj["timestamp"]; ok {
+		wantObj["inputs"].(map[string]any)["timestamp"] = ts
+	}
+
+	require.Equal(t, wantObj, actualObj, "file name: %s\nwant: %s\ngot: %s",
+		wantFName, jsonWant, actual)
 }

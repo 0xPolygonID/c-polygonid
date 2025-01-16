@@ -15,7 +15,7 @@ jobs:
       matrix:
         containers:
           - 1.22.5-bookworm
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     container: golang:${{matrix.containers}}
     steps:
       - uses: actions/checkout@v4
