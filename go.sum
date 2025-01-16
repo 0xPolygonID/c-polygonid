@@ -137,8 +137,8 @@ github.com/iden3/contracts-abi/onchain-non-merklized-issuer-base/v0/go/abi v0.0.
 github.com/iden3/contracts-abi/onchain-non-merklized-issuer-base/v0/go/abi v0.0.0-20240222110004-06aa097d1318/go.mod h1:vMgeBNntJeIDZrIDY0d6sZQU+JigUo4h+m95qeU03ew=
 github.com/iden3/contracts-abi/state/go/abi v1.0.1 h1:FsaLJSy3NSyJl5k1yfDxc5DhUHRY7Z/UCj0/1YueMrY=
 github.com/iden3/contracts-abi/state/go/abi v1.0.1/go.mod h1:TxgIrXCvxms3sbOdsy8kTvffUCIpEEifNy0fSXdkU4w=
-github.com/iden3/go-circuits/v2 v2.4.1-0.20250114090025-48c50135fd41 h1:ugiX4tCTIA8HSh5OMfwZkQl869qtek/oSY8sTdMUV/0=
-github.com/iden3/go-circuits/v2 v2.4.1-0.20250114090025-48c50135fd41/go.mod h1:kzZTeqVRr0SuTMj2Dj9OM60kZzHf4FfaetLgrlnxz94=
+github.com/iden3/go-circuits/v2 v2.4.1-0.20250116125441-51815c3526f8 h1:P30la6uL/YkgK6TMpggCDEdPvWDaz6PMm4WobY6gmkg=
+github.com/iden3/go-circuits/v2 v2.4.1-0.20250116125441-51815c3526f8/go.mod h1:kzZTeqVRr0SuTMj2Dj9OM60kZzHf4FfaetLgrlnxz94=
 github.com/iden3/go-iden3-core/v2 v2.3.1 h1:ytQqiclnVAIWyRKR2LF31hfz4DGRBD6nMjiPILXGSKk=
 github.com/iden3/go-iden3-core/v2 v2.3.1/go.mod h1:8vmG6y8k9VS7iNoxuiKukKbRQFsMyabCc+i8er07zOs=
 github.com/iden3/go-iden3-crypto v0.0.17 h1:NdkceRLJo/pI4UpcjVah4lN/a3yzxRUGXqxbWcYh9mY=
