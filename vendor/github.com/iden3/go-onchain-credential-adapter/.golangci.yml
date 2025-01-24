@@ -1,0 +1,64 @@
+service:
+  golangci-lint-version: 1.x.x
+
+run:
+  tests: false
+
+  timeout: 2m
+  skip-dirs:
+    - vendor
+
+linters-settings:
+  govet:
+    check-shadowing: false
+  goconst:
+    min-len: 2
+    min-occurrences: 2
+  misspell:
+    locale: US
+  lll:
+    line-length: 140
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - style
+      - performance
+
+linters:
+  enable:
+    - bodyclose
+    - megacheck
+    - revive
+    - govet
+    - unconvert
+    - megacheck
+    - structcheck
+    - gas
+    - gocyclo
+    - dupl
+    - misspell
+    - unparam
+    - varcheck
+    - deadcode
+    - typecheck
+    - ineffassign
+    - varcheck
+    - stylecheck
+    - gochecknoinits
+    - exportloopref
+    - gocritic
+    - nakedret
+    - gosimple
+    - prealloc
+    - gci
+    - errcheck
+    - gofmt
+    - goimports
+  fast: false
+  disable-all: true
+
+issues:
+  exclude-rules:
+    - text: "unexported-return:"
+      linters:
+        - revive

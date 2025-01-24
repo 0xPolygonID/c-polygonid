@@ -1,0 +1,22 @@
+package_name: jwa
+output: jwa/options_gen.go
+interfaces:
+  - name: NewSignatureAlgorithmOption
+    comment: |
+      NewSignatureAlgorithmOption represents an option that can be passed to the NewSignatureAlgorithm
+  - name: NewKeyEncryptionAlgorithmOption
+    comment: |
+      NewKeyEncryptionAlgorithmOption represents an option that can be passed to the NewKeyEncryptionAlgorithm
+  - name: NewSignatureKeyEncryptionAlgorithmOption
+    comment: |
+      NewSignatureKeyEncryptionAlgorithmOption represents an option that can be passed to both
+      NewSignatureAlgorithm and NewKeyEncryptionAlgorithm
+    methods:
+      - newSignatureAlgorithmOption
+      - newKeyEncryptionAlgorithmOption
+options:
+  - ident: IsSymmetric
+    interface: NewSignatureKeyEncryptionAlgorithmOption
+    argument_type: bool
+    comment: |
+      IsSymmetric specifies that the algorithm is symmetric

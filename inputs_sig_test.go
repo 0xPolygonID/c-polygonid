@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"sync"
 	"testing"
+	"testing/synctest"
+	"time"
 
 	httpmock "github.com/0xPolygonID/c-polygonid/testing"
 	"github.com/ethereum/go-ethereum/common"
@@ -161,6 +163,19 @@ func TestPrepareInputs(t *testing.T) {
 			"atomic_query_mtp_v2_on_chain_status_output.json",
 			GenericInputsFromJson,
 			nil, cfg, "")
+	})
+
+	t.Run("GenericInputsFromJson — AnonAadhaarV1", func(t *testing.T) {
+		defer httpmock.MockHTTPClient(t, map[string]string{})()
+		cfg := EnvConfig{}
+
+		synctest.Run(func() {
+			sleepTillTime(time.Unix(1737047441, 857548000).UTC())
+			doTest(t, "anon_aadhaar_v1_inputs.json",
+				"anon_aadhaar_v1_output.json",
+				GenericInputsFromJson,
+				nil, cfg, "")
+		})
 	})
 
 	t.Run("AtomicQueryMtpV2Onchain - no roots in identity tree store", func(t *testing.T) {
@@ -1446,4 +1461,10 @@ func TestNewGenesysIDFromEth(t *testing.T) {
 		IDAsInt: "18925340278420228466712879433563154448903652530982176890458034425491886594",
 	}
 	require.Equal(t, wantResp, resp)
+}
+
+func sleepTillTime(wantTime time.Time) {
+	synctestTimeStart := time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)
+	needToSleep := wantTime.Sub(synctestTimeStart)
+	time.Sleep(needToSleep)
 }

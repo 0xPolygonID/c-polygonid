@@ -1,8 +1,9 @@
 module github.com/0xPolygonID/c-polygonid
 
-go 1.22
+go 1.24
 
 require (
+	github.com/0xPolygonID/go-circuit-external v0.0.0
 	github.com/dgraph-io/badger/v4 v4.5.0
 	github.com/ethereum/go-ethereum v1.14.12
 	github.com/iden3/go-circuits/v2 v2.4.1-0.20250116125441-51815c3526f8
@@ -10,7 +11,7 @@ require (
 	github.com/iden3/go-iden3-crypto v0.0.17
 	github.com/iden3/go-merkletree-sql/v2 v2.0.6
 	github.com/iden3/go-onchain-credential-adapter v0.0.0-20240425110009-4004ac8da50c
-	github.com/iden3/go-schema-processor/v2 v2.6.0
+	github.com/iden3/go-schema-processor/v2 v2.6.1
 	github.com/iden3/iden3comm/v2 v2.7.0
 	github.com/iden3/merkletree-proof v0.3.0
 	github.com/piprate/json-gold v0.5.1-0.20241210232033-19254b3ec65b
@@ -29,7 +30,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dchest/blake512 v1.0.0 // indirect
 	github.com/deckarep/golang-set/v2 v2.6.0 // indirect
-	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.2.0 // indirect
+	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.3.0 // indirect
 	github.com/dgraph-io/ristretto/v2 v2.0.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/dustinxie/ecc v0.0.0-20210511000915-959544187564 // indirect
@@ -37,7 +38,7 @@ require (
 	github.com/ethereum/go-verkle v0.1.1-0.20240829091221-dffa7562dbe9 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
-	github.com/goccy/go-json v0.10.2 // indirect
+	github.com/goccy/go-json v0.10.3 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/google/flatbuffers v24.3.25+incompatible // indirect
 	github.com/google/uuid v1.6.0 // indirect
@@ -53,11 +54,13 @@ require (
 	github.com/iden3/go-rapidsnark/witness/v2 v2.0.0 // indirect
 	github.com/iden3/go-rapidsnark/witness/wazero v0.0.0-20230524142950-0986cf057d4e // indirect
 	github.com/klauspost/compress v1.17.11 // indirect
-	github.com/lestrrat-go/blackmagic v1.0.1 // indirect
+	github.com/lestrrat-go/blackmagic v1.0.2 // indirect
 	github.com/lestrrat-go/httpcc v1.0.1 // indirect
 	github.com/lestrrat-go/httprc v1.0.4 // indirect
+	github.com/lestrrat-go/httprc/v3 v3.0.0-beta1 // indirect
 	github.com/lestrrat-go/iter v1.0.2 // indirect
 	github.com/lestrrat-go/jwx/v2 v2.0.12 // indirect
+	github.com/lestrrat-go/jwx/v3 v3.0.0-alpha1 // indirect
 	github.com/lestrrat-go/option v1.0.1 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
@@ -89,3 +92,4 @@ require (
 
 //replace github.com/iden3/go-circuits => ../go-circuits
 //replace github.com/iden3/go-schema-processor/v2 => ../go-schema-processor
+replace github.com/0xPolygonID/go-circuit-external => ../go-circuit-external

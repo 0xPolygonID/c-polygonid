@@ -18,6 +18,7 @@ import (
 	"sync"
 	"time"
 
+	gocircuitexternal "github.com/0xPolygonID/go-circuit-external"
 	"github.com/dgraph-io/badger/v4"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -1168,6 +1169,8 @@ func GenericInputsFromJson(ctx context.Context, cfg EnvConfig,
 		return LinkedMultiQueryInputsFromJson(ctx, cfg, in)
 	case circuits.AuthV2CircuitID:
 		return AuthV2InputsFromJson(ctx, cfg, in)
+	case gocircuitexternal.AnonAadhaarV1:
+		return AnonAadhaarInputsFromJson(ctx, cfg, in)
 	}
 
 	return AtomicQueryInputsResponse{}, errors.New("unknown circuit")
@@ -2655,5 +2658,19 @@ func AuthV2InputsFromJson(_ context.Context, _ EnvConfig,
 
 	out.Inputs = inputs
 
+	return out, nil
+}
+
+func AnonAadhaarInputsFromJson(ctx context.Context, cfg EnvConfig,
+	in []byte) (AtomicQueryInputsResponse, error) {
+
+	var out AtomicQueryInputsResponse
+	var inputs anonAadhaarV1Inputs
+	err := json.Unmarshal(in, &inputs)
+	if err != nil {
+		return out, err
+	}
+
+	out.Inputs = inputs.asAnonAadhaarV1Inputs()
 	return out, nil
 }
