@@ -926,6 +926,13 @@ func PLGNW3CCredentialFromOnchainHex(jsonResponse **C.char, in *C.char,
 	return true
 }
 
+//export PLGNW3CCredentialFromAnonAadhaarInputs
+func PLGNW3CCredentialFromAnonAadhaarInputs(jsonResponse **C.char, in *C.char,
+	cfg *C.char, status **C.PLGNStatus) bool {
+	return callGenericFn(c_polygonid.W3cCredentialsFromAnonAadhaarInputsJson,
+		jsonResponse, in, cfg, status)
+}
+
 // PLGNDescribeID parses ID and return it in different representations.
 // Request example:
 //

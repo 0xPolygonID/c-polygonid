@@ -2674,3 +2674,20 @@ func AnonAadhaarInputsFromJson(ctx context.Context, cfg EnvConfig,
 	out.Inputs = inputs.asAnonAadhaarV1Inputs()
 	return out, nil
 }
+
+func W3cCredentialsFromAnonAadhaarInputsJson(ctx context.Context, cfg EnvConfig,
+	in []byte) (verifiable.W3CCredential, error) {
+
+	var inputs anonAadhaarV1Inputs
+	err := json.Unmarshal(in, &inputs)
+	if err != nil {
+		return verifiable.W3CCredential{}, err
+	}
+
+	w3cCred, err := inputs.asAnonAadhaarV1Inputs().W3CCredential()
+	if err != nil {
+		return verifiable.W3CCredential{}, err
+	}
+
+	return *w3cCred, nil
+}

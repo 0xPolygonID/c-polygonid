@@ -1457,3 +1457,51 @@ func TestNewGenesysIDFromEth(t *testing.T) {
 	}
 	require.Equal(t, wantResp, resp)
 }
+
+func TestW3cCredentialsFromAnonAadhaarInputsJson(t *testing.T) {
+	defer httpmock.MockHTTPClient(t, map[string]string{})()
+
+	ctx := context.Background()
+	var cfg EnvConfig
+	w3cCred, err := W3cCredentialsFromAnonAadhaarInputsJson(ctx, cfg,
+		readFixtureFile("anon_aadhaar_v1_inputs.json"))
+	require.NoError(t, err)
+
+	expectedCredential := `{
+    "@context": [
+      "https://www.w3.org/2018/credentials/v1",
+      "https://schema.iden3.io/core/jsonld/iden3proofs.jsonld",
+      "https://gist.githubusercontent.com/ilya-korotya/078de56c274d44ea5a9579e137bd4301/raw/bfc67afc2246cf40a3fc508f0de9f689f318373d/AnonAadhaar.jsonld"
+    ],
+    "type": [
+      "VerifiableCredential",
+      "AnonAadhaar"
+    ],
+    "issuanceDate": "2019-03-08T05:30:00Z",
+	"expirationDate": "2019-09-06T19:54:00Z",
+    "credentialSubject": {
+      "birthday": 19840101,
+      "gender": 77,
+      "id": "did:iden3:privado:main:2Scn2RfosbkQDMQzQM5nCz3Nk5GnbzZCWzGCd3tc2G",
+      "pinCode": 110051,
+      "state": 452723500356,
+      "type": "AnonAadhaar"
+    },
+    "credentialStatus": {
+      "id": "https://issuer-node-core-api-demo.privado.id/v2/agent",
+      "revocationNonce": 954548273,
+      "type": "Iden3commRevocationStatusV1.0"
+    },
+    "issuer": "did:iden3:privado:main:2Si3eZUE6XetYsmU5dyUK2Cvaxr1EEe65vdv2BML4L",
+    "credentialSchema": {
+      "id": "https://gist.githubusercontent.com/ilya-korotya/601c46ca5a7487ae6e1946b4aab22b1d/raw/3aa88a8dd666253869fb0d86ae58d0ce3d040203/AnonAadhaar.json",
+      "type": "JsonSchema2023"
+    }
+}`
+	w3cCred.ID = "" // It's random generated UUID
+	w3cCredJ, err := json.Marshal(w3cCred)
+	require.NoError(t, err)
+	require.JSONEq(t, expectedCredential, string(w3cCredJ))
+
+	t.Log(w3cCred)
+}
