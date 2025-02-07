@@ -2567,3 +2567,37 @@ func DescribeID(ctx context.Context, cfg EnvConfig,
 		IDAsInt: id.BigInt().String(),
 	}, nil
 }
+
+type CoreClaimResponse struct {
+	CoreClaim    *core.Claim `json:"coreClaim"`
+	CoreClaimHex string      `json:"coreClaimHex"`
+}
+
+func W3CCredentialToCoreClaim(ctx context.Context, cfg EnvConfig, in []byte) (CoreClaimResponse, error) {
+	var req struct {
+		W3CCredential    *verifiable.W3CCredential    `json:"w3cCredential"`
+		CoreClaimOptions *verifiable.CoreClaimOptions `json:"coreClaimOptions"`
+	}
+	err := json.Unmarshal(in, &req)
+	if err != nil {
+		return CoreClaimResponse{}, err
+	}
+	if req.W3CCredential == nil {
+		return CoreClaimResponse{},
+			errors.New("w3cCredential is not set in the request")
+	}
+	var resp struct {
+		CoreClaim    *core.Claim `json:"coreClaim"`
+		CoreClaimHex string      `json:"coreClaimHex"`
+	}
+	resp.CoreClaim, err = req.W3CCredential.ToCoreClaim(ctx,
+		req.CoreClaimOptions)
+	if err != nil {
+		return CoreClaimResponse{}, err
+	}
+	resp.CoreClaimHex, err = resp.CoreClaim.Hex()
+	if err != nil {
+		return CoreClaimResponse{}, err
+	}
+	return resp, nil
+}
