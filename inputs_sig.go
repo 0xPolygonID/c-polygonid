@@ -18,6 +18,7 @@ import (
 	"sync"
 	"time"
 
+	gocircuitexternal "github.com/0xPolygonID/go-circuit-external"
 	"github.com/dgraph-io/badger/v4"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -1168,6 +1169,8 @@ func GenericInputsFromJson(ctx context.Context, cfg EnvConfig,
 		return LinkedMultiQueryInputsFromJson(ctx, cfg, in)
 	case circuits.AuthV2CircuitID:
 		return AuthV2InputsFromJson(ctx, cfg, in)
+	case gocircuitexternal.AnonAadhaarV1:
+		return AnonAadhaarInputsFromJson(ctx, cfg, in)
 	}
 
 	return AtomicQueryInputsResponse{}, errors.New("unknown circuit")
@@ -2656,4 +2659,94 @@ func AuthV2InputsFromJson(_ context.Context, _ EnvConfig,
 	out.Inputs = inputs
 
 	return out, nil
+}
+
+func AnonAadhaarInputsFromJson(ctx context.Context, cfg EnvConfig,
+	in []byte) (AtomicQueryInputsResponse, error) {
+
+	var out AtomicQueryInputsResponse
+	var inputs anonAadhaarV1Inputs
+	err := json.Unmarshal(in, &inputs)
+	if err != nil {
+		return out, err
+	}
+
+	out.Inputs = inputs.asAnonAadhaarV1Inputs()
+	return out, nil
+}
+
+func W3cCredentialsFromAnonAadhaarInputsJson(ctx context.Context, cfg EnvConfig,
+	in []byte) (verifiable.W3CCredential, error) {
+
+	var inputs anonAadhaarV1Inputs
+	err := json.Unmarshal(in, &inputs)
+	if err != nil {
+		return verifiable.W3CCredential{}, err
+	}
+
+	w3cCred, err := inputs.asAnonAadhaarV1Inputs().W3CCredential()
+	if err != nil {
+		return verifiable.W3CCredential{}, err
+	}
+
+	return *w3cCred, nil
+}
+
+type CoreClaimResponse struct {
+	CoreClaim          *core.Claim `json:"coreClaim"`
+	CoreClaimHex       string      `json:"coreClaimHex"`
+	CoreClaimIndexHash *JsonBigInt `json:"coreClaimHIndex"`
+	CoreClaimValueHash *JsonBigInt `json:"coreClaimHValue"`
+}
+
+func W3CCredentialToCoreClaim(ctx context.Context, cfg EnvConfig, in []byte) (CoreClaimResponse, error) {
+	var req struct {
+		W3CCredential    *verifiable.W3CCredential    `json:"w3cCredential"`
+		CoreClaimOptions *verifiable.CoreClaimOptions `json:"coreClaimOptions"`
+	}
+	err := json.Unmarshal(in, &req)
+	if err != nil {
+		return CoreClaimResponse{}, err
+	}
+	if req.W3CCredential == nil {
+		return CoreClaimResponse{},
+			errors.New("w3cCredential is not set in the request")
+	}
+
+	if req.CoreClaimOptions == nil {
+		req.CoreClaimOptions = &verifiable.CoreClaimOptions{
+			RevNonce:              0,
+			Version:               0,
+			SubjectPosition:       verifiable.CredentialSubjectPositionIndex,
+			MerklizedRootPosition: verifiable.CredentialMerklizedRootPositionNone,
+			Updatable:             false,
+			MerklizerOpts:         nil,
+		}
+	}
+
+	req.CoreClaimOptions.MerklizerOpts = append(
+		req.CoreClaimOptions.MerklizerOpts,
+		merklize.WithDocumentLoader(cfg.documentLoader()))
+
+	var resp CoreClaimResponse
+
+	resp.CoreClaim, err = req.W3CCredential.ToCoreClaim(ctx,
+		req.CoreClaimOptions)
+	if err != nil {
+		return CoreClaimResponse{}, err
+	}
+
+	ih, vh, err := resp.CoreClaim.HiHv()
+	if err != nil {
+		return CoreClaimResponse{}, err
+	}
+	resp.CoreClaimIndexHash = NewJsonBigInt(ih)
+	resp.CoreClaimValueHash = NewJsonBigInt(vh)
+
+	resp.CoreClaimHex, err = resp.CoreClaim.Hex()
+	if err != nil {
+		return CoreClaimResponse{}, err
+	}
+
+	return resp, nil
 }

@@ -123,6 +123,10 @@ func (j *jsonNumber) UnmarshalJSON(in []byte) error {
 	return nil
 }
 
+func (j *jsonNumber) toBitInt() *big.Int {
+	return (*big.Int)(j)
+}
+
 // function to fail a compilation if underlined type is not int32
 func assertUnderlineTypeInt32[T ~int32](_ T) {}
 
