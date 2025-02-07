@@ -2569,8 +2569,10 @@ func DescribeID(ctx context.Context, cfg EnvConfig,
 }
 
 type CoreClaimResponse struct {
-	CoreClaim    *core.Claim `json:"coreClaim"`
-	CoreClaimHex string      `json:"coreClaimHex"`
+	CoreClaim          *core.Claim `json:"coreClaim"`
+	CoreClaimHex       string      `json:"coreClaimHex"`
+	CoreClaimIndexHash *JsonBigInt `json:"coreClaimHIndex"`
+	CoreClaimValueHash *JsonBigInt `json:"coreClaimHValue"`
 }
 
 func W3CCredentialToCoreClaim(ctx context.Context, cfg EnvConfig, in []byte) (CoreClaimResponse, error) {
@@ -2602,18 +2604,25 @@ func W3CCredentialToCoreClaim(ctx context.Context, cfg EnvConfig, in []byte) (Co
 		req.CoreClaimOptions.MerklizerOpts,
 		merklize.WithDocumentLoader(cfg.documentLoader()))
 
-	var resp struct {
-		CoreClaim    *core.Claim `json:"coreClaim"`
-		CoreClaimHex string      `json:"coreClaimHex"`
-	}
+	var resp CoreClaimResponse
+
 	resp.CoreClaim, err = req.W3CCredential.ToCoreClaim(ctx,
 		req.CoreClaimOptions)
 	if err != nil {
 		return CoreClaimResponse{}, err
 	}
+
+	ih, vh, err := resp.CoreClaim.HiHv()
+	if err != nil {
+		return CoreClaimResponse{}, err
+	}
+	resp.CoreClaimIndexHash = NewJsonBigInt(ih)
+	resp.CoreClaimValueHash = NewJsonBigInt(vh)
+
 	resp.CoreClaimHex, err = resp.CoreClaim.Hex()
 	if err != nil {
 		return CoreClaimResponse{}, err
 	}
+
 	return resp, nil
 }
