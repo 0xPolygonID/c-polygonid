@@ -8,6 +8,10 @@ import (
 
 type JsonBigInt big.Int
 
+func NewJsonBigInt(i *big.Int) *JsonBigInt {
+	return (*JsonBigInt)(i)
+}
+
 func (j *JsonBigInt) UnmarshalJSON(bytes []byte) error {
 	var s string
 	if err := json.Unmarshal(bytes, &s); err != nil {
