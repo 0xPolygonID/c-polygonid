@@ -2586,6 +2586,22 @@ func W3CCredentialToCoreClaim(ctx context.Context, cfg EnvConfig, in []byte) (Co
 		return CoreClaimResponse{},
 			errors.New("w3cCredential is not set in the request")
 	}
+
+	if req.CoreClaimOptions == nil {
+		req.CoreClaimOptions = &verifiable.CoreClaimOptions{
+			RevNonce:              0,
+			Version:               0,
+			SubjectPosition:       verifiable.CredentialSubjectPositionIndex,
+			MerklizedRootPosition: verifiable.CredentialMerklizedRootPositionNone,
+			Updatable:             false,
+			MerklizerOpts:         nil,
+		}
+	}
+
+	req.CoreClaimOptions.MerklizerOpts = append(
+		req.CoreClaimOptions.MerklizerOpts,
+		merklize.WithDocumentLoader(cfg.documentLoader()))
+
 	var resp struct {
 		CoreClaim    *core.Claim `json:"coreClaim"`
 		CoreClaimHex string      `json:"coreClaimHex"`
