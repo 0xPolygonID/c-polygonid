@@ -1481,7 +1481,8 @@ func TestW3CCredentialToCoreClaim_no_options(t *testing.T) {
 }
 }`)
 
-	resp, err := W3CCredentialToCoreClaim(context.Background(), EnvConfig{}, in)
+	cfg := cfgWithCacheDir(t, EnvConfig{})
+	resp, err := W3CCredentialToCoreClaim(context.Background(), cfg, in)
 	require.NoError(t, err)
 
 	j, err := json.Marshal(resp)
@@ -1564,7 +1565,8 @@ func TestW3CCredentialToCoreClaim_with_options(t *testing.T) {
 }
 }`)
 
-	resp, err := W3CCredentialToCoreClaim(context.Background(), EnvConfig{}, in)
+	cfg := cfgWithCacheDir(t, EnvConfig{})
+	resp, err := W3CCredentialToCoreClaim(context.Background(), cfg, in)
 	require.NoError(t, err)
 
 	j, err := json.Marshal(resp)
@@ -1581,4 +1583,16 @@ func TestW3CCredentialToCoreClaim_with_options(t *testing.T) {
 "coreClaimHex":"f52f1795c533d7b4aa4e7ab02485f86f0a0000000a000000000000000000000002127f89ff6f78c9637e437575d1123c3862b93876abb197b010ea1dad600d000eb6cb518d3dd33341899bcec9dcc68998d11773000000000000000000000000d16d5eb86ca26a02000000000000000000000000000000000000000000000000948801000000000076b7fe650000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
 }`
 	require.JSONEq(t, want, string(j))
+}
+
+func cfgWithCacheDir(t testing.TB, cfg EnvConfig) EnvConfig {
+	cacheDir, err := os.MkdirTemp("", "")
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		err = os.RemoveAll(cacheDir)
+		require.NoError(t, err)
+	})
+
+	cfg.CacheDir = cacheDir
+	return cfg
 }
