@@ -13,24 +13,24 @@ ios-arm64:
 
 
 ios-simulator-x86_64:
-	GOOS=darwin \
+	GOOS=ios \
 	GOARCH=amd64 \
 	CGO_ENABLED=1 \
 	SDK=iphonesimulator \
 	TARGET=x86-64-apple-ios16-simulator \
 	CC=$(PWD)/clangwrap.sh \
-	CGO_CFLAGS="-fembed-bitcode" \
+	CGO_CFLAGS="-fembed-bitcode -target x86_64-apple-ios16-simulator" \
 	go build -tags ios,no_jwz -buildmode=c-archive -o $(IOS_OUT)/libpolygonid-ios-simulator-x86_64.a ./cmd/polygonid
 	cp $(IOS_OUT)/libpolygonid-ios-simulator-x86_64.h $(IOS_OUT)/libpolygonid.h
 
 ios-simulator-arm64:
-	GOOS=darwin \
+	GOOS=ios \
 	GOARCH=arm64 \
 	CGO_ENABLED=1 \
 	SDK=iphonesimulator \
 	TARGET=arm64-apple-ios16-simulator \
 	CC=$(PWD)/clangwrap.sh \
-	CGO_CFLAGS="-fembed-bitcode" \
+	CGO_CFLAGS="-fembed-bitcode -target arm64-apple-ios16-simulator" \
 	go build -tags ios,no_jwz -buildmode=c-archive -o $(IOS_OUT)/libpolygonid-ios-simulator-arm64.a ./cmd/polygonid
 	cp $(IOS_OUT)/libpolygonid-ios-simulator-arm64.h $(IOS_OUT)/libpolygonid.h
 
