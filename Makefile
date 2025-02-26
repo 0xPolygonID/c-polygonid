@@ -52,14 +52,29 @@ ios-simulator: ios-simulator-x86_64 ios-simulator-arm64
 
 ios: ios-old ios-arm64 ios-simulator
 
-ios-xcframework: ios-arm64 ios-simulator darwin-arm64
+ios-static-xcframework: ios-arm64 ios-simulator darwin-arm64
+	# Remove .xcframework if exists
+	rm -rf $(IOS_OUT)/Iden3CLibrary.xcframework
+	# Create separate folder with headers for xcframework
+	mkdir -p $(IOS_OUT)/include
+	cp $(IOS_OUT)/libpolygonid.h $(IOS_OUT)/include
+	# Create xcframework from ios, sim and macos libs
+	xcodebuild -create-xcframework \
+    	-library $(IOS_OUT)/libpolygonid-ios.a -headers $(IOS_OUT)/include/ \
+    	-library $(IOS_OUT)/libpolygonid-ios-simulator.a -headers $(IOS_OUT)/include/ \
+    	-library $(IOS_OUT)/libpolygonid-darwin-arm64.a -headers $(IOS_OUT)/include/ \
+    	-output $(IOS_OUT)/Iden3CLibrary.xcframework
+
+ios-dynamic-xcframework: ios-arm64 ios-simulator darwin-arm64
+	# Remove .xcframework if exists
+	rm -rf $(IOS_OUT)/Iden3CLibrary.xcframework
 	# Create iOS .dylib
 	xcrun -sdk iphoneos clang -arch arm64 -fpic -shared -Wl,-all_load $(IOS_OUT)/libpolygonid-ios.a -framework Corefoundation -framework Security -o $(IOS_OUT)/libpolygonid-ios.dylib
 	# Create iOS sim arm64 .dylib
 	xcrun -sdk iphonesimulator clang -arch arm64 -fpic -shared -Wl,-all_load $(IOS_OUT)/libpolygonid-ios-simulator-arm64.a -framework Corefoundation -framework Security -o $(IOS_OUT)/libpolygonid-ios-simulator-arm64.dylib
 	# Create iOS sim x86_64 .dylib
 	xcrun -sdk iphonesimulator clang -arch x86_64 -fpic -shared -Wl,-all_load $(IOS_OUT)/libpolygonid-ios-simulator-x86_64.a -framework Corefoundation -framework Security -o $(IOS_OUT)/libpolygonid-ios-simulator-x86_64.dylib
-	# Create iOS sim merged .dylib
+	# Create iOS sim fat .dylib
 	lipo $(IOS_OUT)/libpolygonid-ios-simulator-arm64.dylib $(IOS_OUT)/libpolygonid-ios-simulator-x86_64.dylib -output $(IOS_OUT)/libpolygonid-ios-simulator.dylib -create
 	# Create macOS .dylib
 	xcrun -sdk macosx clang -arch arm64 -fpic -shared -Wl,-all_load $(IOS_OUT)/libpolygonid-darwin-arm64.a -framework Corefoundation -framework Security -o $(IOS_OUT)/libpolygonid-darwin-arm64.dylib
