@@ -137,6 +137,32 @@ func TestPrepareInputs(t *testing.T) {
 			nil, cfg, "")
 	})
 
+	t.Run("GenericInputsFromJson — AtomicQueryMtpV2Onchain", func(t *testing.T) {
+		defer httpmock.MockHTTPClient(t,
+			map[string]string{
+				`http://localhost:8545%%%{"jsonrpc":"2.0","method":"eth_call","params":[{"from":"0x0000000000000000000000000000000000000000","input":"0xb4bdea55000e5102b2f7a54e61db03f6c656f65062f4b11b9dd52a1702c2bfdc379d1202","to":"0x134b1be34911e39a8397ec6289782989729807a4"},"latest"]}`:                                                                 "testdata/httpresp_eth_state_2qKc2ns18nV6uDSfaR1RVd7zF1Nm9vfeNZuvuEXQ3X.json",
+				`http://localhost:8545%%%{"jsonrpc":"2.0","method":"eth_call","params":[{"from":"0x0000000000000000000000000000000000000000","input":"0x110c96a7000e5102b2f7a54e61db03f6c656f65062f4b11b9dd52a1702c2bfdc379d12020000000000000000000000000000000000000000000000000000000026d96d5e","to":"0x49b84b9dd137de488924b18299de8bf46fd11469"},"latest"]}`: `testdata/httpresp_eth_iden3state_2qKc2ns18nV6uDSfaR1RVd7zF1Nm9vfeNZuvuEXQ3X_rev_status_651783518.json`,
+				"https://schema.iden3.io/core/jsonld/iden3proofs.jsonld":                                         "testdata/httpresp_iden3proofs.jsonld",
+				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld": "testdata/httpresp_kyc-v3.json-ld",
+				"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v4.jsonld":  "testdata/httpresp_kyc_v4.jsonld",
+			},
+			httpmock.IgnoreUntouchedURLs(),
+			httpmock.WithPostRequestBodyProcessor(removeIdFromEthBody))()
+		cfg := EnvConfig{
+			ChainConfigs: map[core.ChainID]ChainConfig{
+				80001: {
+					RPCUrl:            "http://localhost:8545",
+					StateContractAddr: common.HexToAddress("0x134B1BE34911E39A8397ec6289782989729807a4"),
+				},
+			},
+		}
+
+		doTest(t, "atomic_query_mtp_v2_on_chain_status_inputs.json",
+			"atomic_query_mtp_v2_on_chain_status_output.json",
+			GenericInputsFromJson,
+			nil, cfg, "")
+	})
+
 	t.Run("AtomicQueryMtpV2Onchain - no roots in identity tree store", func(t *testing.T) {
 		defer httpmock.MockHTTPClient(t, map[string]string{
 			`http://localhost:8545%%%{"jsonrpc":"2.0","method":"eth_call","params":[{"from":"0x0000000000000000000000000000000000000000","input":"0xb4bdea55000e5102b2f7a54e61db03f6c656f65062f4b11b9dd52a1702c2bfdc379d1202","to":"0x134b1be34911e39a8397ec6289782989729807a4"},"latest"]}`:                                                                 "testdata/httpresp_eth_state_2qKc2ns18nV6uDSfaR1RVd7zF1Nm9vfeNZuvuEXQ3X.json",
@@ -1079,7 +1105,6 @@ func (c *countingDocumentLoader) reset() {
 
 func TestMerklizeCred(t *testing.T) {
 	mockBadgerLog(t)
-	flushCacheDB(t)
 
 	defer httpmock.MockHTTPClient(t, map[string]string{
 		"https://schema.iden3.io/core/jsonld/iden3proofs.jsonld":                                         "testdata/httpresp_iden3proofs.jsonld",
@@ -1094,7 +1119,11 @@ func TestMerklizeCred(t *testing.T) {
 	}
 	ctx := context.Background()
 
-	mz, err := merklizeCred(ctx, w3cCred, documentLoader, true)
+	cacheDir, err := os.MkdirTemp("", "")
+	require.NoError(t, err)
+	defer os.RemoveAll(cacheDir)
+
+	mz, err := merklizeCred(ctx, w3cCred, documentLoader, true, cacheDir)
 	require.NoError(t, err)
 	require.Equal(t, wantRoot, mz.Root().BigInt().String())
 
@@ -1105,12 +1134,10 @@ func TestMerklizeCred(t *testing.T) {
 	// test that following call to merklizeCred does not make any HTTP calls
 	documentLoader.reset()
 
-	mz, err = merklizeCred(ctx, w3cCred, documentLoader, true)
+	mz, err = merklizeCred(ctx, w3cCred, documentLoader, true, cacheDir)
 	require.NoError(t, err)
 	require.Equal(t, wantRoot, mz.Root().BigInt().String())
 	require.Equal(t, 0, documentLoader.counter())
-
-	flushCacheDB(t)
 }
 
 func vcCredChecksum(in []byte) []byte {
