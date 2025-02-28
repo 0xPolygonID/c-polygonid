@@ -1,23 +1,31 @@
 IOS_OUT=ios
 
+IOS_SDK_PATH=$(shell xcrun --sdk iphoneos --show-sdk-path)
+IOS_SIM_SDK_PATH=$(shell xcrun --sdk iphonesimulator --show-sdk-path)
+
 ios-arm64:
 	GOOS=ios \
 	GOARCH=arm64 \
+	CLANGARCH=arm64 \
 	CGO_ENABLED=1 \
-	SDK=iphoneos \
 	TARGET=arm64-apple-ios16 \
+	SDK=iphoneos \
+	SDK_PATH=$(IOS_SDK_PATH) \
+	CGO_LDFLAGS="-target arm64-apple-ios16 -syslibroot \"${IOS_SDK_PATH}\"" \
 	CC=$(PWD)/clangwrap.sh \
 	CGO_CFLAGS="-fembed-bitcode" \
 	go build -tags no_jwz -buildmode=c-archive -o $(IOS_OUT)/libpolygonid-ios.a ./cmd/polygonid
 	cp $(IOS_OUT)/libpolygonid-ios.h $(IOS_OUT)/libpolygonid.h
 
-
 ios-simulator-x86_64:
 	GOOS=ios \
 	GOARCH=amd64 \
+	CLANGARCH=x86_64 \
 	CGO_ENABLED=1 \
+	TARGET=x86_64-apple-ios16-simulator \
 	SDK=iphonesimulator \
-	TARGET=x86-64-apple-ios16-simulator \
+	SDK_PATH=$(IOS_SIM_SDK_PATH) \
+	CGO_LDFLAGS="-target x86_64-apple-ios16-simulator -syslibroot \"${IOS_SIM_SDK_PATH}\"" \
 	CC=$(PWD)/clangwrap.sh \
 	CGO_CFLAGS="-fembed-bitcode -target x86_64-apple-ios16-simulator" \
 	go build -tags ios,no_jwz -buildmode=c-archive -o $(IOS_OUT)/libpolygonid-ios-simulator-x86_64.a ./cmd/polygonid
@@ -26,9 +34,12 @@ ios-simulator-x86_64:
 ios-simulator-arm64:
 	GOOS=ios \
 	GOARCH=arm64 \
+	CLANGARCH=arm64 \
 	CGO_ENABLED=1 \
-	SDK=iphonesimulator \
 	TARGET=arm64-apple-ios16-simulator \
+	SDK=iphonesimulator \
+	SDK_PATH=$(IOS_SIM_SDK_PATH) \
+	CGO_LDFLAGS="-target arm64-apple-ios16-simulator -syslibroot \"${IOS_SIM_SDK_PATH}\"" \
 	CC=$(PWD)/clangwrap.sh \
 	CGO_CFLAGS="-fembed-bitcode -target arm64-apple-ios16-simulator" \
 	go build -tags ios,no_jwz -buildmode=c-archive -o $(IOS_OUT)/libpolygonid-ios-simulator-arm64.a ./cmd/polygonid
@@ -46,11 +57,14 @@ ios-old: ios-arm64 ios-simulator-x86_64
 	lipo $(IOS_OUT)/libpolygonid-ios.a $(IOS_OUT)/libpolygonid-ios-simulator-x86_64.a -create -output $(IOS_OUT)/libpolygonid.a
 	cp $(IOS_OUT)/libpolygonid-ios.h $(IOS_OUT)/libpolygonid.h
 
+ios-device: ios-arm64
+	cp $(IOS_OUT)/libpolygonid-ios.h $(IOS_OUT)/libpolygonid.h
+
 ios-simulator: ios-simulator-x86_64 ios-simulator-arm64
 	lipo $(IOS_OUT)/libpolygonid-ios-simulator-x86_64.a $(IOS_OUT)/libpolygonid-ios-simulator-arm64.a -create -output $(IOS_OUT)/libpolygonid-ios-simulator.a
 	cp $(IOS_OUT)/libpolygonid-ios-simulator-arm64.h $(IOS_OUT)/libpolygonid.h
 
-ios: ios-old ios-arm64 ios-simulator
+ios: ios-device ios-simulator
 
 ios-static-xcframework: ios-arm64 ios-simulator darwin-arm64
 	# Remove .xcframework if exists
