@@ -283,6 +283,14 @@ func PLGNNewGenesisIDFromEth(jsonResponse **C.char, in *C.char, cfg *C.char,
 		status)
 }
 
+//export PLGNW3CCredentialToCoreClaim
+func PLGNW3CCredentialToCoreClaim(jsonResponse **C.char, in *C.char, cfg *C.char,
+	status **C.PLGNStatus) bool {
+
+	return callGenericFn(c_polygonid.W3CCredentialToCoreClaim, jsonResponse, in,
+		cfg, status)
+}
+
 //export PLGNCreateClaim
 func PLGNCreateClaim(jsonResponse **C.char, in *C.char,
 	status **C.PLGNStatus) (ok bool) {
