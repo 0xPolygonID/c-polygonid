@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	gocircuitexternal "github.com/0xPolygonID/go-circuit-external"
+	gocircuitexternal "github.com/0xPolygonID/go-circuit-external/AnonAadhaar"
 	"github.com/stretchr/testify/require"
 )
 

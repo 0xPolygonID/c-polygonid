@@ -173,6 +173,16 @@ func TestPrepareInputs(t *testing.T) {
 			nil, cfg, "")
 	})
 
+	t.Run("GenericInputsFromJson — PassportV1", func(t *testing.T) {
+		defer httpmock.MockHTTPClient(t, map[string]string{})()
+		cfg := EnvConfig{}
+
+		doTest(t, "passport_v1_inputs.json",
+			"passport_v1_output.json",
+			GenericInputsFromJson,
+			nil, cfg, "")
+	})
+
 	t.Run("AtomicQueryMtpV2Onchain - no roots in identity tree store", func(t *testing.T) {
 		defer httpmock.MockHTTPClient(t, map[string]string{
 			`http://localhost:8545%%%{"jsonrpc":"2.0","method":"eth_call","params":[{"from":"0x0000000000000000000000000000000000000000","input":"0xb4bdea55000e5102b2f7a54e61db03f6c656f65062f4b11b9dd52a1702c2bfdc379d1202","to":"0x134b1be34911e39a8397ec6289782989729807a4"},"latest"]}`:                                                                 "testdata/httpresp_eth_state_2qKc2ns18nV6uDSfaR1RVd7zF1Nm9vfeNZuvuEXQ3X.json",
@@ -1497,6 +1507,60 @@ func TestW3cCredentialsFromAnonAadhaarInputsJson(t *testing.T) {
       "id":  "ipfs://QmeTNnum9CThm6f7eBSxWuDQBTZC7EQrawr3AD6UJw38GM",
       "type": "JsonSchema2023"
     }
+}`
+	w3cCred.ID = "" // It's random generated UUID
+	w3cCredJ, err := json.Marshal(w3cCred)
+	t.Log(string(w3cCredJ))
+	require.NoError(t, err)
+	require.JSONEq(t, expectedCredential, string(w3cCredJ))
+}
+
+func TestW3cCredentialsFromPassportInputsJson(t *testing.T) {
+	defer httpmock.MockHTTPClient(t, map[string]string{})()
+
+	ctx := context.Background()
+	var cfg EnvConfig
+	w3cCred, err := W3cCredentialsFromPassportInputsJson(ctx, cfg,
+		readFixtureFile("passport_v1_inputs.json"))
+	require.NoError(t, err)
+
+	expectedCredential := `{
+  "@context": [
+    "https://www.w3.org/2018/credentials/v1",
+    "https://schema.iden3.io/core/jsonld/iden3proofs.jsonld",
+    "ipfs://QmbbizDVuzyhdqbUUk534tUKxEgxVg21QbRXZNpoNBXvcj"
+  ],
+  "type": [
+    "VerifiableCredential",
+    "BasicPerson"
+  ],
+  "expirationDate": "2035-08-03T00:00:00Z",
+  "issuanceDate": "2025-03-21T17:28:52Z",
+  "credentialSubject": {
+    "dateOfBirth": 19960309,
+    "documentExpirationDate": 20350803,
+    "firstName": "VALERIY",
+    "fullName": "KUZNETSOV",
+    "govermentIdentifier": "AC1234567",
+    "governmentIdentifierType": "P",
+    "id": "did:iden3:privado:main:2Scn2RfosbkQDMQzQM5nCz3Nk5GnbzZCWzGCd3tc2G",
+    "nationalities": {
+      "nationality1CountryCode": "UKR",
+      "nationality2CountryCode": "UKR"
+    },
+    "sex": "M",
+    "type": "BasicPerson"
+  },
+  "credentialStatus": {
+    "id": "did:iden3:privado:main:2Scn2RfosbkQDMQzQM5nCz3Nk5GnbzZCWzGCd3tc2G/credentialStatus?contractAddress=80001:0x2fCE183c7Fbc4EbB5DB3B0F5a63e0e02AE9a85d2\u0026state=a1abdb9f44c7b649eb4d21b59ef34bd38e054aa3e500987575a14fc92c49f42c",
+    "type": "Iden3OnchainSparseMerkleTreeProof2023",
+    "revocationNonce": 0
+  },
+  "issuer": "did:iden3:privado:main:2Si3eZUE6XetYsmU5dyUK2Cvaxr1EEe65vdv2BML4L",
+  "credentialSchema": {
+    "id": "ipfs://QmR7gqw4MKRLH8XSb75LkQuNAjoKhR3kZAb1A3g7CBRE3M",
+    "type": "JsonSchema2023"
+  }
 }`
 	w3cCred.ID = "" // It's random generated UUID
 	w3cCredJ, err := json.Marshal(w3cCred)
