@@ -1,5 +1,6 @@
 {
     "passportData": "615b5f1f58503c554b524b555a4e4554534f563c3c56414c455249593c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c41433132333435363734554b52393630333039314d333530383033353c3c3c3c3c3c3c3c3c3c3c3c3c3c3032",
+    "dg2Hash": "88328f6e5066315192a573911a6f33081da50fd51397af13edb3d7badbb59f98",
     "credentialSubjectID": "did:iden3:privado:main:2Scn2RfosbkQDMQzQM5nCz3Nk5GnbzZCWzGCd3tc2G",
     "credentialStatusRevocationNonce": 0,
     "credentialStatusID": "did:iden3:privado:main:2Scn2RfosbkQDMQzQM5nCz3Nk5GnbzZCWzGCd3tc2G/credentialStatus?contractAddress=80001:0x2fCE183c7Fbc4EbB5DB3B0F5a63e0e02AE9a85d2\u0026state=a1abdb9f44c7b649eb4d21b59ef34bd38e054aa3e500987575a14fc92c49f42c",

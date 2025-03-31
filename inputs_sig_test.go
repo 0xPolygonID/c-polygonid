@@ -1528,7 +1528,7 @@ func TestW3cCredentialsFromPassportInputsJson(t *testing.T) {
   "@context": [
     "https://www.w3.org/2018/credentials/v1",
     "https://schema.iden3.io/core/jsonld/iden3proofs.jsonld",
-    "ipfs://QmbbizDVuzyhdqbUUk534tUKxEgxVg21QbRXZNpoNBXvcj"
+    "ipfs://QmZbsTnRwtCmbdg3r9o7Txid37LmvPcvmzVi1Abvqu1WKL"
   ],
   "type": [
     "VerifiableCredential",
@@ -1537,11 +1537,14 @@ func TestW3cCredentialsFromPassportInputsJson(t *testing.T) {
   "expirationDate": "2035-08-03T00:00:00Z",
   "issuanceDate": "2025-03-21T17:28:52Z",
   "credentialSubject": {
+    "customFields": {
+      "string3": "88328f6e5066315192a573911a6f33081da50fd51397af13edb3d7badbb59f98"
+    },
     "dateOfBirth": 19960309,
     "documentExpirationDate": 20350803,
     "firstName": "VALERIY",
     "fullName": "KUZNETSOV",
-    "govermentIdentifier": "AC1234567",
+    "governmentIdentifier": "AC1234567",
     "governmentIdentifierType": "P",
     "id": "did:iden3:privado:main:2Scn2RfosbkQDMQzQM5nCz3Nk5GnbzZCWzGCd3tc2G",
     "nationalities": {
@@ -1558,7 +1561,7 @@ func TestW3cCredentialsFromPassportInputsJson(t *testing.T) {
   },
   "issuer": "did:iden3:privado:main:2Si3eZUE6XetYsmU5dyUK2Cvaxr1EEe65vdv2BML4L",
   "credentialSchema": {
-    "id": "ipfs://QmR7gqw4MKRLH8XSb75LkQuNAjoKhR3kZAb1A3g7CBRE3M",
+    "id": "ipfs://QmTojMfyzxehCJVw7aUrdWuxdF68R7oLYooGHCUr9wwsef",
     "type": "JsonSchema2023"
   }
 }`
