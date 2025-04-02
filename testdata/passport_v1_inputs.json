@@ -8,6 +8,6 @@
     "linkNonce": "1",
     "issuerID": "did:iden3:privado:main:2Si3eZUE6XetYsmU5dyUK2Cvaxr1EEe65vdv2BML4L",
     "request": {
-        "circuitId": "passportV1"
+        "circuitId": "credential_sha256"
     }
 }

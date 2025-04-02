@@ -1172,7 +1172,11 @@ func GenericInputsFromJson(ctx context.Context, cfg EnvConfig,
 		return AuthV2InputsFromJson(ctx, cfg, in)
 	case gocircuitexternal.AnonAadhaarV1:
 		return AnonAadhaarInputsFromJson(ctx, cfg, in)
-	case externalpassport.PassportV1:
+	case externalpassport.CredentialSHA1,
+		externalpassport.CredentialSHA224,
+		externalpassport.CredentialSHA256,
+		externalpassport.CredentialSHA384,
+		externalpassport.CredentialSHA512:
 		return PassportInputsFromJson(ctx, cfg, in)
 	}
 
