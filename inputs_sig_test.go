@@ -1537,9 +1537,6 @@ func TestW3cCredentialsFromPassportInputsJson(t *testing.T) {
   "expirationDate": "2026-03-21T17:28:52Z",
   "issuanceDate": "2025-03-21T17:28:52Z",
   "credentialSubject": {
-    "customFields": {
-      "string3": "88328f6e5066315192a573911a6f33081da50fd51397af13edb3d7badbb59f98"
-    },
     "dateOfBirth": 19960309,
     "documentExpirationDate": 20350803,
     "firstName": "VALERIY",
