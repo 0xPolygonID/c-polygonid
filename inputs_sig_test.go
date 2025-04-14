@@ -1478,35 +1478,42 @@ func TestW3cCredentialsFromAnonAadhaarInputsJson(t *testing.T) {
 	require.NoError(t, err)
 
 	expectedCredential := `{
-    "@context":[
-      "https://www.w3.org/2018/credentials/v1",
-      "https://schema.iden3.io/core/jsonld/iden3proofs.jsonld",
-      "ipfs://QmYcmkJeSDcaTSDfVkMMh7Xay83dJeEc9HDy2Mh8J7gLJA"
-    ],
-    "type": [
-      "VerifiableCredential",
-      "AnonAadhaar"
-    ],
-    "issuanceDate": "2019-03-08T05:30:00Z",
-    "expirationDate": "2019-09-06T19:54:00Z",
-    "credentialSubject": {
-      "birthday": 19840101,
-      "gender": 77,
-      "id": "did:iden3:privado:main:2Scn2RfosbkQDMQzQM5nCz3Nk5GnbzZCWzGCd3tc2G",
-      "pinCode": 110051,
-      "state": 452723500356,
-      "type": "AnonAadhaar"
+  "@context": [
+    "https://www.w3.org/2018/credentials/v1",
+    "https://schema.iden3.io/core/jsonld/iden3proofs.jsonld",
+    "ipfs://QmZbsTnRwtCmbdg3r9o7Txid37LmvPcvmzVi1Abvqu1WKL"
+  ],
+  "type": [
+    "VerifiableCredential",
+    "BasicPerson"
+  ],
+  "expirationDate": "2019-09-06T19:54:00Z",
+  "issuanceDate": "2019-03-08T05:30:00Z",
+  "credentialSubject": {
+    "addresses": {
+      "primaryAddress": {
+        "addressLine1": "C/O Ishwar Chand East Delhi  B-31, 3rd Floor  110051 Krishna Nagar Delhi Radhey Shyam Park Extension Gandhi Nagar Krishna Nagar"
+      }
     },
-    "credentialStatus":{
-      "id":"did:iden3:privado:main:2Scn2RfosbkQDMQzQM5nCz3Nk5GnbzZCWzGCd3tc2G/credentialStatus?revocationNonce=1051565438\u0026contractAddress=80001:0x2fCE183c7Fbc4EbB5DB3B0F5a63e0e02AE9a85d2\u0026state=a1abdb9f44c7b649eb4d21b59ef34bd38e054aa3e500987575a14fc92c49f42c",
-      "type":"Iden3OnchainSparseMerkleTreeProof2023",
-      "revocationNonce":0
-    },
-    "issuer": "did:iden3:privado:main:2Si3eZUE6XetYsmU5dyUK2Cvaxr1EEe65vdv2BML4L",
-    "credentialSchema": {
-      "id":  "ipfs://QmeTNnum9CThm6f7eBSxWuDQBTZC7EQrawr3AD6UJw38GM",
-      "type": "JsonSchema2023"
-    }
+    "dateOfBirth": 19840101,
+    "firstName": "Sumit Kumar",
+    "fullName": "Sumit Kumar",
+    "gender": "M",
+    "governmentIdentifier": "269720190308114407437",
+    "governmentIdentifierType": "other",
+    "id": "did:iden3:privado:main:2Scn2RfosbkQDMQzQM5nCz3Nk5GnbzZCWzGCd3tc2G",
+    "type": "BasicPerson"
+  },
+  "credentialStatus": {
+    "id": "did:iden3:privado:main:2Si3eZUE6XetYsmU5dyUK2Cvaxr1EEe65vdv2BML4L/credentialStatus?revocationNonce=1051565438&contractAddress=80001:0x2fCE183c7Fbc4EbB5DB3B0F5a63e0e02AE9a85d2",
+    "type": "Iden3OnchainSparseMerkleTreeProof2023",
+    "revocationNonce": 0
+  },
+  "issuer": "did:iden3:privado:main:2Si3eZUE6XetYsmU5dyUK2Cvaxr1EEe65vdv2BML4L",
+  "credentialSchema": {
+    "id": "ipfs://QmTojMfyzxehCJVw7aUrdWuxdF68R7oLYooGHCUr9wwsef",
+    "type": "JsonSchema2023"
+  }
 }`
 	w3cCred.ID = "" // It's random generated UUID
 	w3cCredJ, err := json.Marshal(w3cCred)
