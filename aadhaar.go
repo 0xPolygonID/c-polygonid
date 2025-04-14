@@ -1,7 +1,7 @@
 package c_polygonid
 
 import (
-	gocircuitexternal "github.com/0xPolygonID/go-circuit-external"
+	gocircuitexternal "github.com/0xPolygonID/go-circuit-external/AnonAadhaar"
 )
 
 type anonAadhaarV1Inputs struct {

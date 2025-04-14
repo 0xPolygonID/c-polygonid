@@ -941,6 +941,13 @@ func PLGNW3CCredentialFromAnonAadhaarInputs(jsonResponse **C.char, in *C.char,
 		jsonResponse, in, cfg, status)
 }
 
+//export PLGNW3CCredentialFromPassportInputs
+func PLGNW3CCredentialFromPassportInputs(jsonResponse **C.char, in *C.char,
+	cfg *C.char, status **C.PLGNStatus) bool {
+	return callGenericFn(c_polygonid.W3cCredentialsFromPassportInputsJson,
+		jsonResponse, in, cfg, status)
+}
+
 // PLGNDescribeID parses ID and return it in different representations.
 // Request example:
 //
