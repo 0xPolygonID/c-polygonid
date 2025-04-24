@@ -1496,7 +1496,6 @@ func TestW3cCredentialsFromAnonAadhaarInputsJson(t *testing.T) {
       }
     },
     "dateOfBirth": 19840101,
-    "firstName": "Sumit Kumar",
     "fullName": "Sumit Kumar",
     "gender": "M",
     "governmentIdentifier": "269720190308114407437",
@@ -1546,7 +1545,6 @@ func TestW3cCredentialsFromPassportInputsJson(t *testing.T) {
   "credentialSubject": {
     "dateOfBirth": 19960309,
     "documentExpirationDate": 20350803,
-    "firstName": "KUZNETSOV  VALERIY",
     "fullName": "KUZNETSOV  VALERIY",
     "governmentIdentifier": "AC1234567",
     "governmentIdentifierType": "P",
