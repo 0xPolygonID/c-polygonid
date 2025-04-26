@@ -1496,12 +1496,14 @@ func TestW3cCredentialsFromAnonAadhaarInputsJson(t *testing.T) {
       }
     },
     "dateOfBirth": 19840101,
-    "firstName": "Sumit Kumar",
     "fullName": "Sumit Kumar",
     "gender": "M",
     "governmentIdentifier": "269720190308114407437",
     "governmentIdentifierType": "other",
     "id": "did:iden3:privado:main:2Scn2RfosbkQDMQzQM5nCz3Nk5GnbzZCWzGCd3tc2G",
+	"nationalities": {
+		"nationality2CountryCode": "IND"
+	},
     "type": "BasicPerson"
   },
   "credentialStatus": {
@@ -1546,8 +1548,7 @@ func TestW3cCredentialsFromPassportInputsJson(t *testing.T) {
   "credentialSubject": {
     "dateOfBirth": 19960309,
     "documentExpirationDate": 20350803,
-    "firstName": "VALERIY",
-    "fullName": "KUZNETSOV",
+    "fullName": "KUZNETSOV  VALERIY",
     "governmentIdentifier": "AC1234567",
     "governmentIdentifierType": "P",
     "id": "did:iden3:privado:main:2Scn2RfosbkQDMQzQM5nCz3Nk5GnbzZCWzGCd3tc2G",
