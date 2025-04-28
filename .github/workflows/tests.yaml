@@ -11,7 +11,7 @@ jobs:
     strategy:
       matrix:
         containers:
-          - 1.22.5-bookworm
+          - 1.24.2-bookworm
     runs-on: ubuntu-24.04
     container: golang:${{ matrix.containers }}
     env:
