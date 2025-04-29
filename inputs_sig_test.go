@@ -1501,9 +1501,6 @@ func TestW3cCredentialsFromAnonAadhaarInputsJson(t *testing.T) {
     "governmentIdentifier": "269720190308114407437",
     "governmentIdentifierType": "other",
     "id": "did:iden3:privado:main:2Scn2RfosbkQDMQzQM5nCz3Nk5GnbzZCWzGCd3tc2G",
-	"nationalities": {
-		"nationality2CountryCode": "IND"
-	},
     "type": "BasicPerson"
   },
   "credentialStatus": {
