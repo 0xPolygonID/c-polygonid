@@ -158,6 +158,11 @@ func maybeCreateStatus(status **C.PLGNStatus, code C.PLGNStatusCode,
 	*status = s
 }
 
+// Deprecated: Use PLGNAGenerateInputs with additional
+// `"request": {"circuitId": "authV2"}` in the request json. This function
+// does not support `statsInfo` in response and returns inputs
+// on top level of response object.
+//
 //export PLGNAuthV2InputsMarshal
 func PLGNAuthV2InputsMarshal(jsonResponse **C.char, in *C.char,
 	status **C.PLGNStatus) bool {
@@ -618,6 +623,7 @@ func marshalInputsResponse(
 	var resp struct {
 		Inputs                 json.RawMessage `json:"inputs"`
 		VerifiablePresentation any             `json:"verifiablePresentation,omitempty"`
+		PublicStatesInfo       json.RawMessage `json:"publicStatesInfo,omitempty"`
 	}
 	if inputsResponse.VerifiablePresentation != nil {
 		resp.VerifiablePresentation = inputsResponse.VerifiablePresentation
@@ -626,6 +632,18 @@ func marshalInputsResponse(
 	resp.Inputs, err = inputsResponse.Inputs.InputsMarshal()
 	if err != nil {
 		return "", err
+	}
+
+	i, ok := inputsResponse.Inputs.(circuits.PublicStatesInfoProvider)
+	if ok {
+		publicStatesInfo, err := i.GetPublicStatesInfo()
+		if err != nil {
+			return "", err
+		}
+		resp.PublicStatesInfo, err = json.Marshal(publicStatesInfo)
+		if err != nil {
+			return "", err
+		}
 	}
 
 	respBytes, err := json.Marshal(resp)
@@ -759,6 +777,20 @@ func PLGNALinkedMultiQueryInputs(jsonResponse **C.char, in *C.char,
 		jsonResponse, in, cfg, status)
 }
 
+// PLGNAGenerateInputs returns the inputs for the circuit based on the
+// request.circuitId field.
+//
+//export PLGNAGenerateInputs
+func PLGNAGenerateInputs(jsonResponse **C.char, in *C.char,
+	cfg *C.char, status **C.PLGNStatus) bool {
+
+	ctx, cancel := logAPITime()
+	defer cancel()
+
+	return prepareInputs(ctx, c_polygonid.GenericInputsFromJson,
+		jsonResponse, in, cfg, status)
+}
+
 //export PLGNFreeStatus
 func PLGNFreeStatus(status *C.PLGNStatus) {
 	_, cancel := logAPITime()
@@ -798,7 +830,7 @@ func PLGNCleanCache2(cfg *C.char, status **C.PLGNStatus) bool {
 	_, cancel := logAPITime()
 	defer cancel()
 
-	envCfg, err := createEnvConfig(cfg)
+	envCfg, err := c_polygonid.NewEnvConfigFromJSON(cStrToGoSlice(cfg))
 	if err != nil {
 		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
 		return false
@@ -823,7 +855,7 @@ func PLGNCacheCredentials(in *C.char, cfg *C.char, status **C.PLGNStatus) bool {
 
 	inData := C.GoBytes(unsafe.Pointer(in), C.int(C.strlen(in)))
 
-	envCfg, err := createEnvConfig(cfg)
+	envCfg, err := c_polygonid.NewEnvConfigFromJSON(cStrToGoSlice(cfg))
 	if err != nil {
 		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
 		return false
@@ -876,7 +908,7 @@ func PLGNW3CCredentialFromOnchainHex(jsonResponse **C.char, in *C.char,
 
 	inData := C.GoBytes(unsafe.Pointer(in), C.int(C.strlen(in)))
 
-	envCfg, err := createEnvConfig(cfg)
+	envCfg, err := c_polygonid.NewEnvConfigFromJSON(cStrToGoSlice(cfg))
 	if err != nil {
 		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
 		return false
@@ -933,7 +965,7 @@ func PLGNDescribeID(jsonResponse **C.char, in *C.char, cfg *C.char,
 		return false
 	}
 
-	envCfg, err := createEnvConfig(cfg)
+	envCfg, err := c_polygonid.NewEnvConfigFromJSON(cStrToGoSlice(cfg))
 	if err != nil {
 		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
 		return false
@@ -996,15 +1028,6 @@ func PLGNBabyJubJubPublicCompress(jsonResponse **C.char, in *C.char,
 		in, cfg, status)
 }
 
-// createEnvConfig returns empty config if input json is nil.
-func createEnvConfig(cfgJson *C.char) (c_polygonid.EnvConfig, error) {
-	var cfgData []byte
-	if cfgJson != nil {
-		cfgData = C.GoBytes(unsafe.Pointer(cfgJson), C.int(C.strlen(cfgJson)))
-	}
-	return c_polygonid.NewEnvConfigFromJSON(cfgData)
-}
-
 type atomicQueryInputsFn func(ctx context.Context, cfg c_polygonid.EnvConfig,
 	in []byte) (c_polygonid.AtomicQueryInputsResponse, error)
 
@@ -1023,7 +1046,7 @@ func prepareInputs(ctx context.Context, fn atomicQueryInputsFn,
 
 	inData := C.GoBytes(unsafe.Pointer(in), C.int(C.strlen(in)))
 
-	envCfg, err := createEnvConfig(cfg)
+	envCfg, err := c_polygonid.NewEnvConfigFromJSON(cStrToGoSlice(cfg))
 	if err != nil {
 		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
 		return false
@@ -1102,6 +1125,14 @@ func statusFromError(err error) (C.PLGNStatusCode, string) {
 	return C.PLGNSTATUSCODE_ERROR, err.Error()
 }
 
+func cStrToGoSlice(in *C.char) []byte {
+	var out []byte
+	if in != nil {
+		out = C.GoBytes(unsafe.Pointer(in), C.int(C.strlen(in)))
+	}
+	return out
+}
+
 func callGenericFn[R any](
 	fn func(context.Context, c_polygonid.EnvConfig, []byte) (R, error),
 	jsonResponse **C.char, in *C.char, cfg *C.char,
@@ -1116,7 +1147,7 @@ func callGenericFn[R any](
 		return false
 	}
 
-	envCfg, err := createEnvConfig(cfg)
+	envCfg, err := c_polygonid.NewEnvConfigFromJSON(cStrToGoSlice(cfg))
 	if err != nil {
 		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
 		return false

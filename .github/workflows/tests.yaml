@@ -10,23 +10,18 @@ jobs:
   test:
     strategy:
       matrix:
-        containers:
-          - 1.24.2-bookworm
+        go_version:
+          - "1.23.8"
+          - "1.24.2"
     runs-on: ubuntu-24.04
-    container: golang:${{ matrix.containers }}
     env:
-      IPFS_URL: http://ipfs:5001
+      IPFS_URL: http://localhost:5001
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/cache@v4
+      - uses: actions/setup-go@v5
         with:
-          path: |
-            ~/.cache/go-build
-            /go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-      - run: go test -race -timeout=60s -find-unused-httpresp ./...
+          go-version: ${{ matrix.go_version }}
+      - run: go test -v -race -timeout=60s ./... -find-unused-httpresp
     services:
       ipfs:
         image: ipfs/kubo:v0.26.0
