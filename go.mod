@@ -5,7 +5,7 @@ go 1.23.5
 toolchain go1.24.2
 
 require (
-	github.com/0xPolygonID/go-circuit-external v0.0.0
+	github.com/0xPolygonID/go-circuit-external v0.0.1
 	github.com/dgraph-io/badger/v4 v4.5.0
 	github.com/ethereum/go-ethereum v1.15.10
 	github.com/iden3/go-circuits/v2 v2.4.1
@@ -90,7 +90,3 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	rsc.io/tmplfunc v0.0.3 // indirect
 )
-
-//replace github.com/iden3/go-circuits => ../go-circuits
-//replace github.com/iden3/go-schema-processor/v2 => ../go-schema-processor
-replace github.com/0xPolygonID/go-circuit-external => ../go-circuit-external

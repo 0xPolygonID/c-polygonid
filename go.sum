@@ -1,4 +1,6 @@
 cloud.google.com/go v0.26.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
+github.com/0xPolygonID/go-circuit-external v0.0.1 h1:ik21IBWvrpZ/SP0ttRaY34qDjCOwSrdQz0tTaB2NFAE=
+github.com/0xPolygonID/go-circuit-external v0.0.1/go.mod h1:gZUM0sF5Xs6IlP/f8zL/hWPjJHbplnWKW5/PD50kzL0=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/DataDog/zstd v1.4.5 h1:EndNeuB0l9syBZhut0wns3gV1hL8zX8LIu6ZiVHWLIQ=
 github.com/DataDog/zstd v1.4.5/go.mod h1:1jcaCB/ufaK+sKp1NBhlGmpz41jOoPQ35bpF36t7BBo=
