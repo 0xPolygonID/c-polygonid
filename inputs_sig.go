@@ -18,6 +18,8 @@ import (
 	"sync"
 	"time"
 
+	gocircuitexternal "github.com/0xPolygonID/go-circuit-external/AnonAadhaar"
+	externalpassport "github.com/0xPolygonID/go-circuit-external/passport"
 	"github.com/dgraph-io/badger/v4"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -1168,6 +1170,14 @@ func GenericInputsFromJson(ctx context.Context, cfg EnvConfig,
 		return LinkedMultiQueryInputsFromJson(ctx, cfg, in)
 	case circuits.AuthV2CircuitID:
 		return AuthV2InputsFromJson(ctx, cfg, in)
+	case gocircuitexternal.AnonAadhaarV1:
+		return AnonAadhaarInputsFromJson(ctx, cfg, in)
+	case externalpassport.CredentialSHA1,
+		externalpassport.CredentialSHA224,
+		externalpassport.CredentialSHA256,
+		externalpassport.CredentialSHA384,
+		externalpassport.CredentialSHA512:
+		return PassportInputsFromJson(ctx, cfg, in)
 	}
 
 	return AtomicQueryInputsResponse{}, errors.New("unknown circuit")
@@ -2656,6 +2666,67 @@ func AuthV2InputsFromJson(_ context.Context, _ EnvConfig,
 	out.Inputs = inputs
 
 	return out, nil
+}
+
+func AnonAadhaarInputsFromJson(ctx context.Context, cfg EnvConfig,
+	in []byte) (AtomicQueryInputsResponse, error) {
+
+	var out AtomicQueryInputsResponse
+	var inputs anonAadhaarV1Inputs
+	err := json.Unmarshal(in, &inputs)
+	if err != nil {
+		return out, err
+	}
+
+	out.Inputs = inputs.asAnonAadhaarV1Inputs()
+	return out, nil
+}
+
+func PassportInputsFromJson(ctx context.Context, cfg EnvConfig,
+	in []byte) (AtomicQueryInputsResponse, error) {
+
+	var inputs externalpassport.PassportV1Inputs
+	err := json.Unmarshal(in, &inputs)
+	if err != nil {
+		return AtomicQueryInputsResponse{}, err
+	}
+
+	return AtomicQueryInputsResponse{
+		Inputs: &inputs,
+	}, nil
+}
+
+func W3cCredentialsFromAnonAadhaarInputsJson(ctx context.Context, cfg EnvConfig,
+	in []byte) (verifiable.W3CCredential, error) {
+
+	var inputs anonAadhaarV1Inputs
+	err := json.Unmarshal(in, &inputs)
+	if err != nil {
+		return verifiable.W3CCredential{}, err
+	}
+
+	w3cCred, err := inputs.asAnonAadhaarV1Inputs().W3CCredential()
+	if err != nil {
+		return verifiable.W3CCredential{}, err
+	}
+
+	return *w3cCred, nil
+}
+
+func W3cCredentialsFromPassportInputsJson(ctx context.Context, cfg EnvConfig,
+	in []byte) (verifiable.W3CCredential, error) {
+	var inputs externalpassport.PassportV1Inputs
+	err := json.Unmarshal(in, &inputs)
+	if err != nil {
+		return verifiable.W3CCredential{}, err
+	}
+
+	w3cCred, err := inputs.W3CCredential()
+	if err != nil {
+		return verifiable.W3CCredential{}, err
+	}
+
+	return *w3cCred, nil
 }
 
 type CoreClaimResponse struct {
