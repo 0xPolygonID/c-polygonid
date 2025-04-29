@@ -3,6 +3,7 @@ package c_polygonid
 import (
 	"context"
 	"encoding/json"
+	"os"
 	"testing"
 
 	httpmock "github.com/0xPolygonID/c-polygonid/testing"
@@ -27,6 +28,15 @@ var w3cCredDoc = `{"id":"https://dd25-62-87-103-47.ngrok-free.app/api/v1/identit
 func TestInMemoryStorage_MarshalBinary(t *testing.T) {
 	mockBadgerLog(t)
 
+	cacheDir, err := os.MkdirTemp("", "")
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		err = os.RemoveAll(cacheDir)
+		require.NoError(t, err)
+	})
+
+	cfg := EnvConfig{CacheDir: cacheDir}
+
 	defer httpmock.MockHTTPClient(t, map[string]string{
 		"https://schema.iden3.io/core/jsonld/iden3proofs.jsonld":                                         "testdata/httpresp_iden3proofs.jsonld",
 		"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld": "testdata/httpresp_kyc-v3.json-ld",
@@ -36,7 +46,6 @@ func TestInMemoryStorage_MarshalBinary(t *testing.T) {
 	mtStorage := newInMemoryStorage()
 	ctx := context.Background()
 	var mt *merkletree.MerkleTree
-	var err error
 	mt, err = merkletree.NewMerkleTree(ctx, mtStorage, mtLevels)
 	if err != nil {
 		return
@@ -44,7 +53,7 @@ func TestInMemoryStorage_MarshalBinary(t *testing.T) {
 
 	_, err = w3cCred.Merklize(ctx,
 		merklize.WithMerkleTree(merklize.MerkleTreeSQLAdapter(mt)),
-		merklize.WithDocumentLoader(EnvConfig{}.documentLoader()))
+		merklize.WithDocumentLoader(cfg.documentLoader()))
 	require.NoError(t, err)
 
 	storageBytes, err := mtStorage.MarshalBinary()

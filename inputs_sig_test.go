@@ -1420,3 +1420,183 @@ func TestNewGenesysIDFromEth(t *testing.T) {
 	}
 	require.Equal(t, wantResp, resp)
 }
+
+func TestW3CCredentialToCoreClaim_no_options(t *testing.T) {
+	in := []byte(`{
+"w3cCredential": {
+  "id": "urn:iden3:onchain:80001:0xc84e8ac5385E0813f01aA9C698ED44C831961670:0",
+  "@context": [
+    "https://www.w3.org/2018/credentials/v1",
+    "https://schema.iden3.io/core/jsonld/iden3proofs.jsonld",
+    "https://gist.githubusercontent.com/ilya-korotya/660496c859f8d31a7d2a92ca5e970967/raw/6b5fc14fe630c17bfa52e05e08fdc8394c5ea0ce/non-merklized-non-zero-balance.jsonld",
+    "https://schema.iden3.io/core/jsonld/displayMethod.jsonld"
+  ],
+  "type": [
+    "VerifiableCredential",
+    "Balance"
+  ],
+  "expirationDate": "2024-03-23T11:05:26Z",
+  "issuanceDate": "2024-02-22T11:05:26Z",
+  "credentialSubject": {
+    "address": "657065114158124047812701241180089030040156354062",
+    "balance": "174130123440549329",
+    "id": "did:polygonid:polygon:mumbai:2qJFtKfABTJi2yUAcUhuvUnDojuNwUJjhuXQDhUg3e",
+    "type": "Balance"
+  },
+  "credentialStatus": {
+    "id": "did:polygonid:polygon:mumbai:2qCU58EJgrEMJvPfhUCnFCwuKQTkX8VmJX2sJCH6C8/credentialStatus?revocationNonce=0\u0026contractAddress=80001:0xc84e8ac5385E0813f01aA9C698ED44C831961670",
+    "type": "Iden3OnchainSparseMerkleTreeProof2023",
+    "revocationNonce": 0
+  },
+  "issuer": "did:polygonid:polygon:mumbai:2qCU58EJgrEMJvPfhUCnFCwuKQTkX8VmJX2sJCH6C8",
+  "credentialSchema": {
+    "id": "https://gist.githubusercontent.com/ilya-korotya/e10cd79a8cc26ab6e40400a11838617e/raw/575edc33d485e2a4c806baad97e21117f3c90a9f/non-merklized-non-zero-balance.json",
+    "type": "JsonSchema2023"
+  },
+  "proof": [
+    {
+      "type": "Iden3SparseMerkleTreeProof",
+      "issuerData": {
+        "id": "did:polygonid:polygon:mumbai:2qCU58EJgrEMJvPfhUCnFCwuKQTkX8VmJX2sJCH6C8",
+        "state": {
+          "rootOfRoots": "19a633fecfa2117672bbcfb65307e3bd73101cd3dd49b849ea231b5927afc70e",
+          "claimsTreeRoot": "3ca701ead4d7da0eb5c4950ac0950a7ae92f4acc853a24698489f5a9b08fc72e",
+          "revocationTreeRoot": "0000000000000000000000000000000000000000000000000000000000000000",
+          "value": "6f5dd91f13004cca5c8b31524239de77ce149a9073d7ace737a1b7cffb96ab26"
+        }
+      },
+      "coreClaim": "f52f1795c533d7b4aa4e7ab02485f86f0a00000000000000000000000000000002127f89ff6f78c9637e437575d1123c3862b93876abb197b010ea1dad600d000eb6cb518d3dd33341899bcec9dcc68998d11773000000000000000000000000d16d5eb86ca26a02000000000000000000000000000000000000000000000000000000000000000076b7fe650000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "mtp": {
+        "existence": true,
+        "siblings": [
+          "4692761366944891051814480185546124875872606319832740381039122455881379612023"
+        ]
+      }
+    }
+  ],
+  "displayMethod": {
+    "id": "ipfs://QmS8eY8ZCiAAW8qgx3T6SQ3HDGeddwLZsjPXNAZExQwRY4",
+    "type": "Iden3BasicDisplayMethodV1"
+  }
+}
+}`)
+
+	cfg := cfgWithCacheDir(t, EnvConfig{})
+	resp, err := W3CCredentialToCoreClaim(context.Background(), cfg, in)
+	require.NoError(t, err)
+
+	j, err := json.Marshal(resp)
+	require.NoError(t, err)
+
+	want := `{
+"coreClaim":[
+  "3551658366829735292135739573638798979061",
+  "23636246712529601958450231201481253153358313547226024401161643230341566978",
+  "657065114158124047812701241180089030040156354062",
+  "174130123440549329",
+  "31565919519920133594379452416","0","0","0"
+],
+"coreClaimHex":"f52f1795c533d7b4aa4e7ab02485f86f0a00000000000000000000000000000002127f89ff6f78c9637e437575d1123c3862b93876abb197b010ea1dad600d000eb6cb518d3dd33341899bcec9dcc68998d11773000000000000000000000000d16d5eb86ca26a02000000000000000000000000000000000000000000000000000000000000000076b7fe650000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+"coreClaimHIndex":"9830186757367035399211680064143074011271741678904507974796272761508415159201",
+"coreClaimHValue":"17258652693603475311237387771556096220921552146872585410863362205406628125367"
+}`
+	require.JSONEq(t, want, string(j))
+}
+
+func TestW3CCredentialToCoreClaim_with_options(t *testing.T) {
+	in := []byte(`{
+"w3cCredential": {
+  "id": "urn:iden3:onchain:80001:0xc84e8ac5385E0813f01aA9C698ED44C831961670:0",
+  "@context": [
+    "https://www.w3.org/2018/credentials/v1",
+    "https://schema.iden3.io/core/jsonld/iden3proofs.jsonld",
+    "https://gist.githubusercontent.com/ilya-korotya/660496c859f8d31a7d2a92ca5e970967/raw/6b5fc14fe630c17bfa52e05e08fdc8394c5ea0ce/non-merklized-non-zero-balance.jsonld",
+    "https://schema.iden3.io/core/jsonld/displayMethod.jsonld"
+  ],
+  "type": [
+    "VerifiableCredential",
+    "Balance"
+  ],
+  "expirationDate": "2024-03-23T11:05:26Z",
+  "issuanceDate": "2024-02-22T11:05:26Z",
+  "credentialSubject": {
+    "address": "657065114158124047812701241180089030040156354062",
+    "balance": "174130123440549329",
+    "id": "did:polygonid:polygon:mumbai:2qJFtKfABTJi2yUAcUhuvUnDojuNwUJjhuXQDhUg3e",
+    "type": "Balance"
+  },
+  "credentialStatus": {
+    "id": "did:polygonid:polygon:mumbai:2qCU58EJgrEMJvPfhUCnFCwuKQTkX8VmJX2sJCH6C8/credentialStatus?revocationNonce=0\u0026contractAddress=80001:0xc84e8ac5385E0813f01aA9C698ED44C831961670",
+    "type": "Iden3OnchainSparseMerkleTreeProof2023",
+    "revocationNonce": 0
+  },
+  "issuer": "did:polygonid:polygon:mumbai:2qCU58EJgrEMJvPfhUCnFCwuKQTkX8VmJX2sJCH6C8",
+  "credentialSchema": {
+    "id": "https://gist.githubusercontent.com/ilya-korotya/e10cd79a8cc26ab6e40400a11838617e/raw/575edc33d485e2a4c806baad97e21117f3c90a9f/non-merklized-non-zero-balance.json",
+    "type": "JsonSchema2023"
+  },
+  "proof": [
+    {
+      "type": "Iden3SparseMerkleTreeProof",
+      "issuerData": {
+        "id": "did:polygonid:polygon:mumbai:2qCU58EJgrEMJvPfhUCnFCwuKQTkX8VmJX2sJCH6C8",
+        "state": {
+          "rootOfRoots": "19a633fecfa2117672bbcfb65307e3bd73101cd3dd49b849ea231b5927afc70e",
+          "claimsTreeRoot": "3ca701ead4d7da0eb5c4950ac0950a7ae92f4acc853a24698489f5a9b08fc72e",
+          "revocationTreeRoot": "0000000000000000000000000000000000000000000000000000000000000000",
+          "value": "6f5dd91f13004cca5c8b31524239de77ce149a9073d7ace737a1b7cffb96ab26"
+        }
+      },
+      "coreClaim": "f52f1795c533d7b4aa4e7ab02485f86f0a00000000000000000000000000000002127f89ff6f78c9637e437575d1123c3862b93876abb197b010ea1dad600d000eb6cb518d3dd33341899bcec9dcc68998d11773000000000000000000000000d16d5eb86ca26a02000000000000000000000000000000000000000000000000000000000000000076b7fe650000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "mtp": {
+        "existence": true,
+        "siblings": [
+          "4692761366944891051814480185546124875872606319832740381039122455881379612023"
+        ]
+      }
+    }
+  ],
+  "displayMethod": {
+    "id": "ipfs://QmS8eY8ZCiAAW8qgx3T6SQ3HDGeddwLZsjPXNAZExQwRY4",
+    "type": "Iden3BasicDisplayMethodV1"
+  }
+},
+"coreClaimOptions": {
+  "revNonce": 100500,
+  "version": 10
+}
+}`)
+
+	cfg := cfgWithCacheDir(t, EnvConfig{})
+	resp, err := W3CCredentialToCoreClaim(context.Background(), cfg, in)
+	require.NoError(t, err)
+
+	j, err := json.Marshal(resp)
+	require.NoError(t, err)
+
+	want := `{
+"coreClaim":[
+  "14615016376860687548866583619298569770198124408821",
+  "23636246712529601958450231201481253153358313547226024401161643230341566978",
+  "657065114158124047812701241180089030040156354062",
+  "174130123440549329",
+  "31565919519920133594379552916","0","0","0"
+],
+"coreClaimHex":"f52f1795c533d7b4aa4e7ab02485f86f0a0000000a000000000000000000000002127f89ff6f78c9637e437575d1123c3862b93876abb197b010ea1dad600d000eb6cb518d3dd33341899bcec9dcc68998d11773000000000000000000000000d16d5eb86ca26a02000000000000000000000000000000000000000000000000948801000000000076b7fe650000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+"coreClaimHIndex":"8248879511591962298487070528062416881268611626776654397983770791558299508439",
+"coreClaimHValue":"6727479208098822222837416757591595696764728825200049195652465812007399726477"
+}`
+	require.JSONEq(t, want, string(j))
+}
+
+func cfgWithCacheDir(t testing.TB, cfg EnvConfig) EnvConfig {
+	cacheDir, err := os.MkdirTemp("", "")
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		err = os.RemoveAll(cacheDir)
+		require.NoError(t, err)
+	})
+
+	cfg.CacheDir = cacheDir
+	return cfg
+}
