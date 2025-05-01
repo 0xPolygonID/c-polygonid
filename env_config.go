@@ -12,10 +12,11 @@ import (
 )
 
 type EnvConfig struct {
-	DIDMethods   []MethodConfig
-	ChainConfigs PerChainConfig
-	IPFSNodeURL  string
-	CacheDir     string
+	DIDMethods     []MethodConfig
+	ChainConfigs   PerChainConfig
+	IPFSNodeURL    string
+	IPFSGatewayURL string
+	CacheDir       string
 
 	// backward incompatible fields, it's an error to use them
 	EthereumURL       string
@@ -126,6 +127,10 @@ func (cfg EnvConfig) documentLoader() ld.DocumentLoader {
 	if cfg.IPFSNodeURL != "" {
 		ipfsNode = &ipfsCli{rpcURL: cfg.IPFSNodeURL}
 	}
+	var ipfsGatewayURL string
+	if cfg.IPFSGatewayURL != "" {
+		ipfsGatewayURL = cfg.IPFSGatewayURL
+	}
 
 	var opts []loaders.DocumentLoaderOption
 
@@ -138,5 +143,5 @@ func (cfg EnvConfig) documentLoader() ld.DocumentLoader {
 		opts = append(opts, loaders.WithCacheEngine(cacheEngine))
 	}
 
-	return loaders.NewDocumentLoader(ipfsNode, "", opts...)
+	return loaders.NewDocumentLoader(ipfsNode, ipfsGatewayURL, opts...)
 }
