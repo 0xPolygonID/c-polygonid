@@ -1492,7 +1492,7 @@ func TestW3cCredentialsFromAnonAadhaarInputsJson(t *testing.T) {
   "credentialSubject": {
     "addresses": {
       "primaryAddress": {
-        "addressLine1": "C/O Ishwar Chand East Delhi  B-31, 3rd Floor  110051 Krishna Nagar Delhi Radhey Shyam Park Extension Gandhi Nagar Krishna Nagar"
+        "addressLine1": "C/O Ishwar Chand;East Delhi;;B-31, 3rd Floor;;110051;Krishna Nagar;Delhi;Radhey Shyam Park Extension;Gandhi Nagar;Krishna Nagar"
       }
     },
     "dateOfBirth": 19840101,
@@ -1509,7 +1509,7 @@ func TestW3cCredentialsFromAnonAadhaarInputsJson(t *testing.T) {
   "credentialStatus": {
     "id": "did:iden3:privado:main:2Si3eZUE6XetYsmU5dyUK2Cvaxr1EEe65vdv2BML4L/credentialStatus?revocationNonce=1051565438&contractAddress=80001:0x2fCE183c7Fbc4EbB5DB3B0F5a63e0e02AE9a85d2",
     "type": "Iden3OnchainSparseMerkleTreeProof2023",
-    "revocationNonce": 0
+    "revocationNonce": 1257894000
   },
   "issuer": "did:iden3:privado:main:2Si3eZUE6XetYsmU5dyUK2Cvaxr1EEe65vdv2BML4L",
   "credentialSchema": {
@@ -1562,7 +1562,7 @@ func TestW3cCredentialsFromPassportInputsJson(t *testing.T) {
   "credentialStatus": {
     "id": "did:iden3:privado:main:2Scn2RfosbkQDMQzQM5nCz3Nk5GnbzZCWzGCd3tc2G/credentialStatus?contractAddress=80001:0x2fCE183c7Fbc4EbB5DB3B0F5a63e0e02AE9a85d2\u0026state=a1abdb9f44c7b649eb4d21b59ef34bd38e054aa3e500987575a14fc92c49f42c",
     "type": "Iden3OnchainSparseMerkleTreeProof2023",
-    "revocationNonce": 0
+    "revocationNonce": 1257894000
   },
   "issuer": "did:iden3:privado:main:2Si3eZUE6XetYsmU5dyUK2Cvaxr1EEe65vdv2BML4L",
   "credentialSchema": {
