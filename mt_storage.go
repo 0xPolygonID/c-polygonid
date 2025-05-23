@@ -82,7 +82,7 @@ func (m *inMemoryStorage) MarshalBinary() ([]byte, error) {
 		return nil, err
 	}
 
-	hasRoot := false
+	var hasRoot bool
 	if m.currentRoot != nil {
 		hasRoot = true
 	}
