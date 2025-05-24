@@ -113,7 +113,7 @@ func ValidateAttestationDocument(_ context.Context, _ EnvConfig,
 
 	if !rootCertFound {
 		return ValidateAttestationDocumentResponse{}, fmt.Errorf(
-			"MSN root certificate not found in CA bundle")
+			"NSM root certificate not found in CA bundle")
 	}
 
 	_, err = leafCert.Verify(x509.VerifyOptions{
