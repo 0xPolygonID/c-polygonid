@@ -1,6 +1,6 @@
 module github.com/0xPolygonID/c-polygonid
 
-go 1.23.5
+go 1.24
 
 toolchain go1.24.2
 
@@ -8,6 +8,7 @@ require (
 	github.com/0xPolygonID/go-circuit-external v0.0.4
 	github.com/dgraph-io/badger/v4 v4.5.0
 	github.com/ethereum/go-ethereum v1.15.10
+	github.com/fxamacker/cbor/v2 v2.5.0
 	github.com/iden3/go-circuits/v2 v2.4.1
 	github.com/iden3/go-iden3-core/v2 v2.3.2
 	github.com/iden3/go-iden3-crypto v0.0.17
@@ -18,6 +19,7 @@ require (
 	github.com/iden3/merkletree-proof v0.3.0
 	github.com/piprate/json-gold v0.5.1-0.20241210232033-19254b3ec65b
 	github.com/stretchr/testify v1.10.0
+	github.com/veraison/go-cose v1.3.0
 )
 
 require (
@@ -78,6 +80,7 @@ require (
 	github.com/tetratelabs/wazero v1.1.0 // indirect
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
+	github.com/x448/float16 v0.8.4 // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	golang.org/x/crypto v0.35.0 // indirect
