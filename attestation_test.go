@@ -15,7 +15,7 @@ func sleepTill(tm string) {
 	if err != nil {
 		panic(err)
 	}
-	wait := tmParsed.Sub(time.Now())
+	wait := time.Until(tmParsed)
 	if wait < 0 {
 		wait = 0
 	}
