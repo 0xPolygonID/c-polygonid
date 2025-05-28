@@ -137,7 +137,7 @@ func openDB(cacheDir string) (*badger.DB, error) {
 	badgerPath := path.Join(cacheDir, "c-polygonid-cache")
 
 	opts := badger.DefaultOptions(badgerPath).
-		WithValueLogFileSize(256 * 1024 * 1024)
+		WithValueLogFileSize(128 * 1024 * 1024)
 	if badgerLogger != nil {
 		opts.Logger = badgerLogger
 	}
