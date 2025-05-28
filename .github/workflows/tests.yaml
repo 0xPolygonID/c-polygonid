@@ -11,8 +11,7 @@ jobs:
     strategy:
       matrix:
         go_version:
-          - "1.23.8"
-          - "1.24.2"
+          - "1.24.3"
     runs-on: ubuntu-24.04
     env:
       IPFS_URL: http://localhost:5001
@@ -22,6 +21,8 @@ jobs:
         with:
           go-version: ${{ matrix.go_version }}
       - run: go test -v -race -timeout=60s ./... -find-unused-httpresp
+        env:
+          GOEXPERIMENT: "synctest"
     services:
       ipfs:
         image: ipfs/kubo:v0.26.0
