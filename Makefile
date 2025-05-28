@@ -127,6 +127,10 @@ android-x86-64:
 	CC=$(ANDROID_NDK_HOME)/toolchains/llvm/prebuilt/darwin-x86_64/bin/x86_64-linux-android21-clang \
 	go build -tags no_jwz -buildmode=c-shared -o $(ANDROID_OUT)/jnilibs/x86-64/libpolygonid.so ./cmd/polygonid
 
-android: android-armeabi-v7a android-arm64-v8a android-x86 android-x86-64
+android-old: android-armeabi-v7a  android-x86
+
+android-new: android-arm64-v8a android-x86-64
+
+android: android-new android-old
 
 all: android ios
