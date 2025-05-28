@@ -2,10 +2,10 @@ package c_polygonid
 
 import (
 	"context"
-	"crypto/ecdsa"
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 
@@ -20,9 +20,7 @@ var msnRootCertFingerprint = [32]byte{
 	0x98, 0x93, 0xF3, 0xC6, 0x8F, 0x79, 0xBB, 0x5B}
 
 type ValidateAttestationDocumentResponse struct {
-	PublicKey  string `json:"public_key"`
-	PublicKeyX string `json:"public_key_x_int,omitempty"`
-	PublicKeyY string `json:"public_key_y_int,omitempty"`
+	PublicKey string `json:"public_key"`
 }
 
 type ValidateAttestationDocumentRequest struct {
@@ -67,8 +65,9 @@ func ValidateAttestationDocument(_ context.Context, _ EnvConfig,
 	}
 
 	var docContents struct {
-		Cert     []byte   `cbor:"certificate"`
-		CaBundle [][]byte `cbor:"cabundle"`
+		Cert      []byte   `cbor:"certificate"`
+		CaBundle  [][]byte `cbor:"cabundle"`
+		PublicKey []byte   `cbor:"public_key"`
 	}
 	err = cbor.Unmarshal(msg.Payload, &docContents)
 	if err != nil {
@@ -138,19 +137,25 @@ func ValidateAttestationDocument(_ context.Context, _ EnvConfig,
 
 	var resp ValidateAttestationDocumentResponse
 
-	pubKey, err := x509.MarshalPKIXPublicKey(leafCert.PublicKey)
+	// check if public key is a valid HEX encoded string
+	if len(docContents.PublicKey) == 0 {
+		return ValidateAttestationDocumentResponse{}, fmt.Errorf(
+			"no public key found in attestation document")
+	}
+
+	var dst = make([]byte, hex.DecodedLen(len(docContents.PublicKey)))
+	n, err := hex.Decode(dst, docContents.PublicKey)
 	if err != nil {
 		return ValidateAttestationDocumentResponse{}, fmt.Errorf(
-			"failed to marshal public key: %w", err)
+			"failed to decode public key from attestation document: %w", err)
+	}
+	if n != len(dst) {
+		return ValidateAttestationDocumentResponse{}, fmt.Errorf(
+			"decoded public key length does not match expected length: "+
+				"expected %d, got %d", len(dst), n)
 	}
 
-	resp.PublicKey = base64.StdEncoding.EncodeToString(pubKey)
-
-	switch pk := leafCert.PublicKey.(type) {
-	case *ecdsa.PublicKey:
-		resp.PublicKeyX = pk.X.String()
-		resp.PublicKeyY = pk.Y.String()
-	}
+	resp.PublicKey = string(docContents.PublicKey)
 
 	return resp, nil
 }
