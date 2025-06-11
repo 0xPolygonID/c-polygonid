@@ -20,7 +20,8 @@ var msnRootCertFingerprint = [32]byte{
 	0x98, 0x93, 0xF3, 0xC6, 0x8F, 0x79, 0xBB, 0x5B}
 
 type ValidateAttestationDocumentResponse struct {
-	PublicKey string `json:"public_key"`
+	PublicKey string `json:"public_key,omitempty"`
+	UserData  string `json:"user_data,omitempty"`
 }
 
 type ValidateAttestationDocumentRequest struct {
@@ -67,6 +68,7 @@ func ValidateAttestationDocument(_ context.Context, _ EnvConfig,
 	var docContents struct {
 		Cert      []byte   `cbor:"certificate"`
 		CaBundle  [][]byte `cbor:"cabundle"`
+		UserData  []byte   `cbor:"user_data"`
 		PublicKey []byte   `cbor:"public_key"`
 	}
 	err = cbor.Unmarshal(msg.Payload, &docContents)
@@ -138,24 +140,25 @@ func ValidateAttestationDocument(_ context.Context, _ EnvConfig,
 	var resp ValidateAttestationDocumentResponse
 
 	// check if public key is a valid HEX encoded string
-	if len(docContents.PublicKey) == 0 {
-		return ValidateAttestationDocumentResponse{}, fmt.Errorf(
-			"no public key found in attestation document")
+	if len(docContents.PublicKey) != 0 {
+		var dst = make([]byte, hex.DecodedLen(len(docContents.PublicKey)))
+		n, err := hex.Decode(dst, docContents.PublicKey)
+		if err != nil {
+			return ValidateAttestationDocumentResponse{}, fmt.Errorf(
+				"failed to decode public key from attestation document: %w", err)
+		}
+		if n != len(dst) {
+			return ValidateAttestationDocumentResponse{}, fmt.Errorf(
+				"decoded public key length does not match expected length: "+
+					"expected %d, got %d", len(dst), n)
+		}
+
+		resp.PublicKey = string(docContents.PublicKey)
 	}
 
-	var dst = make([]byte, hex.DecodedLen(len(docContents.PublicKey)))
-	n, err := hex.Decode(dst, docContents.PublicKey)
-	if err != nil {
-		return ValidateAttestationDocumentResponse{}, fmt.Errorf(
-			"failed to decode public key from attestation document: %w", err)
+	if len(docContents.UserData) != 0 {
+		resp.UserData = base64.StdEncoding.EncodeToString(docContents.UserData)
 	}
-	if n != len(dst) {
-		return ValidateAttestationDocumentResponse{}, fmt.Errorf(
-			"decoded public key length does not match expected length: "+
-				"expected %d, got %d", len(dst), n)
-	}
-
-	resp.PublicKey = string(docContents.PublicKey)
 
 	return resp, nil
 }
