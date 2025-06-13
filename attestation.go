@@ -157,7 +157,7 @@ func ValidateAttestationDocument(_ context.Context, _ EnvConfig,
 	}
 
 	if len(docContents.UserData) != 0 {
-		resp.UserData = base64.StdEncoding.EncodeToString(docContents.UserData)
+		resp.UserData = base64.RawURLEncoding.EncodeToString(docContents.UserData)
 	}
 
 	return resp, nil
