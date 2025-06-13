@@ -1141,7 +1141,7 @@ func TestMerklizeCred(t *testing.T) {
 
 	cacheDir, err := os.MkdirTemp("", "")
 	require.NoError(t, err)
-	defer os.RemoveAll(cacheDir)
+	defer func() { _ = os.RemoveAll(cacheDir) }()
 
 	mz, err := merklizeCred(ctx, w3cCred, documentLoader, true, cacheDir)
 	require.NoError(t, err)
