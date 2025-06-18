@@ -173,6 +173,22 @@ func TestPrepareInputs(t *testing.T) {
 			nil, cfg, "")
 	})
 
+	// Check if input preparation function returns error if QR was expired.
+	t.Run("GenericInputsFromJson — AnonAadhaarV1 with timeNow", func(t *testing.T) {
+		defer httpmock.MockHTTPClient(t, map[string]string{})()
+		f := readFixtureFile("anon_aadhaar_v1_inputs_time_now.json")
+		out, err := GenericInputsFromJson(
+			context.Background(),
+			EnvConfig{},
+			f,
+		)
+		require.NoError(t, err)
+
+		proofBytes, err := out.Inputs.InputsMarshal()
+		require.Nil(t, proofBytes)
+		require.ErrorContains(t, err, "expiration date")
+	})
+
 	t.Run("GenericInputsFromJson — PassportV1", func(t *testing.T) {
 		defer httpmock.MockHTTPClient(t, map[string]string{})()
 		cfg := EnvConfig{}
