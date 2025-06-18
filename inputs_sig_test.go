@@ -1523,7 +1523,7 @@ func TestW3cCredentialsFromAnonAadhaarInputsJson(t *testing.T) {
     "type": "BasicPerson"
   },
   "credentialStatus": {
-    "id": "did:iden3:privado:main:2Si3eZUE6XetYsmU5dyUK2Cvaxr1EEe65vdv2BML4L/credentialStatus?revocationNonce=1051565438&contractAddress=80001:0x2fCE183c7Fbc4EbB5DB3B0F5a63e0e02AE9a85d2",
+    "id": "did:iden3:privado:main:2Si3eZUE6XetYsmU5dyUK2Cvaxr1EEe65vdv2BML4L/credentialStatus?revocationNonce=1257894000&contractAddress=80001:0x2fCE183c7Fbc4EbB5DB3B0F5a63e0e02AE9a85d2",
     "type": "Iden3OnchainSparseMerkleTreeProof2023",
     "revocationNonce": 1257894000
   },
