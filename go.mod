@@ -5,7 +5,7 @@ go 1.24
 toolchain go1.24.2
 
 require (
-	github.com/0xPolygonID/go-circuit-external v0.0.4
+	github.com/0xPolygonID/go-circuit-external v0.0.5
 	github.com/dgraph-io/badger/v4 v4.5.0
 	github.com/ethereum/go-ethereum v1.15.10
 	github.com/fxamacker/cbor/v2 v2.5.0
