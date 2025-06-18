@@ -1264,7 +1264,7 @@ func queryProofType(requestObj jsonObj) (circuits.ProofType, error) {
 
 }
 
-func buildQueryPath(ctx context.Context, contextURL string, contextType string,
+func buildQueryPath(_ context.Context, contextURL string, contextType string,
 	field string,
 	documentLoader ld.DocumentLoader) (path merklize.Path, err error) {
 
@@ -1683,7 +1683,7 @@ func sortedKeys(m jsonObj) []string {
 func queriesFromObjMerklized(ctx context.Context,
 	w3cCred verifiable.W3CCredential, requestObj jsonObj,
 	documentLoader ld.DocumentLoader, circuitID circuits.CircuitID,
-	claim *core.Claim, cacheDir string) ([]*circuits.Query, jsonObj, error) {
+	_ *core.Claim, cacheDir string) ([]*circuits.Query, jsonObj, error) {
 
 	region := trace.StartRegion(ctx, "queryFromObjMerklized")
 	defer region.End()

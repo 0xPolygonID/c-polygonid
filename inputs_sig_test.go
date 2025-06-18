@@ -173,6 +173,22 @@ func TestPrepareInputs(t *testing.T) {
 			nil, cfg, "")
 	})
 
+	// Check if input preparation function returns error if QR was expired.
+	t.Run("GenericInputsFromJson — AnonAadhaarV1 with timeNow", func(t *testing.T) {
+		defer httpmock.MockHTTPClient(t, map[string]string{})()
+		f := readFixtureFile("anon_aadhaar_v1_inputs_time_now.json")
+		out, err := GenericInputsFromJson(
+			context.Background(),
+			EnvConfig{},
+			f,
+		)
+		require.NoError(t, err)
+
+		proofBytes, err := out.Inputs.InputsMarshal()
+		require.Nil(t, proofBytes)
+		require.ErrorContains(t, err, "expiration date")
+	})
+
 	t.Run("GenericInputsFromJson — PassportV1", func(t *testing.T) {
 		defer httpmock.MockHTTPClient(t, map[string]string{})()
 		cfg := EnvConfig{}
@@ -1141,7 +1157,7 @@ func TestMerklizeCred(t *testing.T) {
 
 	cacheDir, err := os.MkdirTemp("", "")
 	require.NoError(t, err)
-	defer os.RemoveAll(cacheDir)
+	defer func() { _ = os.RemoveAll(cacheDir) }()
 
 	mz, err := merklizeCred(ctx, w3cCred, documentLoader, true, cacheDir)
 	require.NoError(t, err)
@@ -1507,7 +1523,7 @@ func TestW3cCredentialsFromAnonAadhaarInputsJson(t *testing.T) {
     "type": "BasicPerson"
   },
   "credentialStatus": {
-    "id": "did:iden3:privado:main:2Si3eZUE6XetYsmU5dyUK2Cvaxr1EEe65vdv2BML4L/credentialStatus?revocationNonce=1051565438&contractAddress=80001:0x2fCE183c7Fbc4EbB5DB3B0F5a63e0e02AE9a85d2",
+    "id": "did:iden3:privado:main:2Si3eZUE6XetYsmU5dyUK2Cvaxr1EEe65vdv2BML4L/credentialStatus?revocationNonce=1257894000&contractAddress=80001:0x2fCE183c7Fbc4EbB5DB3B0F5a63e0e02AE9a85d2",
     "type": "Iden3OnchainSparseMerkleTreeProof2023",
     "revocationNonce": 1257894000
   },
