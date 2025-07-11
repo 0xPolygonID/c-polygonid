@@ -241,7 +241,7 @@ func TestPrepareInputs(t *testing.T) {
 
 			wantVerifiablePresentation := map[string]any{
 				"@context": []any{"https://www.w3.org/2018/credentials/v1"},
-				"@type":    "VerifiablePresentation",
+				"type":     "VerifiablePresentation",
 				"verifiableCredential": map[string]any{
 					"@context": []any{
 						"https://www.w3.org/2018/credentials/v1",
@@ -272,7 +272,7 @@ func TestPrepareInputs(t *testing.T) {
 
 		wantVerifiablePresentation := map[string]any{
 			"@context": []any{"https://www.w3.org/2018/credentials/v1"},
-			"@type":    "VerifiablePresentation",
+			"type":     "VerifiablePresentation",
 			"verifiableCredential": map[string]any{
 				"@context": []any{
 					"https://www.w3.org/2018/credentials/v1",
@@ -404,7 +404,7 @@ func TestPrepareInputs(t *testing.T) {
 
 			wantVerifiablePresentation := map[string]any{
 				"@context": []any{"https://www.w3.org/2018/credentials/v1"},
-				"@type":    "VerifiablePresentation",
+				"type":     "VerifiablePresentation",
 				"verifiableCredential": map[string]any{
 					"@context": []any{
 						"https://www.w3.org/2018/credentials/v1",
@@ -552,7 +552,7 @@ func TestPrepareInputs(t *testing.T) {
 
 		wantVerifiablePresentation := map[string]any{
 			"@context": []any{"https://www.w3.org/2018/credentials/v1"},
-			"@type":    "VerifiablePresentation",
+			"type":     "VerifiablePresentation",
 			"verifiableCredential": map[string]any{
 				"@context": []any{
 					"https://www.w3.org/2018/credentials/v1",
@@ -678,7 +678,7 @@ func TestPrepareInputs(t *testing.T) {
 
 		wantVerifiablePresentation := map[string]any{
 			"@context": []any{"https://www.w3.org/2018/credentials/v1"},
-			"@type":    "VerifiablePresentation",
+			"type":     "VerifiablePresentation",
 			"verifiableCredential": map[string]any{
 				"@context": []any{
 					"https://www.w3.org/2018/credentials/v1",
@@ -806,7 +806,7 @@ func TestPrepareInputs(t *testing.T) {
 
 		wantVerifiablePresentation := map[string]any{
 			"@context": []any{"https://www.w3.org/2018/credentials/v1"},
-			"@type":    "VerifiablePresentation",
+			"type":     "VerifiablePresentation",
 			"verifiableCredential": map[string]any{
 				"@context": []any{
 					"https://www.w3.org/2018/credentials/v1",
@@ -836,7 +836,7 @@ func TestPrepareInputs(t *testing.T) {
 
 			wantVerifiablePresentation := map[string]any{
 				"@context": []any{"https://www.w3.org/2018/credentials/v1"},
-				"@type":    "VerifiablePresentation",
+				"type":     "VerifiablePresentation",
 				"verifiableCredential": map[string]any{
 					"@context": []any{
 						"https://www.w3.org/2018/credentials/v1",
@@ -880,7 +880,7 @@ func TestPrepareInputs(t *testing.T) {
 
 		wantVerifiablePresentation := map[string]any{
 			"@context": []any{"https://www.w3.org/2018/credentials/v1"},
-			"@type":    "VerifiablePresentation",
+			"type":     "VerifiablePresentation",
 			"verifiableCredential": map[string]any{
 				"@context": []any{
 					"https://www.w3.org/2018/credentials/v1",

@@ -709,7 +709,7 @@ func fmtVerifiablePresentation(context string, tp string,
 
 	return map[string]any{
 		"@context": baseContext,
-		"@type":    "VerifiablePresentation",
+		"type":     "VerifiablePresentation",
 		"verifiableCredential": map[string]any{
 			"@context":          ldContext,
 			"@type":             vcTypes,
