@@ -247,7 +247,7 @@ func TestPrepareInputs(t *testing.T) {
 						"https://www.w3.org/2018/credentials/v1",
 						"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3-non-merklized.json-ld",
 					},
-					"@type": []any{"VerifiableCredential", "KYCAgeCredential"},
+					"type": []any{"VerifiableCredential", "KYCAgeCredential"},
 					"credentialSubject": map[string]any{
 						"@type":        "KYCAgeCredential",
 						"documentType": float64(99),
@@ -278,7 +278,7 @@ func TestPrepareInputs(t *testing.T) {
 					"https://www.w3.org/2018/credentials/v1",
 					"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld",
 				},
-				"@type": []any{"VerifiableCredential", "KYCAgeCredential"},
+				"type": []any{"VerifiableCredential", "KYCAgeCredential"},
 				"credentialSubject": map[string]any{
 					"@type":        "KYCAgeCredential",
 					"documentType": float64(2),
@@ -410,7 +410,7 @@ func TestPrepareInputs(t *testing.T) {
 						"https://www.w3.org/2018/credentials/v1",
 						"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3-non-merklized.json-ld",
 					},
-					"@type": []any{"VerifiableCredential", "KYCAgeCredential"},
+					"type": []any{"VerifiableCredential", "KYCAgeCredential"},
 					"credentialSubject": map[string]any{
 						"@type":        "KYCAgeCredential",
 						"documentType": float64(99),
@@ -558,7 +558,7 @@ func TestPrepareInputs(t *testing.T) {
 					"https://www.w3.org/2018/credentials/v1",
 					"ipfs://QmcAJCriUKiU4WQogfhqpi6j8S8XTmZdmg7hpaVr4eGynW",
 				},
-				"@type": []any{"VerifiableCredential", "DeliveryAddress"},
+				"type": []any{"VerifiableCredential", "DeliveryAddress"},
 				"credentialSubject": map[string]any{
 					"@type": "DeliveryAddress",
 					"postalProviderInformation": map[string]any{
@@ -684,7 +684,7 @@ func TestPrepareInputs(t *testing.T) {
 					"https://www.w3.org/2018/credentials/v1",
 					"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld",
 				},
-				"@type": []any{"VerifiableCredential", "KYCAgeCredential"},
+				"type": []any{"VerifiableCredential", "KYCAgeCredential"},
 				"credentialSubject": map[string]any{
 					"@type":        "KYCAgeCredential",
 					"documentType": float64(2),
@@ -812,7 +812,7 @@ func TestPrepareInputs(t *testing.T) {
 					"https://www.w3.org/2018/credentials/v1",
 					"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld",
 				},
-				"@type": []any{"VerifiableCredential", "KYCAgeCredential"},
+				"type": []any{"VerifiableCredential", "KYCAgeCredential"},
 				"credentialSubject": map[string]any{
 					"@type":        "KYCAgeCredential",
 					"documentType": float64(2),
@@ -842,7 +842,7 @@ func TestPrepareInputs(t *testing.T) {
 						"https://www.w3.org/2018/credentials/v1",
 						"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3-non-merklized.json-ld",
 					},
-					"@type": []any{"VerifiableCredential", "KYCAgeCredential"},
+					"type": []any{"VerifiableCredential", "KYCAgeCredential"},
 					"credentialSubject": map[string]any{
 						"@type":        "KYCAgeCredential",
 						"documentType": float64(99),
@@ -886,7 +886,7 @@ func TestPrepareInputs(t *testing.T) {
 					"https://www.w3.org/2018/credentials/v1",
 					"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3-non-merklized.json-ld",
 				},
-				"@type": []any{"VerifiableCredential", "KYCAgeCredential"},
+				"type": []any{"VerifiableCredential", "KYCAgeCredential"},
 				"credentialSubject": map[string]any{
 					"@type":        "KYCAgeCredential",
 					"documentType": float64(99),
