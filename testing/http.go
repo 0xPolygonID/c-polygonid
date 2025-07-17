@@ -54,12 +54,13 @@ func (m *mockedRouterTripper) RoundTrip(
 	if !ok {
 		var requestBodyStr = string(postData)
 		var processedBody = string(postDataProcessed)
-		if requestBodyStr == "" {
+		switch requestBodyStr {
+		case "":
 			m.t.Errorf("unexpected http request: %v", urlStr)
-		} else if requestBodyStr == processedBody {
+		case processedBody:
 			m.t.Errorf("unexpected http request: %v\nBody: %v",
 				urlStr, requestBodyStr)
-		} else {
+		default:
 			m.t.Errorf(
 				"unexpected http request: %v\nBody: %v\nProcessed body: %v",
 				urlStr, requestBodyStr, processedBody)

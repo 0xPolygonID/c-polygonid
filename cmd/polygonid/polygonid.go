@@ -1042,6 +1042,14 @@ func PLGNBabyJubJubPublicCompress(jsonResponse **C.char, in *C.char,
 		in, cfg, status)
 }
 
+//export PLGNValidateAttestationDocument
+func PLGNValidateAttestationDocument(jsonResponse **C.char, in *C.char,
+	cfg *C.char, status **C.PLGNStatus) bool {
+
+	return callGenericFn(c_polygonid.ValidateAttestationDocument, jsonResponse,
+		in, cfg, status)
+}
+
 type atomicQueryInputsFn func(ctx context.Context, cfg c_polygonid.EnvConfig,
 	in []byte) (c_polygonid.AtomicQueryInputsResponse, error)
 
