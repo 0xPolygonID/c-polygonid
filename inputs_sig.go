@@ -642,7 +642,7 @@ type objEntry struct {
 }
 
 func mkVPObj(tp string, kvs ...objEntry) (jsonObj, error) {
-	out := jsonObj{"@type": tp}
+	out := jsonObj{"type": tp}
 	for _, kv := range kvs {
 		err := insertKV(out, kv)
 		if err != nil {
@@ -709,10 +709,10 @@ func fmtVerifiablePresentation(context string, tp string,
 
 	return map[string]any{
 		"@context": baseContext,
-		"@type":    "VerifiablePresentation",
+		"type":     "VerifiablePresentation",
 		"verifiableCredential": map[string]any{
 			"@context":          ldContext,
-			"@type":             vcTypes,
+			"type":              vcTypes,
 			"credentialSubject": credSubject,
 		},
 	}, nil

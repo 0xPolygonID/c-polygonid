@@ -257,15 +257,15 @@ func TestPrepareInputs(t *testing.T) {
 
 			wantVerifiablePresentation := map[string]any{
 				"@context": []any{"https://www.w3.org/2018/credentials/v1"},
-				"@type":    "VerifiablePresentation",
+				"type":     "VerifiablePresentation",
 				"verifiableCredential": map[string]any{
 					"@context": []any{
 						"https://www.w3.org/2018/credentials/v1",
 						"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3-non-merklized.json-ld",
 					},
-					"@type": []any{"VerifiableCredential", "KYCAgeCredential"},
+					"type": []any{"VerifiableCredential", "KYCAgeCredential"},
 					"credentialSubject": map[string]any{
-						"@type":        "KYCAgeCredential",
+						"type":         "KYCAgeCredential",
 						"documentType": float64(99),
 					},
 				},
@@ -288,15 +288,15 @@ func TestPrepareInputs(t *testing.T) {
 
 		wantVerifiablePresentation := map[string]any{
 			"@context": []any{"https://www.w3.org/2018/credentials/v1"},
-			"@type":    "VerifiablePresentation",
+			"type":     "VerifiablePresentation",
 			"verifiableCredential": map[string]any{
 				"@context": []any{
 					"https://www.w3.org/2018/credentials/v1",
 					"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld",
 				},
-				"@type": []any{"VerifiableCredential", "KYCAgeCredential"},
+				"type": []any{"VerifiableCredential", "KYCAgeCredential"},
 				"credentialSubject": map[string]any{
-					"@type":        "KYCAgeCredential",
+					"type":         "KYCAgeCredential",
 					"documentType": float64(2),
 				},
 			},
@@ -420,15 +420,15 @@ func TestPrepareInputs(t *testing.T) {
 
 			wantVerifiablePresentation := map[string]any{
 				"@context": []any{"https://www.w3.org/2018/credentials/v1"},
-				"@type":    "VerifiablePresentation",
+				"type":     "VerifiablePresentation",
 				"verifiableCredential": map[string]any{
 					"@context": []any{
 						"https://www.w3.org/2018/credentials/v1",
 						"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3-non-merklized.json-ld",
 					},
-					"@type": []any{"VerifiableCredential", "KYCAgeCredential"},
+					"type": []any{"VerifiableCredential", "KYCAgeCredential"},
 					"credentialSubject": map[string]any{
-						"@type":        "KYCAgeCredential",
+						"type":         "KYCAgeCredential",
 						"documentType": float64(99),
 					},
 				},
@@ -568,15 +568,15 @@ func TestPrepareInputs(t *testing.T) {
 
 		wantVerifiablePresentation := map[string]any{
 			"@context": []any{"https://www.w3.org/2018/credentials/v1"},
-			"@type":    "VerifiablePresentation",
+			"type":     "VerifiablePresentation",
 			"verifiableCredential": map[string]any{
 				"@context": []any{
 					"https://www.w3.org/2018/credentials/v1",
 					"ipfs://QmcAJCriUKiU4WQogfhqpi6j8S8XTmZdmg7hpaVr4eGynW",
 				},
-				"@type": []any{"VerifiableCredential", "DeliveryAddress"},
+				"type": []any{"VerifiableCredential", "DeliveryAddress"},
 				"credentialSubject": map[string]any{
-					"@type": "DeliveryAddress",
+					"type": "DeliveryAddress",
 					"postalProviderInformation": map[string]any{
 						"address1": map[string]any{
 							"name": "addressName",
@@ -694,15 +694,15 @@ func TestPrepareInputs(t *testing.T) {
 
 		wantVerifiablePresentation := map[string]any{
 			"@context": []any{"https://www.w3.org/2018/credentials/v1"},
-			"@type":    "VerifiablePresentation",
+			"type":     "VerifiablePresentation",
 			"verifiableCredential": map[string]any{
 				"@context": []any{
 					"https://www.w3.org/2018/credentials/v1",
 					"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld",
 				},
-				"@type": []any{"VerifiableCredential", "KYCAgeCredential"},
+				"type": []any{"VerifiableCredential", "KYCAgeCredential"},
 				"credentialSubject": map[string]any{
-					"@type":        "KYCAgeCredential",
+					"type":         "KYCAgeCredential",
 					"documentType": float64(2),
 				},
 			},
@@ -822,15 +822,15 @@ func TestPrepareInputs(t *testing.T) {
 
 		wantVerifiablePresentation := map[string]any{
 			"@context": []any{"https://www.w3.org/2018/credentials/v1"},
-			"@type":    "VerifiablePresentation",
+			"type":     "VerifiablePresentation",
 			"verifiableCredential": map[string]any{
 				"@context": []any{
 					"https://www.w3.org/2018/credentials/v1",
 					"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld",
 				},
-				"@type": []any{"VerifiableCredential", "KYCAgeCredential"},
+				"type": []any{"VerifiableCredential", "KYCAgeCredential"},
 				"credentialSubject": map[string]any{
-					"@type":        "KYCAgeCredential",
+					"type":         "KYCAgeCredential",
 					"documentType": float64(2),
 				},
 			},
@@ -852,15 +852,15 @@ func TestPrepareInputs(t *testing.T) {
 
 			wantVerifiablePresentation := map[string]any{
 				"@context": []any{"https://www.w3.org/2018/credentials/v1"},
-				"@type":    "VerifiablePresentation",
+				"type":     "VerifiablePresentation",
 				"verifiableCredential": map[string]any{
 					"@context": []any{
 						"https://www.w3.org/2018/credentials/v1",
 						"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3-non-merklized.json-ld",
 					},
-					"@type": []any{"VerifiableCredential", "KYCAgeCredential"},
+					"type": []any{"VerifiableCredential", "KYCAgeCredential"},
 					"credentialSubject": map[string]any{
-						"@type":        "KYCAgeCredential",
+						"type":         "KYCAgeCredential",
 						"documentType": float64(99),
 					},
 				},
@@ -896,15 +896,15 @@ func TestPrepareInputs(t *testing.T) {
 
 		wantVerifiablePresentation := map[string]any{
 			"@context": []any{"https://www.w3.org/2018/credentials/v1"},
-			"@type":    "VerifiablePresentation",
+			"type":     "VerifiablePresentation",
 			"verifiableCredential": map[string]any{
 				"@context": []any{
 					"https://www.w3.org/2018/credentials/v1",
 					"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3-non-merklized.json-ld",
 				},
-				"@type": []any{"VerifiableCredential", "KYCAgeCredential"},
+				"type": []any{"VerifiableCredential", "KYCAgeCredential"},
 				"credentialSubject": map[string]any{
-					"@type":        "KYCAgeCredential",
+					"type":         "KYCAgeCredential",
 					"documentType": float64(99),
 				},
 			},
@@ -1414,7 +1414,7 @@ func TestMkVPObj(t *testing.T) {
 		},
 		{
 			in:   []objEntry{},
-			want: jsonObj{"@type": tp},
+			want: jsonObj{"type": tp},
 		},
 		{
 			in: []objEntry{
@@ -1423,7 +1423,7 @@ func TestMkVPObj(t *testing.T) {
 				{"x.y2", 5},
 			},
 			want: jsonObj{
-				"@type": "tp",
+				"type": "tp",
 				"x": jsonObj{
 					"y1": jsonObj{
 						"z1": 3,
