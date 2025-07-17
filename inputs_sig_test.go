@@ -249,7 +249,7 @@ func TestPrepareInputs(t *testing.T) {
 					},
 					"type": []any{"VerifiableCredential", "KYCAgeCredential"},
 					"credentialSubject": map[string]any{
-						"@type":        "KYCAgeCredential",
+						"type":         "KYCAgeCredential",
 						"documentType": float64(99),
 					},
 				},
@@ -280,7 +280,7 @@ func TestPrepareInputs(t *testing.T) {
 				},
 				"type": []any{"VerifiableCredential", "KYCAgeCredential"},
 				"credentialSubject": map[string]any{
-					"@type":        "KYCAgeCredential",
+					"type":         "KYCAgeCredential",
 					"documentType": float64(2),
 				},
 			},
@@ -412,7 +412,7 @@ func TestPrepareInputs(t *testing.T) {
 					},
 					"type": []any{"VerifiableCredential", "KYCAgeCredential"},
 					"credentialSubject": map[string]any{
-						"@type":        "KYCAgeCredential",
+						"type":         "KYCAgeCredential",
 						"documentType": float64(99),
 					},
 				},
@@ -560,7 +560,7 @@ func TestPrepareInputs(t *testing.T) {
 				},
 				"type": []any{"VerifiableCredential", "DeliveryAddress"},
 				"credentialSubject": map[string]any{
-					"@type": "DeliveryAddress",
+					"type": "DeliveryAddress",
 					"postalProviderInformation": map[string]any{
 						"address1": map[string]any{
 							"name": "addressName",
@@ -686,7 +686,7 @@ func TestPrepareInputs(t *testing.T) {
 				},
 				"type": []any{"VerifiableCredential", "KYCAgeCredential"},
 				"credentialSubject": map[string]any{
-					"@type":        "KYCAgeCredential",
+					"type":         "KYCAgeCredential",
 					"documentType": float64(2),
 				},
 			},
@@ -814,7 +814,7 @@ func TestPrepareInputs(t *testing.T) {
 				},
 				"type": []any{"VerifiableCredential", "KYCAgeCredential"},
 				"credentialSubject": map[string]any{
-					"@type":        "KYCAgeCredential",
+					"type":         "KYCAgeCredential",
 					"documentType": float64(2),
 				},
 			},
@@ -844,7 +844,7 @@ func TestPrepareInputs(t *testing.T) {
 					},
 					"type": []any{"VerifiableCredential", "KYCAgeCredential"},
 					"credentialSubject": map[string]any{
-						"@type":        "KYCAgeCredential",
+						"type":         "KYCAgeCredential",
 						"documentType": float64(99),
 					},
 				},
@@ -888,7 +888,7 @@ func TestPrepareInputs(t *testing.T) {
 				},
 				"type": []any{"VerifiableCredential", "KYCAgeCredential"},
 				"credentialSubject": map[string]any{
-					"@type":        "KYCAgeCredential",
+					"type":         "KYCAgeCredential",
 					"documentType": float64(99),
 				},
 			},
@@ -1398,7 +1398,7 @@ func TestMkVPObj(t *testing.T) {
 		},
 		{
 			in:   []objEntry{},
-			want: jsonObj{"@type": tp},
+			want: jsonObj{"type": tp},
 		},
 		{
 			in: []objEntry{
@@ -1407,7 +1407,7 @@ func TestMkVPObj(t *testing.T) {
 				{"x.y2", 5},
 			},
 			want: jsonObj{
-				"@type": "tp",
+				"type": "tp",
 				"x": jsonObj{
 					"y1": jsonObj{
 						"z1": 3,
