@@ -1,7 +1,7 @@
 {
   "id": "x1QQ78ktjAmia48pyEZENyurZhpRSdPMWmtv1zbsi",
   "profileNonce": "123",
-  "claimSubjectProfileNonce": "234",
+  "claimSubjectProfileNonce": "0",
   "verifiableCredentials": {
     "id": "http://localhost:8001/api/v1/claim/98781b98-73c9-11ed-9818-3a0197678785",
     "@context": [

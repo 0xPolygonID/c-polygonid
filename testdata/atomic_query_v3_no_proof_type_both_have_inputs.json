@@ -1,7 +1,7 @@
 {
   "id": "x1QQ78ktjAmia48pyEZENyurZhpRSdPMWmtv1zbsi",
   "profileNonce": "123",
-  "claimSubjectProfileNonce": "234",
+  "claimSubjectProfileNonce": "0",
   "verifierId": "did:iden3:polygon:mumbai:x1QQ78ktjAmia48pyEZENyurZhpRSdPMWmtv1zbsi",
   "linkNonce": "456",
   "verifiableCredentials": {

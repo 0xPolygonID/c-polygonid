@@ -111,6 +111,19 @@ func TestPrepareInputs(t *testing.T) {
 		}
 	}
 
+	doTestMarsalError := func(t testing.TB, inFile string,
+		fn PrepareInputsFn, cfg EnvConfig, wantErr string) {
+		err := CleanCache("")
+		require.NoError(t, err)
+
+		ctx := context.Background()
+		out, err := fn(ctx, cfg, readFixtureFile(inFile))
+		require.NoError(t, err)
+
+		_, err = out.Inputs.InputsMarshal()
+		require.ErrorContains(t, err, wantErr)
+	}
+
 	t.Run("AtomicQueryMtpV2Onchain", func(t *testing.T) {
 		defer httpmock.MockHTTPClient(t,
 			map[string]string{
@@ -915,6 +928,30 @@ func TestPrepareInputs(t *testing.T) {
 			"linked_multi_query_non_merklized_output.json",
 			LinkedMultiQueryInputsFromJson, wantVerifiablePresentation,
 			EnvConfig{}, "")
+	})
+
+	t.Run("Negative test - incorrect CredentialSubjectProfile", func(t *testing.T) {
+		defer httpmock.MockHTTPClient(t, map[string]string{
+			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld":                                                         "testdata/httpresp_kyc-v3.json-ld",
+			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld":                                             "testdata/httpresp_iden3credential_v2.json",
+			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/2376431481": "testdata/httpresp_rev_status_2376431481.json",
+			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/0":          "testdata/httpresp_rev_status_wuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU_0.json",
+		})()
+
+		doTestMarsalError(t, "atomic_query_v3_sig_empty_query_inputs_incorrect_profile.json",
+			AtomicQueryV3InputsFromJson, EnvConfig{}, circuits.ErrorUserProfileMismatch)
+	})
+
+	t.Run("Negative test - incorrect UserID", func(t *testing.T) {
+		defer httpmock.MockHTTPClient(t, map[string]string{
+			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld":                                                         "testdata/httpresp_kyc-v3.json-ld",
+			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld":                                             "testdata/httpresp_iden3credential_v2.json",
+			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/2376431481": "testdata/httpresp_rev_status_2376431481.json",
+			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/0":          "testdata/httpresp_rev_status_wuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU_0.json",
+		})()
+
+		doTestMarsalError(t, "atomic_query_v3_sig_empty_query_inputs_incorrect_user_id.json",
+			AtomicQueryV3InputsFromJson, EnvConfig{}, circuits.ErrorUserProfileMismatch)
 	})
 }
 

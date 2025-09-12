@@ -9,7 +9,7 @@ require (
 	github.com/dgraph-io/badger/v4 v4.5.0
 	github.com/ethereum/go-ethereum v1.15.10
 	github.com/fxamacker/cbor/v2 v2.5.0
-	github.com/iden3/go-circuits/v2 v2.4.1
+	github.com/iden3/go-circuits/v2 v2.4.3
 	github.com/iden3/go-iden3-core/v2 v2.3.2
 	github.com/iden3/go-iden3-crypto v0.0.17
 	github.com/iden3/go-merkletree-sql/v2 v2.0.6
