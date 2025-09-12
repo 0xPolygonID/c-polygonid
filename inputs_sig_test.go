@@ -337,7 +337,7 @@ func TestPrepareInputs(t *testing.T) {
 	t.Run("AtomicQuerySigV2InputsFromJson - ipfs", func(t *testing.T) {
 		ipfsURL := os.Getenv("IPFS_URL")
 		if ipfsURL == "" {
-			t.Skip("IPFS_URL is not set")
+			t.Fatal("IPFS_URL is not set")
 		}
 
 		defer preserveIPFSHttpCli()()
@@ -564,7 +564,7 @@ func TestPrepareInputs(t *testing.T) {
 
 		ipfsURL := os.Getenv("IPFS_URL")
 		if ipfsURL == "" {
-			t.Skip("IPFS_URL is not set")
+			t.Fatal("IPFS_URL is not set")
 		}
 
 		defer preserveIPFSHttpCli()()
@@ -742,7 +742,7 @@ func TestPrepareInputs(t *testing.T) {
 	t.Run("AtomicQueryV3InputsFromJson__Sig_exists_true", func(t *testing.T) {
 		ipfsURL := os.Getenv("IPFS_URL")
 		if ipfsURL == "" {
-			t.Skip("IPFS_URL is not set")
+			t.Fatal("IPFS_URL is not set")
 		}
 
 		defer preserveIPFSHttpCli()()
@@ -784,7 +784,7 @@ func TestPrepareInputs(t *testing.T) {
 	t.Run("AtomicQueryV3InputsFromJson__Sig_exists_false", func(t *testing.T) {
 		ipfsURL := os.Getenv("IPFS_URL")
 		if ipfsURL == "" {
-			t.Skip("IPFS_URL is not set")
+			t.Fatal("IPFS_URL is not set")
 		}
 
 		defer preserveIPFSHttpCli()()

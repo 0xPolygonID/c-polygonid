@@ -13,7 +13,7 @@ import (
 func TestIPFSCli(t *testing.T) {
 	ipfsURL := os.Getenv("IPFS_URL")
 	if ipfsURL == "" {
-		t.Skip("IPFS_URL is not set")
+		t.Fatal("IPFS_URL is not set")
 	}
 
 	f, err := os.ReadFile("testdata/httpresp_kyc-v3.json-ld")
