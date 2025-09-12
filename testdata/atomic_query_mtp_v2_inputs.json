@@ -1,7 +1,7 @@
 {
   "id": "2qHrsSHq8RG9YzDkFUU7R8x5z8HjfEWuAzWCAEK6g5",
   "profileNonce": "123",
-  "claimSubjectProfileNonce": "234",
+  "claimSubjectProfileNonce": "0",
   "verifiableCredentials": {
     "id": "http://localhost:8001/api/v1/identities/did:polygonid:polygon:mumbai:2qFuKxq6iPem5w2U6T6druwGFjqTinE1kqNkSN7oo9/claims/b2133c66-9d5b-11ed-a8ca-e24d9cbdb31b",
     "@context": [

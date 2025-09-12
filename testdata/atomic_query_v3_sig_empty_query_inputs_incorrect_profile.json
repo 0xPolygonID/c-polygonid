@@ -1,7 +1,7 @@
 {
   "id": "x1QQ78ktjAmia48pyEZENyurZhpRSdPMWmtv1zbsi",
   "profileNonce": "123",
-  "claimSubjectProfileNonce": "0",
+  "claimSubjectProfileNonce": "456",
   "verifiableCredentials": {
     "id": "http://localhost:8001/api/v1/claim/98781b98-73c9-11ed-9818-3a0197678785",
     "@context": [
@@ -88,11 +88,6 @@
       "allowedIssuers": "unused",
       "context": "https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld",
       "type": "KYCAgeCredential",
-      "credentialSubject": {
-        "documentType": {
-          "$eq": 2
-        }
-      },
       "proofType": "BJJSignature2021"
     }
   }
