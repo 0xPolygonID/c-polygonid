@@ -1,0 +1,26 @@
+{
+    "keys": [
+        {
+            "kid": "did:example:bob#key-1",
+            "alg": "RSA-OAEP-256",
+            "d": "At_mN3s4CLFyREOKj-9oRRbonvxV-Suri60SRW4nLLfkd-p23lEwqAPEpypZ6YVFszodRPsHHUANb1-ugKIbrfJluolcoY-uFx6RBhbdtAIAqCpo9u8sSzFN0A8j1k6eyLPvZk8XAhFO0njlpWvpXv9WGR03yXYAj0pg6gBtXCqBsGkgNHG_9aCjiEWx_ka08DIoFiCom_dO3qBW933lqRnlFekCXHyVvz3acaNOgDGPlHGCIuseSOQ1yrioEcuNb0TCkxz2TALggFGlHIXa8qWGa5RFp3k0Yp3EgGg6zIHi61RBZZ-uUTCOSfOcjORPhsXrOT6sExBZcZSBW_4rgQ",
+            "dp": "riyROhqS877aFemjUzoJsA3Z2iI1FQqB9vyyi5C794yHVfDm_581uZLOM_8oLe_sfhut9fDpbOdKK1w7xn6DDQiXc-C5o2Ren9S_pXANZrH38quVvpVsjituDJbh2S2zYuFqsapa4KsxB2xyze9k7hJq-X9LRWZElyHmCofT9YE",
+            "dq": "ir_QbKvTRvwKHxUdcWhvjLUCovZAZcATe_1hHryn2ZFPk-hB5UhU9gET34sI9JmvdZyzWWw6NNPzV1PBepY_jA_Q1WRPVdvjVexcbujoqJmsSS3C5JOSjPGterHktNzyCxHXYcIR_xtY-CUQzrcEpsWWKxRK28eF8vsbkWuiIg8",
+            "e": "AQAB",
+            "kty": "RSA",
+            "n": "rnsrSf-BdwZ0jPqZtBcwbAwaLpI3DBYb6sascKRXC_s5LHKHfOJbVJHkn5kSThRtPt2IismFqU9aNpNRUcTU9NvicTX8pYjtURWYBerFL6pcUUbDr3u9KZoQ42Ui3T1VovHMbyvwFrWrCTpCPbK0gMSzim2X_zkQ3x-5d5_fU59Gto8vCSawFFRRGuBAfvaAoYDCnoqDFa0EmwW5amJgUHytBXUCIuX-IcEi2c4ryZ8ikhPUm9ftA26PqsL_HW7LnOi2e5oeGYgLHg0O9QoFXjqz_iatfVjuiRFjwyT08vUafIF2oCeTP48o-qK2bLzJtT9O9A5ksPDuWs-xSJqX4w",
+            "p": "5zg1TO6FErgDbSonj1CWjr7L5UN9sZepY25bObjE2EKzeWJtMIcEkT1QDwDvLws2n-xQ5yUgDlt33LBDOAQIMNiSVqloxPUZnh1JBhi9SWHwAtbZg4WYjn-rVJy4RhsyKFkDSxJG1FkzPyroCM5bqtRH6abVVkEELSsrqh3HJxE",
+            "q": "wS5Fwg5IDgyzHudDQERmpLHLfuSD6yPfzcutB4rHnov2hY9gZYScS82mGnrh3N7D3JWyckM1RtlyXT7FbDthGM1NBcE7UdSNWRaDJGsucsciKhhPlxeSUTifnSUMxLvX0du86EeBWjpmZ-u66Cwt_5wWWGmKfoD1XAKq-znb17M",
+            "qi": "FCX3QK99dvGr5P4L2CA3Iv0qN_7xLSshX38Teq12xPbhWbgGcSQDH1FNvN9EEIfpzg1TCY1dRdkCR3P8CLgCRiUSpQRYSplP0vNoUCrl_M1-kg1GqZycDBX2VOgn62WJWFv1p7YcOG8mPWx0Ct_JKi_kejapb0xRucrf9nX_7o8"
+        },
+        {
+            "kid": "did:example:bob#key-2",
+            "alg": "ECDH-ES+A256KW",
+            "crv": "P-384",
+            "d": "iAvWH5HAN0IdxfqSxohLzGrYLFuEbb_m265fjMup6kBsG13wjb5iAKNIMafUUzCJ",
+            "kty": "EC",
+            "x": "G4kvmvgCeAUuekHJmEzdTERHL1ZrIHkfMPUCTka3ECTuEUovZawyo-jpXcAzQ-PG",
+            "y": "0CYQ0bbP0FPlxfKvz2zcm3p6muQdGRH2d1rs_NY_8LVX2bBNGaX4sHfTB1_fAbvr"
+        }
+    ]
+}

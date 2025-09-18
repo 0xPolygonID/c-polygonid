@@ -1050,6 +1050,52 @@ func PLGNValidateAttestationDocument(jsonResponse **C.char, in *C.char,
 		in, cfg, status)
 }
 
+// PLGNAAnonPack an jwe token for the input data.
+//
+//export PLGNAAnonPack
+func PLGNAAnonPack(jsonResponse **C.char, in *C.char,
+	cfg *C.char, status **C.PLGNStatus) bool {
+	if jsonResponse == nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_NIL_POINTER,
+			"jsonResponse pointer is nil")
+		return false
+	}
+
+	inData := C.GoBytes(unsafe.Pointer(in), C.int(C.strlen(in)))
+
+	cyphertext, err := c_polygonid.AnonPack(inData)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
+		return false
+	}
+
+	*jsonResponse = C.CString(string(cyphertext))
+	return true
+}
+
+// PLGNAAnonUnpack decrypt jwe message to iden3comm basic message.
+//
+//export PLGNAAnonUnpack
+func PLGNAAnonUnpack(jsonResponse **C.char, in *C.char,
+	cfg *C.char, status **C.PLGNStatus) bool {
+	if jsonResponse == nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_NIL_POINTER,
+			"jsonResponse pointer is nil")
+		return false
+	}
+
+	inData := C.GoBytes(unsafe.Pointer(in), C.int(C.strlen(in)))
+
+	decryptedtext, err := c_polygonid.AnonUnpack(inData)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
+		return false
+	}
+
+	*jsonResponse = C.CString(string(decryptedtext))
+	return true
+}
+
 type atomicQueryInputsFn func(ctx context.Context, cfg c_polygonid.EnvConfig,
 	in []byte) (c_polygonid.AtomicQueryInputsResponse, error)
 

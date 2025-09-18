@@ -1,0 +1,186 @@
+{
+    "message": {
+        "id": "4b50a529-d55f-4fbe-8ff9-722a0d601c15",
+        "typ": "application/iden3comm-encrypted-json",
+        "type": "https://iden3-communication.io/authorization/1.0/response",
+        "thid": "4b50a529-d55f-4fbe-8ff9-722a0d601c15",
+        "body": {
+            "scope": null
+        },
+        "from": "did:polygonid:polygon:mumbai:alice",
+        "to": "did:polygonid:polygon:mumbai:zk-room"
+    },
+    "recipientDidDocs": [
+        {
+            "didDocument": {
+                "@context": [
+                    "https://www.w3.org/ns/did/v1"
+                ],
+                "id": "did:example:alice",
+                "verificationMethod": [
+                    {
+                        "id": "did:example:alice#key-1",
+                        "type": "JsonWebKey2020",
+                        "controller": "did:example:alice",
+                        "publicKeyJwk": {
+                            "alg": "RSA-OAEP-256",
+                            "e": "AQAB",
+                            "kty": "RSA",
+                            "n": "ug3XPDJ-a5jgdXI_1yjIM-3wKxQ2IJ6p09mmf9ClLGkQtOeaWrv7s3z7lp99C0myUlMHywzitzVqRyNSxM-q2e3J3UnbFwF17UDO4sxUm2RBkvGxqc_Guy93Ju0IP63t3xfYZ3eDpG6CCWZRpRA_5iz7vCPEPaHbyLRfgWR3npRiUNlqsNvJifEWxHtWNFMnNK6rFMNlUCDoJCtQYY7Y35OTqJZAF63Tq1QAV5uyIuwokGQ_hNXis89wJL8pE49WaXNi6O5sZ6u6yQIf9gpFuIQR2OLEnY3WMTGOj7jNAdD0IFwe3mf_q9EXDF4RWh7Zu75FPStGdNUZmQLhvy7-Tw"
+                        }
+                    },
+                    {
+                        "id": "did:example:alice#key-2",
+                        "type": "JsonWebKey2020",
+                        "controller": "did:example:alice",
+                        "publicKeyJwk": {
+                            "alg": "ECDH-ES+A256KW",
+                            "crv": "P-384",
+                            "kty": "EC",
+                            "x": "7CFCaNFaRd9L2OA-hfEJ5PLlFm3GSjLmyRF1qgtdgDTLQXJXOTPTEhkQTnSc-ugL",
+                            "y": "7tVljSB4a7Xc2kEPOl5Vt0jJp4jW6093vdvBZZgpmyZbVIMA8jjvAuZC-OQeGPw7"
+                        }
+                    }
+                ],
+                "service": [
+                    {
+                        "id": "did:example:alice#mobile",
+                        "type": "Iden3MobileServiceV1",
+                        "serviceEndpoint": "iden3comm:v0.1:callbackHandler",
+                        "metadata": null
+                    },
+                    {
+                        "id": "did:example:alice#push",
+                        "type": "push-notification",
+                        "serviceEndpoint": "https://notification-service.privado.id/api/v1",
+                        "metadata": {
+                            "devices": [
+                                {
+                                    "ciphertext": "Asr2hUAhY6jm4J0fGJRshw6kNPAxQdwDk4KJZ1G1nBicwzyQboHBusKblRFqsvGd/pUIAhWFgxMD2C4830A0MuMH3YbBETwid2ZHNJvpm+vf2DYwO1g7BbAeDTyFOLcQ5Pvg7JTkB6SllsU0uLMwXkZmWNMvhS1yG9dZ4jgEH0N5yvJ4Z8aJbL0epVQOJu2JoiQceMbyiUMFZ/BTj6v6ToLjWv+B/+PSWDJqS+myZqNJXpPySHwxo/UWsuVGQKk5/KnzUklJ1hyp93JneROaKNERUz7svx9RSZyqiWAEc/OyMuSmdfFZcteE0WhYbhLoFAqXkE0mAGskWRvZ+vvmPC51AbMy6i3xwsXUqBlvqYOTBJ/c0boDmELgnUBtqgfMuP+lvfDN8I7gmetG+YgBC9gBMbZNp2BOnZYJzpAFWGPmqKZrtRKYouK9YnQ6uWCaCS3esTWaf8NcSewiCTO+bRzEvpvejCbYxYm/Dq30zvIHLI4cIpc5PHS84YXj6Ib1mRIqEWJTo4Qs996ZE7Ae/EAXnWEvWyvt1y14RBGge485Ng94uRrVVQwAWj/vAKQx13FZkPn99mIR62PzqxbwCLwhzTC653XMNWOoUxu0MEunA6q8Lc+KzErVmJKx0vKiLvi3iEE7O0fqVO93h9EZcqamFVd1+uIjqCAACX2GBl0=",
+                                    "alg": "RSA-OAEP-512"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+            "didResolutionMetadata": null,
+            "didDocumentMetadata": null
+        },
+        {
+            "didDocument": {
+                "@context": [
+                    "https://www.w3.org/ns/did/v1"
+                ],
+                "id": "did:example:bob",
+                "verificationMethod": [
+                    {
+                        "id": "did:example:bob#key-1",
+                        "type": "JsonWebKey2020",
+                        "controller": "did:example:bob",
+                        "publicKeyJwk": {
+                            "alg": "RSA-OAEP-256",
+                            "e": "AQAB",
+                            "kty": "RSA",
+                            "n": "rnsrSf-BdwZ0jPqZtBcwbAwaLpI3DBYb6sascKRXC_s5LHKHfOJbVJHkn5kSThRtPt2IismFqU9aNpNRUcTU9NvicTX8pYjtURWYBerFL6pcUUbDr3u9KZoQ42Ui3T1VovHMbyvwFrWrCTpCPbK0gMSzim2X_zkQ3x-5d5_fU59Gto8vCSawFFRRGuBAfvaAoYDCnoqDFa0EmwW5amJgUHytBXUCIuX-IcEi2c4ryZ8ikhPUm9ftA26PqsL_HW7LnOi2e5oeGYgLHg0O9QoFXjqz_iatfVjuiRFjwyT08vUafIF2oCeTP48o-qK2bLzJtT9O9A5ksPDuWs-xSJqX4w"
+                        }
+                    },
+                    {
+                        "id": "did:example:bob#key-2",
+                        "type": "JsonWebKey2020",
+                        "controller": "did:example:bob",
+                        "publicKeyJwk": {
+                            "alg": "ECDH-ES+A256KW",
+                            "crv": "P-384",
+                            "kty": "EC",
+                            "x": "G4kvmvgCeAUuekHJmEzdTERHL1ZrIHkfMPUCTka3ECTuEUovZawyo-jpXcAzQ-PG",
+                            "y": "0CYQ0bbP0FPlxfKvz2zcm3p6muQdGRH2d1rs_NY_8LVX2bBNGaX4sHfTB1_fAbvr"
+                        }
+                    }
+                ],
+                "service": [
+                    {
+                        "id": "did:example:bob#mobile",
+                        "type": "Iden3MobileServiceV1",
+                        "serviceEndpoint": "iden3comm:v0.1:callbackHandler",
+                        "metadata": null
+                    },
+                    {
+                        "id": "did:example:bob#push",
+                        "type": "push-notification",
+                        "serviceEndpoint": "https://notification-service.privado.id/api/v1",
+                        "metadata": {
+                            "devices": [
+                                {
+                                    "ciphertext": "Asr2hUAhY6jm4J0fGJRshw6kNPAxQdwDk4KJZ1G1nBicwzyQboHBusKblRFqsvGd/pUIAhWFgxMD2C4830A0MuMH3YbBETwid2ZHNJvpm+vf2DYwO1g7BbAeDTyFOLcQ5Pvg7JTkB6SllsU0uLMwXkZmWNMvhS1yG9dZ4jgEH0N5yvJ4Z8aJbL0epVQOJu2JoiQceMbyiUMFZ/BTj6v6ToLjWv+B/+PSWDJqS+myZqNJXpPySHwxo/UWsuVGQKk5/KnzUklJ1hyp93JneROaKNERUz7svx9RSZyqiWAEc/OyMuSmdfFZcteE0WhYbhLoFAqXkE0mAGskWRvZ+vvmPC51AbMy6i3xwsXUqBlvqYOTBJ/c0boDmELgnUBtqgfMuP+lvfDN8I7gmetG+YgBC9gBMbZNp2BOnZYJzpAFWGPmqKZrtRKYouK9YnQ6uWCaCS3esTWaf8NcSewiCTO+bRzEvpvejCbYxYm/Dq30zvIHLI4cIpc5PHS84YXj6Ib1mRIqEWJTo4Qs996ZE7Ae/EAXnWEvWyvt1y14RBGge485Ng94uRrVVQwAWj/vAKQx13FZkPn99mIR62PzqxbwCLwhzTC653XMNWOoUxu0MEunA6q8Lc+KzErVmJKx0vKiLvi3iEE7O0fqVO93h9EZcqamFVd1+uIjqCAACX2GBl0=",
+                                    "alg": "RSA-OAEP-512"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+            "didResolutionMetadata": null,
+            "didDocumentMetadata": null
+        },
+        {
+            "didDocument": {
+                "@context": [
+                    "https://www.w3.org/ns/did/v1"
+                ],
+                "id": "did:example:viktor",
+                "verificationMethod": [
+                    {
+                        "id": "did:example:viktor#key-1",
+                        "type": "JsonWebKey2020",
+                        "controller": "did:example:viktor",
+                        "publicKeyJwk": {
+                            "alg": "RSA-OAEP-256",
+                            "e": "AQAB",
+                            "kty": "RSA",
+                            "n": "zMTX7LGVxSjvTgGXZX7pvY3zuo4LGdFoOVd2xj8puVvy0TO_xnBrOVrvcZa6b-QYtgWIfvjCzPmzmWGKyiBAXiaILf2grp9bHddXuUYSjUyoycCpT6Rn24sipo2dn_Edy04XifdP_oaPNinNrPQhwzEebOBfArMyELWjxD3Nyeuchka71hN06QAKthkcbmj7KBWzCOMSNDp-ftgkS7IGyVhjhkDS7JrHOUotFLxA4NDSD2jLBEMorixMQIsbuURn7IWjwP0_JGRB68C0POxYJa9VttZNPwn8AbUa9JKUrUgRo0J6m2tTqdg38gWpD3HPI0sofpsbZYfi0HemIJ5GVQ"
+                        }
+                    },
+                    {
+                        "id": "did:example:viktor#key-2",
+                        "type": "JsonWebKey2020",
+                        "controller": "did:example:viktor",
+                        "publicKeyJwk": {
+                            "alg": "ECDH-ES+A256KW",
+                            "crv": "P-384",
+                            "kty": "EC",
+                            "x": "9XSDhZeh4vv-3iGcFF-5rf_lbMKi2W3Uh-Omqk3ZCXnoigtMi1fVZvshDvogYB-k",
+                            "y": "tTa7NMqkYKbKD8F9JqBD4Q-0NoOgu_goIajzzbxU-bmTrvuQlbKZXG0urCduRIg6"
+                        }
+                    }
+                ],
+                "service": [
+                    {
+                        "id": "did:example:viktor#mobile",
+                        "type": "Iden3MobileServiceV1",
+                        "serviceEndpoint": "iden3comm:v0.1:callbackHandler",
+                        "metadata": null
+                    },
+                    {
+                        "id": "did:example:viktor#push",
+                        "type": "push-notification",
+                        "serviceEndpoint": "https://notification-service.privado.id/api/v1",
+                        "metadata": {
+                            "devices": [
+                                {
+                                    "ciphertext": "Asr2hUAhY6jm4J0fGJRshw6kNPAxQdwDk4KJZ1G1nBicwzyQboHBusKblRFqsvGd/pUIAhWFgxMD2C4830A0MuMH3YbBETwid2ZHNJvpm+vf2DYwO1g7BbAeDTyFOLcQ5Pvg7JTkB6SllsU0uLMwXkZmWNMvhS1yG9dZ4jgEH0N5yvJ4Z8aJbL0epVQOJu2JoiQceMbyiUMFZ/BTj6v6ToLjWv+B/+PSWDJqS+myZqNJXpPySHwxo/UWsuVGQKk5/KnzUklJ1hyp93JneROaKNERUz7svx9RSZyqiWAEc/OyMuSmdfFZcteE0WhYbhLoFAqXkE0mAGskWRvZ+vvmPC51AbMy6i3xwsXUqBlvqYOTBJ/c0boDmELgnUBtqgfMuP+lvfDN8I7gmetG+YgBC9gBMbZNp2BOnZYJzpAFWGPmqKZrtRKYouK9YnQ6uWCaCS3esTWaf8NcSewiCTO+bRzEvpvejCbYxYm/Dq30zvIHLI4cIpc5PHS84YXj6Ib1mRIqEWJTo4Qs996ZE7Ae/EAXnWEvWyvt1y14RBGge485Ng94uRrVVQwAWj/vAKQx13FZkPn99mIR62PzqxbwCLwhzTC653XMNWOoUxu0MEunA6q8Lc+KzErVmJKx0vKiLvi3iEE7O0fqVO93h9EZcqamFVd1+uIjqCAACX2GBl0=",
+                                    "alg": "RSA-OAEP-512"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+            "didResolutionMetadata": null,
+            "didDocumentMetadata": null
+        }
+    ],
+    "recipientAlg": {
+        "did:example:bob": "ECDH-ES+A256KW"
+    }
+}

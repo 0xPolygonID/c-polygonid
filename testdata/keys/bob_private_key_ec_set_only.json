@@ -1,0 +1,13 @@
+{
+    "keys": [
+        {
+            "kid": "did:example:bob#key-2",
+            "alg": "ECDH-ES+A256KW",
+            "crv": "P-384",
+            "d": "iAvWH5HAN0IdxfqSxohLzGrYLFuEbb_m265fjMup6kBsG13wjb5iAKNIMafUUzCJ",
+            "kty": "EC",
+            "x": "G4kvmvgCeAUuekHJmEzdTERHL1ZrIHkfMPUCTka3ECTuEUovZawyo-jpXcAzQ-PG",
+            "y": "0CYQ0bbP0FPlxfKvz2zcm3p6muQdGRH2d1rs_NY_8LVX2bBNGaX4sHfTB1_fAbvr"
+        }
+    ]
+}
