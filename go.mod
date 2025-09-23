@@ -14,7 +14,7 @@ require (
 	github.com/iden3/go-merkletree-sql/v2 v2.0.6
 	github.com/iden3/go-onchain-credential-adapter v0.0.0-20240425110009-4004ac8da50c
 	github.com/iden3/go-schema-processor/v2 v2.6.3
-	github.com/iden3/iden3comm/v2 v2.11.4-0.20250917220731-45a5239d7235
+	github.com/iden3/iden3comm/v2 v2.11.5
 	github.com/iden3/merkletree-proof v1.0.1
 	github.com/lestrrat-go/jwx/v3 v3.0.10
 	github.com/piprate/json-gold v0.5.1-0.20241210232033-19254b3ec65b
@@ -50,7 +50,6 @@ require (
 	github.com/iden3/contracts-abi/onchain-credential-status-resolver/go/abi v1.0.2 // indirect
 	github.com/iden3/contracts-abi/onchain-non-merklized-issuer-base/v0/go/abi v0.0.0-20240222110004-06aa097d1318 // indirect
 	github.com/iden3/contracts-abi/state/go/abi v1.1.0 // indirect
-	github.com/iden3/go-iden3-crypto/v2 v2.0.0 // indirect
 	github.com/iden3/go-jwz/v2 v2.2.2 // indirect
 	github.com/iden3/go-rapidsnark/prover v0.0.10 // indirect
 	github.com/iden3/go-rapidsnark/types v0.0.3 // indirect

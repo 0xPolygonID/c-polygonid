@@ -162,8 +162,6 @@ github.com/iden3/go-iden3-core/v2 v2.3.2 h1:kZq/TiSUmBKO/mvPUucfFE45ugTW+hXXlGT+
 github.com/iden3/go-iden3-core/v2 v2.3.2/go.mod h1:8vmG6y8k9VS7iNoxuiKukKbRQFsMyabCc+i8er07zOs=
 github.com/iden3/go-iden3-crypto v0.0.17 h1:NdkceRLJo/pI4UpcjVah4lN/a3yzxRUGXqxbWcYh9mY=
 github.com/iden3/go-iden3-crypto v0.0.17/go.mod h1:dLpM4vEPJ3nDHzhWFXDjzkn1qHoBeOT/3UEhXsEsP3E=
-github.com/iden3/go-iden3-crypto/v2 v2.0.0 h1:MpP+NlT1l5g9T9Y1m486eWnM1cojqa9K0qxd+kv3E/M=
-github.com/iden3/go-iden3-crypto/v2 v2.0.0/go.mod h1:9C3wVqOVNHd00rNZTR1tXd9pUwGTPyY7beJGmmHxUCc=
 github.com/iden3/go-jwz/v2 v2.2.2 h1:bTHsMc9j3TNLcjWPt/FTnfGkUcCXhPLjF8G39aXpkcQ=
 github.com/iden3/go-jwz/v2 v2.2.2/go.mod h1:/+URs74IGWAuyr9+nTB/bYbQ8SXgm9zjUW9HLThFd1E=
 github.com/iden3/go-merkletree-sql/v2 v2.0.6 h1:vsVDImnvnHf7Ggr45ptFOXJyWNA/8IwVQO1jzRLUlY8=
@@ -182,8 +180,8 @@ github.com/iden3/go-rapidsnark/witness/wazero v0.0.0-20230524142950-0986cf057d4e
 github.com/iden3/go-rapidsnark/witness/wazero v0.0.0-20230524142950-0986cf057d4e/go.mod h1:UEBifEzw62T6VzIHJeHuUgeLg2U/J9ttf7hOwQEqnYk=
 github.com/iden3/go-schema-processor/v2 v2.6.3 h1:WSSNREiZjQurhLX9moI0A36vuixKgmBetqVXhifZA0A=
 github.com/iden3/go-schema-processor/v2 v2.6.3/go.mod h1:OxNV97oEShKpSIE7KSEqFFktBkPJDLDW/oNbT+ky8KU=
-github.com/iden3/iden3comm/v2 v2.11.4-0.20250917220731-45a5239d7235 h1:4Gh7qnsV+vWfe3dQnv/TSWaE0BJ8TbhDU86CRtuwbsc=
-github.com/iden3/iden3comm/v2 v2.11.4-0.20250917220731-45a5239d7235/go.mod h1:L7U8OUflsURr0xkzRf4TD22mKkxpPbgjDcQZCa8a0xI=
+github.com/iden3/iden3comm/v2 v2.11.5 h1:yoAdd7uFkGa6aGWPc/0iO0Me+P5IMo6Y8+9Jk5PmXS0=
+github.com/iden3/iden3comm/v2 v2.11.5/go.mod h1:29qLgEECd/g5QzfCNwMAP4+yx7fUKbbwTMszSpfFUws=
 github.com/iden3/jose-primitives v0.0.5 h1:jj7EAXrKBFmuj8LdHTC47MBMQwtKm0d6Uc9k8HrIZ1c=
 github.com/iden3/jose-primitives v0.0.5/go.mod h1:KhDi+Mt/Z43PK4xLmXPy+C3tFCypRcdj6kM6h0IOx0U=
 github.com/iden3/merkletree-proof v1.0.1 h1:4Srfjm4rsFwjEhhvFDC8/VzK1eYs1jYzEOmwS962s2A=
