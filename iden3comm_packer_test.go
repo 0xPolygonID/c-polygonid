@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/lestrrat-go/jwx/v3/jwk"
 	"github.com/stretchr/testify/require"
 )
 
@@ -30,9 +31,9 @@ func TestAnonPackFlow_RSA(t *testing.T) {
 	require.NotEmpty(t, cyphertext)
 
 	recipients := []string{
-		filepath.Join("testdata", "keys", "alice_private_key_set.json"),
-		filepath.Join("testdata", "keys", "bob_private_key_set.json"),
-		filepath.Join("testdata", "keys", "viktor_private_key_set.json"),
+		filepath.Join("testdata", "keys", "alice_private_key_rsa_set_only.json"),
+		filepath.Join("testdata", "keys", "bob_private_key_rsa_set_only.json"),
+		filepath.Join("testdata", "keys", "viktor_private_key_rsa_set_only.json"),
 	}
 
 	for _, r := range recipients {
@@ -65,9 +66,9 @@ func TestAnonPackFlow_Multi(t *testing.T) {
 	require.NotEmpty(t, cyphertext)
 
 	recipients := []string{
-		filepath.Join("testdata", "keys", "alice_private_key_set.json"),
+		filepath.Join("testdata", "keys", "alice_private_key_rsa_set_only.json"),
 		filepath.Join("testdata", "keys", "bob_private_key_ec_set_only.json"),
-		filepath.Join("testdata", "keys", "viktor_private_key_set.json"),
+		filepath.Join("testdata", "keys", "viktor_private_key_rsa_set_only.json"),
 	}
 
 	for _, r := range recipients {
@@ -90,6 +91,49 @@ func TestAnonPackFlow_Multi(t *testing.T) {
 	}
 }
 
+func TestAnonPack_Error_MultipleKeysInSet(t *testing.T) {
+	fp := filepath.Join("testdata", "anon_pack_inputs.json")
+	packInput, err := os.ReadFile(fp)
+	require.NoError(t, err)
+
+	cyphertext, err := AnonPack(packInput)
+	require.NoError(t, err)
+	require.NotEmpty(t, cyphertext)
+
+	recipients := []string{
+		filepath.Join("testdata", "keys", "alice_private_key_rsa_set_only.json"),
+		filepath.Join("testdata", "keys", "alice_private_key_ec_set_only.json"),
+	}
+
+	mergedKeySet := jwk.NewSet()
+	for _, r := range recipients {
+		keysetBytes, err := os.ReadFile(r)
+		require.NoError(t, err)
+
+		keyset, err := jwk.Parse(keysetBytes)
+		require.NoError(t, err)
+
+		k, ok := keyset.Key(0)
+		require.True(t, ok)
+		require.NotNil(t, k)
+
+		err = mergedKeySet.AddKey(k)
+		require.NoError(t, err)
+	}
+
+	setBytes, err := json.Marshal(mergedKeySet)
+	require.NoError(t, err)
+
+	unpackInput, err := json.Marshal(anonUnpackerInput{
+		Cyphertext: cyphertext,
+		KeySet:     setBytes,
+	})
+	require.NoError(t, err)
+
+	_, err = AnonUnpack(unpackInput)
+	require.ErrorContains(t, err, "no recipient found")
+}
+
 func Benchmark_3_RSA_Recipients(b *testing.B) {
 	fp := filepath.Join("testdata", "anon_pack_inputs.json")
 	packInput, err := os.ReadFile(fp)
@@ -106,7 +150,8 @@ func Benchmark_3_RSA_Recipients(b *testing.B) {
 
 	b.Run("Unpack_Alice_Only", func(b *testing.B) {
 		var keysetBytes []byte
-		keysetBytes, err = os.ReadFile(filepath.Join("testdata", "keys", "alice_private_key_set.json"))
+		keysetBytes, err = os.ReadFile(
+			filepath.Join("testdata", "keys", "alice_private_key_rsa_set_only.json"))
 		require.NoError(b, err)
 
 		var unpackInput []byte

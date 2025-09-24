@@ -1,7 +1,6 @@
 {
     "keys": [
         {
-            "kid": "did:example:bob#key-2",
             "alg": "ECDH-ES+A256KW",
             "crv": "P-384",
             "d": "iAvWH5HAN0IdxfqSxohLzGrYLFuEbb_m265fjMup6kBsG13wjb5iAKNIMafUUzCJ",

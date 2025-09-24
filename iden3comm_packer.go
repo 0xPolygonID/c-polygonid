@@ -3,6 +3,7 @@ package c_polygonid
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/iden3/driver-did-iden3/pkg/document"
@@ -120,12 +121,15 @@ func AnonUnpack(in []byte) ([]byte, error) {
 		return nil, fmt.Errorf("failed to parse key set: %w", err)
 	}
 
-	resolveKeyFn := func(kid string) (interface{}, error) {
-		k, ok := keySet.LookupKeyID(kid)
-		if !ok {
-			return nil, fmt.Errorf("key '%s' not found", kid)
+	resolveKeyFn := func(_ string) (interface{}, error) {
+		if keySet.Len() != 1 {
+			return nil, errors.New("key set must contain exactly one key")
 		}
-		return k, nil
+		key, ok := keySet.Key(0)
+		if !ok || key == nil {
+			return nil, errors.New("key idx: 0 not found in key set")
+		}
+		return key, nil
 	}
 
 	pm := iden3comm.NewPackageManager()
