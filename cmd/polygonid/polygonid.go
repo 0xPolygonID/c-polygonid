@@ -1063,13 +1063,13 @@ func PLGNAAnonPack(jsonResponse **C.char, in *C.char,
 
 	inData := C.GoBytes(unsafe.Pointer(in), C.int(C.strlen(in)))
 
-	cyphertext, err := c_polygonid.AnonPack(inData)
+	jwe, err := c_polygonid.AnonPack(inData)
 	if err != nil {
 		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
 		return false
 	}
 
-	*jsonResponse = C.CString(string(cyphertext))
+	*jsonResponse = C.CString(string(jwe))
 	return true
 }
 
