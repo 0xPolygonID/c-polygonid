@@ -1050,7 +1050,7 @@ func PLGNValidateAttestationDocument(jsonResponse **C.char, in *C.char,
 		in, cfg, status)
 }
 
-// PLGNAAnonPack an jwe token for the input data.
+// PLGNAAnonPack creates a JWE token for the input data.
 //
 //export PLGNAAnonPack
 func PLGNAAnonPack(jsonResponse **C.char, in *C.char,
@@ -1073,7 +1073,7 @@ func PLGNAAnonPack(jsonResponse **C.char, in *C.char,
 	return true
 }
 
-// PLGNAAnonUnpack decrypt jwe message to iden3comm basic message.
+// PLGNAAnonUnpack decrypts a JWE message to an iden3comm basic message.
 //
 //export PLGNAAnonUnpack
 func PLGNAAnonUnpack(jsonResponse **C.char, in *C.char,
