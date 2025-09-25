@@ -26,9 +26,9 @@ func TestAnonPackFlow_RSA(t *testing.T) {
 	packInput, err := os.ReadFile(fp)
 	require.NoError(t, err)
 
-	cyphertext, err := AnonPack(packInput)
+	ciphertext, err := AnonPack(packInput)
 	require.NoError(t, err)
-	require.NotEmpty(t, cyphertext)
+	require.NotEmpty(t, ciphertext)
 
 	recipients := []string{
 		filepath.Join("testdata", "keys", "alice_private_key_rsa_set_only.json"),
@@ -42,7 +42,7 @@ func TestAnonPackFlow_RSA(t *testing.T) {
 			require.NoError(t, err)
 
 			unpackInput, err := json.Marshal(anonUnpackerInput{
-				Cyphertext: cyphertext,
+				Ciphertext: ciphertext,
 				KeySet:     keysetBytes,
 			})
 			require.NoError(t, err)
@@ -61,9 +61,9 @@ func TestAnonPackFlow_Multi(t *testing.T) {
 	packInput, err := os.ReadFile(fp)
 	require.NoError(t, err)
 
-	cyphertext, err := AnonPack(packInput)
+	ciphertext, err := AnonPack(packInput)
 	require.NoError(t, err)
-	require.NotEmpty(t, cyphertext)
+	require.NotEmpty(t, ciphertext)
 
 	recipients := []string{
 		filepath.Join("testdata", "keys", "alice_private_key_rsa_set_only.json"),
@@ -77,7 +77,7 @@ func TestAnonPackFlow_Multi(t *testing.T) {
 			require.NoError(t, err)
 
 			unpackInput, err := json.Marshal(anonUnpackerInput{
-				Cyphertext: cyphertext,
+				Ciphertext: ciphertext,
 				KeySet:     keysetBytes,
 			})
 			require.NoError(t, err)
@@ -96,9 +96,9 @@ func TestAnonPack_Error_MultipleKeysInSet(t *testing.T) {
 	packInput, err := os.ReadFile(fp)
 	require.NoError(t, err)
 
-	cyphertext, err := AnonPack(packInput)
+	ciphertext, err := AnonPack(packInput)
 	require.NoError(t, err)
-	require.NotEmpty(t, cyphertext)
+	require.NotEmpty(t, ciphertext)
 
 	recipients := []string{
 		filepath.Join("testdata", "keys", "alice_private_key_rsa_set_only.json"),
@@ -125,7 +125,7 @@ func TestAnonPack_Error_MultipleKeysInSet(t *testing.T) {
 	require.NoError(t, err)
 
 	unpackInput, err := json.Marshal(anonUnpackerInput{
-		Cyphertext: cyphertext,
+		Ciphertext: ciphertext,
 		KeySet:     setBytes,
 	})
 	require.NoError(t, err)
@@ -139,12 +139,12 @@ func Benchmark_3_RSA_Recipients(b *testing.B) {
 	packInput, err := os.ReadFile(fp)
 	require.NoError(b, err)
 
-	var finalCyphertexts []byte
+	var finalCiphertexts []byte
 	b.Run("Pack", func(b *testing.B) {
 		for b.Loop() {
-			finalCyphertexts, err = AnonPack(packInput)
+			finalCiphertexts, err = AnonPack(packInput)
 			require.NoError(b, err)
-			require.NotEmpty(b, finalCyphertexts)
+			require.NotEmpty(b, finalCiphertexts)
 		}
 	})
 
@@ -156,7 +156,7 @@ func Benchmark_3_RSA_Recipients(b *testing.B) {
 
 		var unpackInput []byte
 		unpackInput, err = json.Marshal(anonUnpackerInput{
-			Cyphertext: finalCyphertexts,
+			Ciphertext: finalCiphertexts,
 			KeySet:     keysetBytes,
 		})
 		require.NoError(b, err)

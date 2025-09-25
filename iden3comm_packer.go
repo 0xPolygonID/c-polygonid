@@ -46,13 +46,13 @@ func (a *anonPackerInput) validate() error {
 }
 
 type anonUnpackerInput struct {
-	Cyphertext json.RawMessage `json:"cyphertext"`
+	Ciphertext json.RawMessage `json:"ciphertext"`
 	KeySet     json.RawMessage `json:"keySet"`
 }
 
 func (a *anonUnpackerInput) validate() error {
-	if len(a.Cyphertext) == 0 {
-		return fmt.Errorf("cyphertext is required")
+	if len(a.Ciphertext) == 0 {
+		return fmt.Errorf("ciphertext is required")
 	}
 	if len(a.KeySet) == 0 {
 		return fmt.Errorf("keySet is required")
@@ -95,13 +95,13 @@ func AnonPack(in []byte) ([]byte, error) {
 		})
 	}
 
-	cyphertext, err := pm.Pack(packers.MediaTypeEncryptedMessage, encInfo.Message, packers.AnoncryptPackerParams{
+	ciphertext, err := pm.Pack(packers.MediaTypeEncryptedMessage, encInfo.Message, packers.AnoncryptPackerParams{
 		Recipients: recipientDids,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to pack message: %w", err)
 	}
-	return cyphertext, nil
+	return ciphertext, nil
 }
 
 // AnonUnpack performs decryption of an anonymously encrypted message using the provided key set.
@@ -138,7 +138,7 @@ func AnonUnpack(in []byte) ([]byte, error) {
 		return nil, fmt.Errorf("failed to register packer: %w", err)
 	}
 
-	plaintext, mt, err := pm.Unpack(decInfo.Cyphertext)
+	plaintext, mt, err := pm.Unpack(decInfo.Ciphertext)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unpack message: %w", err)
 	}
