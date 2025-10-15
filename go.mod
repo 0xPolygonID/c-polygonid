@@ -14,7 +14,7 @@ require (
 	github.com/iden3/go-merkletree-sql/v2 v2.0.6
 	github.com/iden3/go-onchain-credential-adapter v0.0.0-20240425110009-4004ac8da50c
 	github.com/iden3/go-schema-processor/v2 v2.6.3
-	github.com/iden3/iden3comm/v2 v2.11.7
+	github.com/iden3/iden3comm/v2 v2.11.8
 	github.com/iden3/merkletree-proof v1.0.1
 	github.com/lestrrat-go/jwx/v3 v3.0.10
 	github.com/piprate/json-gold v0.5.1-0.20241210232033-19254b3ec65b

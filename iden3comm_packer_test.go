@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/iden3/go-schema-processor/v2/verifiable"
+	jweProvider "github.com/iden3/iden3comm/v2/packers/providers/jwe"
 	"github.com/lestrrat-go/jwx/v3/jwk"
 	"github.com/stretchr/testify/require"
 )
@@ -132,7 +133,7 @@ func TestAnonPack_Error_MultipleKeysInSet(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = AnonUnpack(unpackInput)
-	require.ErrorContains(t, err, "no recipient found")
+	require.ErrorIs(t, err, jweProvider.ErrDecryptionKeyNotFound)
 }
 
 func Benchmark_3_RSA_Recipients(b *testing.B) {
