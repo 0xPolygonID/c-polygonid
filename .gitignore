@@ -2,3 +2,4 @@
 build/
 ios/
 examples/a.out
+.vscode

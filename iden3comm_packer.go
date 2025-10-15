@@ -10,6 +10,7 @@ import (
 	"github.com/iden3/driver-did-iden3/pkg/services"
 	"github.com/iden3/iden3comm/v2"
 	"github.com/iden3/iden3comm/v2/packers"
+	jweProvider "github.com/iden3/iden3comm/v2/packers/providers/jwe"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwk"
 )
@@ -154,4 +155,37 @@ func AnonUnpack(in []byte) ([]byte, error) {
 	}
 
 	return pb, nil
+}
+
+// DecryptJWE decrypts a JWE ciphertext using the provided key set.
+func DecryptJWE(in []byte) ([]byte, error) {
+	var decInfo anonUnpackerInput
+	err := json.Unmarshal(in, &decInfo)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal input: %w", err)
+	}
+	err = decInfo.validate()
+	if err != nil {
+		return nil, fmt.Errorf("invalid input: %w", err)
+	}
+
+	keySet, err := jwk.Parse(decInfo.KeySet)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse key set: %w", err)
+	}
+
+	if keySet.Len() != 1 {
+		return nil, errors.New("key set must contain exactly one key")
+	}
+
+	key, ok := keySet.Key(0)
+	if !ok || key == nil {
+		return nil, errors.New("key idx: 0 not found in key set")
+	}
+
+	keyResolutionFn := func(_ string) (interface{}, error) {
+		return key, nil
+	}
+
+	return jweProvider.Decrypt(decInfo.Ciphertext, keyResolutionFn)
 }

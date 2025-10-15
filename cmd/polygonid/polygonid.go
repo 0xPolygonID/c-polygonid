@@ -1096,6 +1096,29 @@ func PLGNAAnonUnpack(jsonResponse **C.char, in *C.char,
 	return true
 }
 
+// PLGNDecryptJWE decrypts a JWE token.
+//
+//export PLGNDecryptJWE
+func PLGNDecryptJWE(jsonResponse **C.char, in *C.char,
+	cfg *C.char, status **C.PLGNStatus) bool {
+	if jsonResponse == nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_NIL_POINTER,
+			"jsonResponse pointer is nil")
+		return false
+	}
+
+	inData := C.GoBytes(unsafe.Pointer(in), C.int(C.strlen(in)))
+
+	jwe, err := c_polygonid.DecryptJWE(inData)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
+		return false
+	}
+
+	*jsonResponse = C.CString(string(jwe))
+	return true
+}
+
 type atomicQueryInputsFn func(ctx context.Context, cfg c_polygonid.EnvConfig,
 	in []byte) (c_polygonid.AtomicQueryInputsResponse, error)
 

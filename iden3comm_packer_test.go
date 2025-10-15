@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/iden3/go-schema-processor/v2/verifiable"
 	"github.com/lestrrat-go/jwx/v3/jwk"
 	"github.com/stretchr/testify/require"
 )
@@ -167,4 +168,21 @@ func Benchmark_3_RSA_Recipients(b *testing.B) {
 			require.NotEmpty(b, finalPlaintext)
 		}
 	})
+}
+
+func TestDecryptJWE(t *testing.T) {
+	expectedCredentialJSON := `{"id":"urn:uuid:a6b89dca-a8e8-11f0-9e07-3ec1cb51743a","@context":["https://www.w3.org/2018/credentials/v1","https://schema.iden3.io/core/jsonld/iden3proofs.jsonld","https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld"],"type":["VerifiableCredential","KYCAgeCredential"],"expirationDate":"2030-04-25T16:29:26+02:00","issuanceDate":"2025-10-14T10:29:23.35386Z","credentialSubject":{"birthday":19960424,"documentType":2,"id":"did:iden3:polygon:mumbai:x3HstHLj2rTp6HHXk2WczYP7w3rpCsRbwCMeaQ2H2","type":"KYCAgeCredential"},"credentialStatus":{"id":"https://issuernode-mumbai-protocol.polygonid.me/v2/agent","type":"Iden3commRevocationStatusV1.0","revocationNonce":2229961145},"issuer":"did:polygonid:polygon:amoy:2qXnMYUfndFcM4NVVjbCrzjfMj9eoDYw6Y7zXtHaHR","credentialSchema":{"id":"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json/KYCAgeCredential-v3.json","type":"JsonSchema2023"}}`
+
+	fp := filepath.Join("testdata", "jwe_decrypt_input.json")
+	packInput, err := os.ReadFile(fp)
+	require.NoError(t, err)
+
+	plaintext, err := DecryptJWE(packInput)
+	require.NoError(t, err)
+	require.NotEmpty(t, plaintext)
+
+	var credential verifiable.W3CCredential
+	require.NoError(t, json.Unmarshal(plaintext, &credential))
+
+	require.JSONEq(t, expectedCredentialJSON, string(plaintext))
 }
