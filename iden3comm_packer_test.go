@@ -244,6 +244,13 @@ func TestDecryptEncryptedCredential_SigProof_Revocation_Type_Agent(t *testing.T)
 	fn := func(path string) string {
 		return fmt.Sprintf("testdata/%s", path)
 	}
+
+	mockBodyProcessorFunc := func(url string, body []byte) []byte {
+		if url == "https://issuer-node-core-api-testing.privado.id/v2/agent" {
+			return []byte{}
+		}
+		return removeIdFromEthBody(url, body)
+	}
 	defer httpmock.MockHTTPClient(t,
 		map[string]string{
 			`http://localhost:8545%%%{"jsonrpc":"2.0","method":"eth_call","params":[{"from":"0x0000000000000000000000000000000000000000","input":"0xb4bdea55000b272e8971d11d0515fc84169f32d3135688ac34ace2428b34861c20861302","to":"0x134b1be34911e39a8397ec6289782989729807a4"},"latest"]}`:                                                                 fn("httpresp_eth_state_2qKc2ns18nV6uDSfaR1RVd7zF1Nm9vfeNZuvuEXQ3X.json"),
@@ -253,11 +260,11 @@ func TestDecryptEncryptedCredential_SigProof_Revocation_Type_Agent(t *testing.T)
 			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v4.jsonld":  fn("httpresp_kyc_v4.jsonld"),
 			"https://www.w3.org/2018/credentials/v1":                                                         fn("httpresp_w3_org_2018_credentials_v1.jsonld"),
 			"https://resolver.privado.id/1.0/identifiers/did%3Apolygonid%3Apolygon%3Aamoy%3A2qZpXYbQ9JA7xjxZXXh1WJkc9eaN49XChzCfgYCYMZ?state=e8f0256542d65ab4dd5fe2b4959075b1c54a810a644f2f950018866c25d70411": fn("httpresp_universal_verifier_state_e8f0256542d65ab4dd5fe2b4959075b1c54a810a644f2f950018866c25d70411.json"),
-			"https://issuer-node-core-api-testing.privado.id/v2/agent": fn("httpresp_agent_revocation_to_did:polygonid:polygon:amoy:2qZpXYbQ9JA7xjxZXXh1WJkc9eaN49XChzCfgYCYMZ.json"),
+			"https://issuer-node-core-api-testing.privado.id/v2/agent%%%": fn("httpresp_agent_revocation_to_did:polygonid:polygon:amoy:2qZpXYbQ9JA7xjxZXXh1WJkc9eaN49XChzCfgYCYMZ.json"),
 		},
 		httpmock.IgnoreUntouchedURLs(),
-		httpmock.WithPostRequestBodyProcessor(removeIdFromEthBody),
-		httpmock.WithIgnoreBodyFor([]string{"https://issuer-node-core-api-testing.privado.id/v2/agent"}))()
+		httpmock.WithPostRequestBodyProcessor(mockBodyProcessorFunc),
+	)()
 	cfg := EnvConfig{
 		ChainConfigs: map[core.ChainID]ChainConfig{
 			80002: {
