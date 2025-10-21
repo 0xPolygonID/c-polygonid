@@ -62,7 +62,7 @@ func preserveIPFSHttpCli() func() {
 	}
 }
 
-func removeIdFromEthBody(body []byte) []byte {
+func removeIdFromEthBody(_ string, body []byte) []byte {
 	var ethBody map[string]any
 	err := json.Unmarshal(body, &ethBody)
 	if err != nil {
