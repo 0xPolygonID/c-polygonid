@@ -178,10 +178,10 @@ github.com/iden3/go-rapidsnark/witness/v2 v2.0.0 h1:mkY6VDfwKVJc83QGKmwVXY2LYepi
 github.com/iden3/go-rapidsnark/witness/v2 v2.0.0/go.mod h1:3JRjqUfW1hgI9hzLDO0v8z/DUkR0ZUehhYLlnIfRxnA=
 github.com/iden3/go-rapidsnark/witness/wazero v0.0.0-20230524142950-0986cf057d4e h1:WeiFCrpj5pLRtSA4Mg03yTrSZhHHqN/k5b6bwxd9/tY=
 github.com/iden3/go-rapidsnark/witness/wazero v0.0.0-20230524142950-0986cf057d4e/go.mod h1:UEBifEzw62T6VzIHJeHuUgeLg2U/J9ttf7hOwQEqnYk=
-github.com/iden3/go-schema-processor/v2 v2.6.3 h1:WSSNREiZjQurhLX9moI0A36vuixKgmBetqVXhifZA0A=
-github.com/iden3/go-schema-processor/v2 v2.6.3/go.mod h1:OxNV97oEShKpSIE7KSEqFFktBkPJDLDW/oNbT+ky8KU=
-github.com/iden3/iden3comm/v2 v2.11.8 h1:p09Z8+lgrtp2mBD0PiJxl9LPPBWI368BLlX9Kk7nNhc=
-github.com/iden3/iden3comm/v2 v2.11.8/go.mod h1:29qLgEECd/g5QzfCNwMAP4+yx7fUKbbwTMszSpfFUws=
+github.com/iden3/go-schema-processor/v2 v2.6.4 h1:7Vy6KRvWOowI2YIEhJHbqvmVJQzrd1hjtDP2lwu/mGY=
+github.com/iden3/go-schema-processor/v2 v2.6.4/go.mod h1:OxNV97oEShKpSIE7KSEqFFktBkPJDLDW/oNbT+ky8KU=
+github.com/iden3/iden3comm/v2 v2.11.9 h1:WnaxHsk3GbHGHQqZT+J1vHJrgKrf4uuqAgLX681HAFQ=
+github.com/iden3/iden3comm/v2 v2.11.9/go.mod h1:29qLgEECd/g5QzfCNwMAP4+yx7fUKbbwTMszSpfFUws=
 github.com/iden3/jose-primitives v0.0.5 h1:jj7EAXrKBFmuj8LdHTC47MBMQwtKm0d6Uc9k8HrIZ1c=
 github.com/iden3/jose-primitives v0.0.5/go.mod h1:KhDi+Mt/Z43PK4xLmXPy+C3tFCypRcdj6kM6h0IOx0U=
 github.com/iden3/merkletree-proof v1.0.1 h1:4Srfjm4rsFwjEhhvFDC8/VzK1eYs1jYzEOmwS962s2A=

@@ -1,0 +1,28 @@
+{
+    "@context": "https://w3id.org/did-resolution/v1",
+    "didDocument": {
+        "@context": [
+            "https://www.w3.org/ns/did/v1",
+            "https://schema.iden3.io/core/jsonld/auth.jsonld"
+        ],
+        "id": "did:polygonid:polygon:amoy:2qWBHM4gURfUd6Fc3s1wiEAEWhypWoiPuM3GuJM1op",
+        "verificationMethod": [
+            {
+                "id": "did:polygonid:polygon:amoy:2qWBHM4gURfUd6Fc3s1wiEAEWhypWoiPuM3GuJM1op#state-info",
+                "type": "Iden3StateInfo2023",
+                "controller": "did:polygonid:polygon:amoy:2qWBHM4gURfUd6Fc3s1wiEAEWhypWoiPuM3GuJM1op",
+                "stateContractAddress": "80002:0x1a4cC30f2aA0377b0c3bc9848766D90cb4404124",
+                "published": false
+            }
+        ]
+    },
+    "didResolutionMetadata": {
+        "@context": [
+            "https://schema.iden3.io/core/jsonld/resolution.jsonld"
+        ],
+        "contentType": "application/did+ld+json",
+        "retrieved": "2025-10-20T12:21:28.369912832Z",
+        "type": "Iden3ResolutionMetadata"
+    },
+    "didDocumentMetadata": {}
+}

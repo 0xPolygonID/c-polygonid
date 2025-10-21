@@ -1119,6 +1119,24 @@ func PLGNDecryptJWE(jsonResponse **C.char, in *C.char,
 	return true
 }
 
+// PLGNDecryptEncryptedCredential decrypts an encrypted verifiable credential.
+//
+//export PLGNDecryptEncryptedCredential
+func PLGNDecryptEncryptedCredential(jsonResponse **C.char, in *C.char,
+	cfg *C.char, status **C.PLGNStatus) bool {
+	return callGenericFn(c_polygonid.DecryptEncryptedCredential, jsonResponse, in,
+		cfg, status)
+}
+
+// PLGNVerifyProof verifies a zk proof.
+//
+//export PLGNVerifyProof
+func PLGNVerifyProof(jsonResponse **C.char, in *C.char,
+	cfg *C.char, status **C.PLGNStatus) bool {
+	return callGenericFn(c_polygonid.VerifyProof, jsonResponse, in,
+		cfg, status)
+}
+
 type atomicQueryInputsFn func(ctx context.Context, cfg c_polygonid.EnvConfig,
 	in []byte) (c_polygonid.AtomicQueryInputsResponse, error)
 

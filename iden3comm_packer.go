@@ -5,12 +5,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/iden3/driver-did-iden3/pkg/document"
 	"github.com/iden3/driver-did-iden3/pkg/services"
+	"github.com/iden3/go-iden3-core/v2/w3c"
+	"github.com/iden3/go-schema-processor/v2/verifiable"
 	"github.com/iden3/iden3comm/v2"
 	"github.com/iden3/iden3comm/v2/packers"
 	jweProvider "github.com/iden3/iden3comm/v2/packers/providers/jwe"
+	"github.com/iden3/iden3comm/v2/protocol"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwk"
 )
@@ -49,6 +53,11 @@ func (a *anonPackerInput) validate() error {
 type anonUnpackerInput struct {
 	Ciphertext json.RawMessage `json:"ciphertext"`
 	KeySet     json.RawMessage `json:"keySet"`
+}
+
+type encryptedCredentialInput struct {
+	EncryptedCredentialIssuanceMessage protocol.EncryptedCredentialIssuanceMessage `json:"encryptedCredentialIssuanceMessage"`
+	KeySet                             json.RawMessage                             `json:"keySet"`
 }
 
 func (a *anonUnpackerInput) validate() error {
@@ -164,7 +173,129 @@ func DecryptJWE(in []byte) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal input: %w", err)
 	}
-	err = decInfo.validate()
+	return decrypt(decInfo)
+}
+
+// DecryptEncryptedCredential decrypts and verifies a W3C credential in JWE format.
+func DecryptEncryptedCredential(ctx context.Context, cfg EnvConfig, in []byte) ([]byte, error) {
+	var msg encryptedCredentialInput
+	err := json.Unmarshal(in, &msg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal encrypted credential issuance message: %w", err)
+	}
+
+	jweBytes, err := json.Marshal(msg.EncryptedCredentialIssuanceMessage.Body.Data)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal JWE data: %w", err)
+	}
+
+	decryptIn := anonUnpackerInput{
+		Ciphertext: jweBytes,
+		KeySet:     msg.KeySet,
+	}
+	w3cCredentialBytes, err := decrypt(decryptIn)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decrypt credential: %w", err)
+	}
+
+	var credential verifiable.W3CCredential
+	err = json.Unmarshal(w3cCredentialBytes, &credential)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal credential: %w", err)
+	}
+
+	err = verifyIntegrity(credential, msg.EncryptedCredentialIssuanceMessage.Body)
+	if err != nil {
+		return nil, fmt.Errorf("credential integrity verification failed: %w", err)
+	}
+
+	// set proof from the encrypted credential issuance message to w3c credential
+	credential.Proof = msg.EncryptedCredentialIssuanceMessage.Body.Proof
+
+	err = verifyProof(ctx, cfg, credential)
+	if err != nil {
+		return nil, fmt.Errorf("failed to verify credential proof: %w", err)
+	}
+
+	return w3cCredentialBytes, nil
+}
+
+// VerifyProof verifies the proofs of a W3C credential.
+// The function returns interface{} to satisfy an interface.
+func VerifyProof(ctx context.Context, cfg EnvConfig, credentialBytes []byte) (interface{}, error) {
+	var credential verifiable.W3CCredential
+	err := json.Unmarshal(credentialBytes, &credential)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal credential: %w", err)
+	}
+	return nil, verifyProof(ctx, cfg, credential)
+}
+
+func verifyIntegrity(credential verifiable.W3CCredential, encryptedCredential protocol.EncryptedIssuanceMessageBody) error {
+	if !strings.Contains(credential.ID, encryptedCredential.ID) {
+		return fmt.Errorf("credential ID does not match encrypted issuance message ID")
+	}
+	if !arrayContainsString(credential.Context, encryptedCredential.Context) {
+		return fmt.Errorf("credential context does not contain encrypted issuance message context")
+	}
+	if !arrayContainsString(credential.Type, encryptedCredential.Type) {
+		return fmt.Errorf("credential type does not contain encrypted issuance message type")
+	}
+	return nil
+}
+
+type wrapper func(cs verifiable.CredentialStatus) (verifiable.RevocationStatus, error)
+
+func (f wrapper) Resolve(ctx context.Context,
+	credentialStatus verifiable.CredentialStatus) (verifiable.RevocationStatus, error) {
+	return f(credentialStatus)
+}
+
+// verifyProof verifies the proofs of a W3C credential.
+func verifyProof(ctx context.Context, cfg EnvConfig, credential verifiable.W3CCredential) error {
+	proofsToVerify := make([]verifiable.ProofType, 0, len(credential.Proof))
+	for _, p := range credential.Proof {
+		proofsToVerify = append(proofsToVerify, p.ProofType())
+	}
+
+	userDID, err := w3c.ParseDID(credential.CredentialSubject["id"].(string))
+	if err != nil {
+		return fmt.Errorf("failed to parse user DID: %w", err)
+	}
+
+	issuerDID, err := w3c.ParseDID(credential.Issuer)
+	if err != nil {
+		return fmt.Errorf("failed to parse issuer DID: %w", err)
+	}
+
+	fn := func(cs verifiable.CredentialStatus) (verifiable.RevocationStatus, error) {
+		return cachedResolve(ctx, cfg, issuerDID, userDID, cs, getResolversRegistry)
+	}
+
+	universalResolverHTTPClient := verifiable.NewHTTPDIDResolver(cfg.UniversalResolverURL)
+
+	defaultResolver := verifiable.DefaultCredentialStatusResolverRegistry
+	defaultResolver.Register(verifiable.SparseMerkleTreeProof, wrapper(fn))
+	defaultResolver.Register(verifiable.Iden3ReverseSparseMerkleTreeProof, wrapper(fn))
+	defaultResolver.Register(verifiable.Iden3commRevocationStatusV1, wrapper(fn))
+	defaultResolver.Register(verifiable.Iden3OnchainSparseMerkleTreeProof2023, wrapper(fn))
+
+	for _, proofTypeToVerify := range proofsToVerify {
+		if err := credential.VerifyProof(
+			ctx,
+			proofTypeToVerify,
+			universalResolverHTTPClient,
+			verifiable.WithStatusResolverRegistry(defaultResolver),
+		); err != nil {
+			return fmt.Errorf("failed to verify proof of type %s: %w", proofTypeToVerify, err)
+		}
+	}
+
+	return nil
+}
+
+func decrypt(decInfo anonUnpackerInput) ([]byte, error) {
+	err := decInfo.validate()
 	if err != nil {
 		return nil, fmt.Errorf("invalid input: %w", err)
 	}
@@ -188,4 +319,13 @@ func DecryptJWE(in []byte) ([]byte, error) {
 	}
 
 	return jweProvider.Decrypt(decInfo.Ciphertext, keyResolutionFn)
+}
+
+func arrayContainsString(arr []string, str string) bool {
+	for _, a := range arr {
+		if a == str {
+			return true
+		}
+	}
+	return false
 }

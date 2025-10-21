@@ -21,6 +21,8 @@ type EnvConfig struct {
 	// backward incompatible fields, it's an error to use them
 	EthereumURL       string
 	StateContractAddr string
+
+	UniversalResolverURL string
 }
 
 var globalRegistrationLock sync.Mutex
