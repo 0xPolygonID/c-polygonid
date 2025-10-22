@@ -1133,31 +1133,8 @@ func PLGNDecryptEncryptedCredential(jsonResponse **C.char, in *C.char,
 //export PLGNVerifyProof
 func PLGNVerifyProof(jsonResponse **C.char, in *C.char,
 	cfg *C.char, status **C.PLGNStatus) bool {
-
-	ctx, cancel := logAPITime()
-	defer cancel()
-
-	if in == nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_NIL_POINTER,
-			"pointer to request is nil")
-		return false
-	}
-
-	envCfg, err := c_polygonid.NewEnvConfigFromJSON(cStrToGoSlice(cfg))
-	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
-		return false
-	}
-
-	inStr := C.GoString(in)
-	err = c_polygonid.VerifyProof(ctx, envCfg, []byte(inStr))
-	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
-		return false
-	}
-
-	*jsonResponse = C.CString(`{"valid": true}`)
-	return true
+	return callGenericFn(c_polygonid.VerifyProof, jsonResponse, in,
+		cfg, status)
 }
 
 type atomicQueryInputsFn func(ctx context.Context, cfg c_polygonid.EnvConfig,

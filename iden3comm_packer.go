@@ -211,7 +211,7 @@ func DecryptEncryptedCredential(ctx context.Context, cfg EnvConfig, in []byte) (
 	// set proof from the encrypted credential issuance message to w3c credential
 	credential.Proof = msg.EncryptedCredentialIssuanceMessage.Body.Proof
 
-	err = verifyProof(ctx, cfg, credential)
+	_, err = verifyProof(ctx, cfg, credential)
 	if err != nil {
 		return nil, fmt.Errorf("failed to verify credential proof: %w", err)
 	}
@@ -219,13 +219,17 @@ func DecryptEncryptedCredential(ctx context.Context, cfg EnvConfig, in []byte) (
 	return w3cCredentialBytes, nil
 }
 
+type VerifyProofResponse struct {
+	Valid bool `json:"valid"`
+}
+
 // VerifyProof verifies the proofs of a W3C credential.
 // The function returns an error indicating the result of the verification.
-func VerifyProof(ctx context.Context, cfg EnvConfig, credentialBytes []byte) error {
+func VerifyProof(ctx context.Context, cfg EnvConfig, credentialBytes []byte) (VerifyProofResponse, error) {
 	var credential verifiable.W3CCredential
 	err := json.Unmarshal(credentialBytes, &credential)
 	if err != nil {
-		return fmt.Errorf("failed to unmarshal credential: %w", err)
+		return VerifyProofResponse{}, fmt.Errorf("failed to unmarshal credential: %w", err)
 	}
 	return verifyProof(ctx, cfg, credential)
 }
@@ -252,7 +256,7 @@ func (f wrapper) Resolve(ctx context.Context,
 }
 
 // verifyProof verifies the proofs of a W3C credential.
-func verifyProof(ctx context.Context, cfg EnvConfig, credential verifiable.W3CCredential) error {
+func verifyProof(ctx context.Context, cfg EnvConfig, credential verifiable.W3CCredential) (VerifyProofResponse, error) {
 	proofsToVerify := make([]verifiable.ProofType, 0, len(credential.Proof))
 	for _, p := range credential.Proof {
 		proofsToVerify = append(proofsToVerify, p.ProofType())
@@ -260,17 +264,17 @@ func verifyProof(ctx context.Context, cfg EnvConfig, credential verifiable.W3CCr
 
 	userDidStr, ok := credential.CredentialSubject["id"].(string)
 	if !ok {
-		return fmt.Errorf("credential subject ID is missing or not a string")
+		return VerifyProofResponse{}, fmt.Errorf("credential subject ID is missing or not a string")
 	}
 
 	userDID, err := w3c.ParseDID(userDidStr)
 	if err != nil {
-		return fmt.Errorf("failed to parse user DID: %w", err)
+		return VerifyProofResponse{}, fmt.Errorf("failed to parse user DID: %w", err)
 	}
 
 	issuerDID, err := w3c.ParseDID(credential.Issuer)
 	if err != nil {
-		return fmt.Errorf("failed to parse issuer DID: %w", err)
+		return VerifyProofResponse{}, fmt.Errorf("failed to parse issuer DID: %w", err)
 	}
 
 	fn := func(cs verifiable.CredentialStatus) (verifiable.RevocationStatus, error) {
@@ -292,11 +296,11 @@ func verifyProof(ctx context.Context, cfg EnvConfig, credential verifiable.W3CCr
 			universalResolverHTTPClient,
 			verifiable.WithStatusResolverRegistry(defaultResolver),
 		); err != nil {
-			return fmt.Errorf("failed to verify proof of type %s: %w", proofTypeToVerify, err)
+			return VerifyProofResponse{}, fmt.Errorf("failed to verify proof of type %s: %w", proofTypeToVerify, err)
 		}
 	}
 
-	return nil
+	return VerifyProofResponse{Valid: true}, nil
 }
 
 func decrypt(decInfo anonUnpackerInput) ([]byte, error) {
