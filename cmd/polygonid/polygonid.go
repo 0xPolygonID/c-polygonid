@@ -1128,13 +1128,35 @@ func PLGNDecryptEncryptedCredential(jsonResponse **C.char, in *C.char,
 		cfg, status)
 }
 
-// PLGNVerifyProof verifies a zk proof.
+// PLGNVerifyProof verifies a W3C credential's proofs (BJJSignature2021, etc.).
 //
 //export PLGNVerifyProof
 func PLGNVerifyProof(jsonResponse **C.char, in *C.char,
 	cfg *C.char, status **C.PLGNStatus) bool {
-	return callGenericFn(c_polygonid.VerifyProof, jsonResponse, in,
-		cfg, status)
+
+	ctx, cancel := logAPITime()
+	defer cancel()
+
+	if in == nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_NIL_POINTER,
+			"pointer to request is nil")
+		return false
+	}
+
+	envCfg, err := c_polygonid.NewEnvConfigFromJSON(cStrToGoSlice(cfg))
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
+		return false
+	}
+
+	inStr := C.GoString(in)
+	err = c_polygonid.VerifyProof(ctx, envCfg, []byte(inStr))
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
+		return false
+	}
+
+	return true
 }
 
 type atomicQueryInputsFn func(ctx context.Context, cfg c_polygonid.EnvConfig,

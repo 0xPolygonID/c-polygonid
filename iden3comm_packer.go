@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/iden3/driver-did-iden3/pkg/document"
 	"github.com/iden3/driver-did-iden3/pkg/services"
@@ -222,17 +221,18 @@ func DecryptEncryptedCredential(ctx context.Context, cfg EnvConfig, in []byte) (
 
 // VerifyProof verifies the proofs of a W3C credential.
 // The function returns interface{} to satisfy an interface.
-func VerifyProof(ctx context.Context, cfg EnvConfig, credentialBytes []byte) (interface{}, error) {
+func VerifyProof(ctx context.Context, cfg EnvConfig, credentialBytes []byte) error {
 	var credential verifiable.W3CCredential
 	err := json.Unmarshal(credentialBytes, &credential)
 	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal credential: %w", err)
+		return fmt.Errorf("failed to unmarshal credential: %w", err)
 	}
-	return nil, verifyProof(ctx, cfg, credential)
+	return verifyProof(ctx, cfg, credential)
 }
 
 func verifyIntegrity(credential verifiable.W3CCredential, encryptedCredential protocol.EncryptedIssuanceMessageBody) error {
-	if !strings.Contains(credential.ID, encryptedCredential.ID) {
+	if credential.ID !=
+		fmt.Sprintf("urn:uuid:%s", encryptedCredential.ID) {
 		return fmt.Errorf("credential ID does not match encrypted issuance message ID")
 	}
 	if !arrayContainsString(credential.Context, encryptedCredential.Context) {
@@ -258,7 +258,12 @@ func verifyProof(ctx context.Context, cfg EnvConfig, credential verifiable.W3CCr
 		proofsToVerify = append(proofsToVerify, p.ProofType())
 	}
 
-	userDID, err := w3c.ParseDID(credential.CredentialSubject["id"].(string))
+	userDidStr, ok := credential.CredentialSubject["id"].(string)
+	if !ok {
+		return fmt.Errorf("credential subject ID is missing or not a string")
+	}
+
+	userDID, err := w3c.ParseDID(userDidStr)
 	if err != nil {
 		return fmt.Errorf("failed to parse user DID: %w", err)
 	}
