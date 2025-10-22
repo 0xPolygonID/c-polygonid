@@ -220,7 +220,7 @@ func DecryptEncryptedCredential(ctx context.Context, cfg EnvConfig, in []byte) (
 }
 
 // VerifyProof verifies the proofs of a W3C credential.
-// The function returns interface{} to satisfy an interface.
+// The function returns an error indicating the result of the verification.
 func VerifyProof(ctx context.Context, cfg EnvConfig, credentialBytes []byte) error {
 	var credential verifiable.W3CCredential
 	err := json.Unmarshal(credentialBytes, &credential)
