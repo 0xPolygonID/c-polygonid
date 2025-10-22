@@ -1156,6 +1156,7 @@ func PLGNVerifyProof(jsonResponse **C.char, in *C.char,
 		return false
 	}
 
+	*jsonResponse = C.CString(`{"valid": true}`)
 	return true
 }
 
