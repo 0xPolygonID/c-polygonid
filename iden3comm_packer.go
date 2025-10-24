@@ -203,17 +203,11 @@ func DecryptEncryptedCredential(ctx context.Context, cfg EnvConfig, in []byte) (
 		return nil, fmt.Errorf("failed to unmarshal credential: %w", err)
 	}
 
-	err = verifyIntegrity(credential, msg.EncryptedCredentialIssuanceMessage.Body)
-	if err != nil {
-		return nil, fmt.Errorf("credential integrity verification failed: %w", err)
-	}
-
 	// set proof from the encrypted credential issuance message to w3c credential
 	credential.Proof = msg.EncryptedCredentialIssuanceMessage.Body.Proof
-
-	_, err = verifyProof(ctx, cfg, credential)
+	err = verifyIntegrity(ctx, cfg, credential, msg.EncryptedCredentialIssuanceMessage.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to verify credential proof: %w", err)
+		return nil, fmt.Errorf("credential integrity verification failed: %w", err)
 	}
 
 	return w3cCredentialBytes, nil
@@ -234,7 +228,7 @@ func VerifyProof(ctx context.Context, cfg EnvConfig, credentialBytes []byte) (Ve
 	return verifyProof(ctx, cfg, credential)
 }
 
-func verifyIntegrity(credential verifiable.W3CCredential, encryptedCredential protocol.EncryptedIssuanceMessageBody) error {
+func verifyIntegrity(ctx context.Context, cfg EnvConfig, credential verifiable.W3CCredential, encryptedCredential protocol.EncryptedIssuanceMessageBody) error {
 	if credential.ID !=
 		fmt.Sprintf("urn:uuid:%s", encryptedCredential.ID) {
 		return fmt.Errorf("credential ID does not match encrypted issuance message ID")
@@ -245,6 +239,12 @@ func verifyIntegrity(credential verifiable.W3CCredential, encryptedCredential pr
 	if !arrayContainsString(credential.Type, encryptedCredential.Type) {
 		return fmt.Errorf("credential type does not contain encrypted issuance message type")
 	}
+
+	_, err := verifyProof(ctx, cfg, credential)
+	if err != nil {
+		return fmt.Errorf("failed to verify credential proof: %w", err)
+	}
+
 	return nil
 }
 
@@ -281,7 +281,7 @@ func verifyProof(ctx context.Context, cfg EnvConfig, credential verifiable.W3CCr
 		return cachedResolve(ctx, cfg, issuerDID, userDID, cs, getResolversRegistry)
 	}
 
-	universalResolverHTTPClient := verifiable.NewHTTPDIDResolver(cfg.UniversalResolverURL)
+	universalResolverHTTPClient := verifiable.NewHTTPDIDResolver(cfg.DIDResolverURL)
 
 	defaultResolver := verifiable.DefaultCredentialStatusResolverRegistry
 	defaultResolver.Register(verifiable.SparseMerkleTreeProof, wrapper(fn))

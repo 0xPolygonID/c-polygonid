@@ -225,7 +225,7 @@ func TestDecryptEncryptedCredential_SigProof_Revocation_Type_RHS(t *testing.T) {
 			},
 		},
 
-		UniversalResolverURL: "https://resolver.privado.id/1.0/identifiers",
+		DIDResolverURL: "https://resolver.privado.id/1.0/identifiers",
 	}
 
 	plaintext, err := DecryptEncryptedCredential(context.Background(), cfg, packInput)
@@ -273,7 +273,7 @@ func TestDecryptEncryptedCredential_SigProof_Revocation_Type_Agent(t *testing.T)
 			},
 		},
 
-		UniversalResolverURL: "https://resolver.privado.id/1.0/identifiers",
+		DIDResolverURL: "https://resolver.privado.id/1.0/identifiers",
 	}
 
 	plaintext, err := DecryptEncryptedCredential(context.Background(), cfg, packInput)
