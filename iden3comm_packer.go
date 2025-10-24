@@ -203,8 +203,6 @@ func DecryptEncryptedCredential(ctx context.Context, cfg EnvConfig, in []byte) (
 		return nil, fmt.Errorf("failed to unmarshal credential: %w", err)
 	}
 
-	// set proof from the encrypted credential issuance message to w3c credential
-	credential.Proof = msg.EncryptedCredentialIssuanceMessage.Body.Proof
 	err = verifyIntegrity(ctx, cfg, credential, msg.EncryptedCredentialIssuanceMessage.Body)
 	if err != nil {
 		return nil, fmt.Errorf("credential integrity verification failed: %w", err)
@@ -240,6 +238,8 @@ func verifyIntegrity(ctx context.Context, cfg EnvConfig, credential verifiable.W
 		return fmt.Errorf("credential type does not contain encrypted issuance message type")
 	}
 
+	// set proof from the encrypted credential issuance message to w3c credential
+	credential.Proof = encryptedCredential.Proof
 	_, err := verifyProof(ctx, cfg, credential)
 	if err != nil {
 		return fmt.Errorf("failed to verify credential proof: %w", err)
