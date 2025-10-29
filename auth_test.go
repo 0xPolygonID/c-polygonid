@@ -23,7 +23,7 @@ func TestVerifyAuthResponse(t *testing.T) {
 	}
 
 	defer preserveIPFSHttpCli()()
-	cid := uploadIPFSFile(t, ipfsURL, fn("httpresp_liveness_credential.json-ld"))
+	cid := uploadIPFSFile(t, ipfsURL, fn("liveness_credential.json-ld.json-ld"))
 	require.Equal(t, "QmcomGJQwJDCg3RE6FjsFYCjjMSTWJXY3fUWeq43Mc5CCJ", cid)
 
 	in := []byte(`{
