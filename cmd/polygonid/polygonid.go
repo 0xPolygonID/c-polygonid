@@ -1137,6 +1137,15 @@ func PLGNVerifyProof(jsonResponse **C.char, in *C.char,
 		cfg, status)
 }
 
+// PLGNVerifyAuthResponse verifies an authentication response.
+//
+//export PLGNVerifyAuthResponse
+func PLGNVerifyAuthResponse(jsonResponse **C.char, in *C.char,
+	cfg *C.char, status **C.PLGNStatus) bool {
+	return callGenericFn(c_polygonid.VerifyAuthResponse, jsonResponse, in,
+		cfg, status)
+}
+
 type atomicQueryInputsFn func(ctx context.Context, cfg c_polygonid.EnvConfig,
 	in []byte) (c_polygonid.AtomicQueryInputsResponse, error)
 

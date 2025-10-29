@@ -9,6 +9,7 @@ require (
 	github.com/fxamacker/cbor/v2 v2.5.0
 	github.com/iden3/driver-did-iden3 v0.0.14
 	github.com/iden3/go-circuits/v2 v2.4.3
+	github.com/iden3/go-iden3-auth/v2 v2.7.5
 	github.com/iden3/go-iden3-core/v2 v2.3.2
 	github.com/iden3/go-iden3-crypto v0.0.17
 	github.com/iden3/go-merkletree-sql/v2 v2.0.6
@@ -57,6 +58,7 @@ require (
 	github.com/iden3/go-rapidsnark/witness/v2 v2.0.0 // indirect
 	github.com/iden3/go-rapidsnark/witness/wazero v0.0.0-20230524142950-0986cf057d4e // indirect
 	github.com/iden3/jose-primitives v0.0.5 // indirect
+	github.com/karlseguin/ccache/v3 v3.0.6 // indirect
 	github.com/klauspost/compress v1.17.11 // indirect
 	github.com/lestrrat-go/blackmagic v1.0.4 // indirect
 	github.com/lestrrat-go/httpcc v1.0.1 // indirect
