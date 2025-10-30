@@ -14,7 +14,7 @@ require (
 	github.com/iden3/go-iden3-crypto v0.0.17
 	github.com/iden3/go-merkletree-sql/v2 v2.0.6
 	github.com/iden3/go-onchain-credential-adapter v0.0.0-20240425110009-4004ac8da50c
-	github.com/iden3/go-schema-processor/v2 v2.6.4
+	github.com/iden3/go-schema-processor/v2 v2.6.5
 	github.com/iden3/iden3comm/v2 v2.11.10-0.20251030122747-acfdfffd5c57
 	github.com/iden3/merkletree-proof v1.0.1
 	github.com/lestrrat-go/jwx/v3 v3.0.10

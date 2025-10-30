@@ -9,6 +9,7 @@ import (
 	"github.com/iden3/driver-did-iden3/pkg/document"
 	"github.com/iden3/driver-did-iden3/pkg/services"
 	"github.com/iden3/go-iden3-core/v2/w3c"
+	"github.com/iden3/go-schema-processor/v2/merklize"
 	"github.com/iden3/go-schema-processor/v2/verifiable"
 	"github.com/iden3/iden3comm/v2"
 	"github.com/iden3/iden3comm/v2/packers"
@@ -289,12 +290,14 @@ func verifyProof(ctx context.Context, cfg EnvConfig, credential verifiable.W3CCr
 	defaultResolver.Register(verifiable.Iden3commRevocationStatusV1, wrapper(fn))
 	defaultResolver.Register(verifiable.Iden3OnchainSparseMerkleTreeProof2023, wrapper(fn))
 
+	dl := cfg.documentLoader()
 	for _, proofTypeToVerify := range proofsToVerify {
 		if err := credential.VerifyProof(
 			ctx,
 			proofTypeToVerify,
 			universalResolverHTTPClient,
 			verifiable.WithStatusResolverRegistry(defaultResolver),
+			verifiable.WithMerklizeOptions(merklize.WithDocumentLoader(dl)),
 		); err != nil {
 			return VerifyProofResponse{}, fmt.Errorf("failed to verify proof of type %s: %w", proofTypeToVerify, err)
 		}
