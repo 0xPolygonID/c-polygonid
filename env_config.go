@@ -22,7 +22,7 @@ type EnvConfig struct {
 	EthereumURL       string
 	StateContractAddr string
 
-	DIDResolverURL string
+	DIDResolverURL string `json:"didResolverUrl"`
 }
 
 var globalRegistrationLock sync.Mutex

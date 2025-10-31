@@ -177,16 +177,18 @@ func DecryptJWE(in []byte) ([]byte, error) {
 }
 
 // DecryptEncryptedCredential decrypts and verifies a W3C credential in JWE format.
-func DecryptEncryptedCredential(ctx context.Context, cfg EnvConfig, in []byte) ([]byte, error) {
+func DecryptEncryptedCredential(ctx context.Context, cfg EnvConfig, in []byte) (*verifiable.W3CCredential, error) {
 	var msg encryptedCredentialInput
 	err := json.Unmarshal(in, &msg)
 	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal encrypted credential issuance message: %w", err)
+		return nil,
+			fmt.Errorf("failed to unmarshal encrypted credential issuance message: %w", err)
 	}
 
 	jweBytes, err := json.Marshal(msg.EncryptedCredentialIssuanceMessage.Body.Data)
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal JWE data: %w", err)
+		return nil,
+			fmt.Errorf("failed to marshal JWE data: %w", err)
 	}
 
 	decryptIn := anonUnpackerInput{
@@ -195,21 +197,24 @@ func DecryptEncryptedCredential(ctx context.Context, cfg EnvConfig, in []byte) (
 	}
 	w3cCredentialBytes, err := decrypt(decryptIn)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decrypt credential: %w", err)
+		return nil,
+			fmt.Errorf("failed to decrypt credential: %w", err)
 	}
 
-	var credential verifiable.W3CCredential
-	err = json.Unmarshal(w3cCredentialBytes, &credential)
+	credential := new(verifiable.W3CCredential)
+	err = json.Unmarshal(w3cCredentialBytes, credential)
 	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal credential: %w", err)
+		return nil,
+			fmt.Errorf("failed to unmarshal credential: %w", err)
 	}
 
 	err = verifyIntegrity(ctx, cfg, credential, msg.EncryptedCredentialIssuanceMessage.Body)
 	if err != nil {
-		return nil, fmt.Errorf("credential integrity verification failed: %w", err)
+		return nil,
+			fmt.Errorf("credential integrity verification failed: %w", err)
 	}
 
-	return w3cCredentialBytes, nil
+	return credential, nil
 }
 
 type VerifyProofResponse struct {
@@ -219,15 +224,15 @@ type VerifyProofResponse struct {
 // VerifyProof verifies the proofs of a W3C credential.
 // The function returns an error indicating the result of the verification.
 func VerifyProof(ctx context.Context, cfg EnvConfig, credentialBytes []byte) (VerifyProofResponse, error) {
-	var credential verifiable.W3CCredential
-	err := json.Unmarshal(credentialBytes, &credential)
+	credential := new(verifiable.W3CCredential)
+	err := json.Unmarshal(credentialBytes, credential)
 	if err != nil {
 		return VerifyProofResponse{}, fmt.Errorf("failed to unmarshal credential: %w", err)
 	}
 	return verifyProof(ctx, cfg, credential)
 }
 
-func verifyIntegrity(ctx context.Context, cfg EnvConfig, credential verifiable.W3CCredential, encryptedCredential protocol.EncryptedIssuanceMessageBody) error {
+func verifyIntegrity(ctx context.Context, cfg EnvConfig, credential *verifiable.W3CCredential, encryptedCredential protocol.EncryptedIssuanceMessageBody) error {
 	if credential.ID !=
 		fmt.Sprintf("urn:uuid:%s", encryptedCredential.ID) {
 		return fmt.Errorf("credential ID does not match encrypted issuance message ID")
@@ -257,7 +262,7 @@ func (f wrapper) Resolve(ctx context.Context,
 }
 
 // verifyProof verifies the proofs of a W3C credential.
-func verifyProof(ctx context.Context, cfg EnvConfig, credential verifiable.W3CCredential) (VerifyProofResponse, error) {
+func verifyProof(ctx context.Context, cfg EnvConfig, credential *verifiable.W3CCredential) (VerifyProofResponse, error) {
 	proofsToVerify := make([]verifiable.ProofType, 0, len(credential.Proof))
 	for _, p := range credential.Proof {
 		proofsToVerify = append(proofsToVerify, p.ProofType())
