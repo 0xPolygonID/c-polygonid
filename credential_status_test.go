@@ -2,6 +2,7 @@ package c_polygonid
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"testing"
 
@@ -23,7 +24,11 @@ func TestCredentialStatusCheck(t *testing.T) {
 	jsonIn := readJsonFile(t, "credential_status_request.json")
 
 	ctx := context.Background()
-	isValid, err := CredentialStatusCheck(ctx, EnvConfig{}, jsonIn)
+	resp, err := CredentialStatusCheck(ctx, EnvConfig{}, jsonIn)
 	require.NoError(t, err)
-	require.True(t, isValid)
+
+	respJ, err := json.Marshal(resp)
+	require.NoError(t, err)
+
+	require.JSONEq(t, `{"valid": true}`, string(respJ))
 }

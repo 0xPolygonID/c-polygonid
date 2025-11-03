@@ -8,8 +8,12 @@ import (
 	"github.com/iden3/go-iden3-core/v2/w3c"
 )
 
+type CredentialStatusCheckResponse struct {
+	Valid bool `json:"valid"`
+}
+
 func CredentialStatusCheck(ctx context.Context, cfg EnvConfig,
-	jsonReq []byte) (bool, error) {
+	jsonReq []byte) (CredentialStatusCheckResponse, error) {
 
 	var req struct {
 		IssuerDID        *w3c.DID `json:"issuer"`
@@ -19,15 +23,15 @@ func CredentialStatusCheck(ctx context.Context, cfg EnvConfig,
 
 	err := json.Unmarshal(jsonReq, &req)
 	if err != nil {
-		return false, err
+		return CredentialStatusCheckResponse{}, err
 	}
 
 	_, err = buildAndValidateCredentialStatus(ctx, cfg, req.CredentialStatus,
 		req.IssuerDID, req.UserDID, false)
 	if errors.Is(err, errCredentialsRevoked) {
-		return false, nil
+		return CredentialStatusCheckResponse{}, nil
 	} else if err != nil {
-		return false, err
+		return CredentialStatusCheckResponse{}, err
 	}
-	return true, nil
+	return CredentialStatusCheckResponse{Valid: true}, nil
 }

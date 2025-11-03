@@ -792,46 +792,11 @@ func PLGNAGenerateInputs(jsonResponse **C.char, in *C.char,
 }
 
 //export PLGNACredentialStatusCheck
-func PLGNACredentialStatusCheck(jsonResponse **C.char, in *C.char,
-	cfg *C.char, status **C.PLGNStatus) bool {
+func PLGNACredentialStatusCheck(jsonResponse **C.char, in *C.char, cfg *C.char,
+	status **C.PLGNStatus) bool {
 
-	if jsonResponse == nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_NIL_POINTER,
-			"jsonResponse pointer is nil")
-		return false
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	inData := C.GoBytes(unsafe.Pointer(in), C.int(C.strlen(in)))
-
-	envCfg, err := c_polygonid.NewEnvConfigFromJSON(cStrToGoSlice(cfg))
-	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
-		return false
-	}
-
-	isValid, err := c_polygonid.CredentialStatusCheck(ctx, envCfg, inData)
-	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
-		return false
-	}
-
-	var resp struct {
-		Valid bool `json:"valid"`
-	}
-	resp.Valid = isValid
-
-	respBytes, err := json.Marshal(resp)
-	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR,
-			"error marshalling credential status check response: %v", err)
-		return false
-	}
-
-	*jsonResponse = C.CString(string(respBytes))
-	return true
+	return callGenericFn(c_polygonid.CredentialStatusCheck, jsonResponse, in,
+		cfg, status)
 }
 
 //export PLGNFreeStatus
