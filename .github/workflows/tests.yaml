@@ -10,22 +10,22 @@ jobs:
   test:
     strategy:
       matrix:
-        containers:
-          - 1.19.13-bullseye
-          - 1.20.11-bullseye
-          - 1.21.4-bullseye
-    runs-on: ubuntu-20.04
-    container: golang:${{ matrix.containers }}
+        go_version:
+          - "1.24.9"
+          - "1.25.3"
+    runs-on: ubuntu-24.04
     env:
-      IPFS_URL: ${{secrets.IPFS_URL }}
+      IPFS_URL: http://localhost:5001
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/cache@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
-          path: |
-            ~/.cache/go-build
-            /go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-      - run: go test -v -race -timeout=60s -find-unused-httpresp ./...
+          go-version: ${{ matrix.go_version }}
+      - run: go test -v -race -timeout=60s ./... -find-unused-httpresp
+        env:
+          GOEXPERIMENT: "synctest"
+    services:
+      ipfs:
+        image: ipfs/kubo:v0.26.0
+        ports:
+          - 5001:5001

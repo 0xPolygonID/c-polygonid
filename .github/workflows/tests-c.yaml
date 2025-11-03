@@ -14,14 +14,13 @@ jobs:
     strategy:
       matrix:
         containers:
-          - 1.19.13-bullseye
-          - 1.20.11-bullseye
-          - 1.21.4-bullseye
-    runs-on: ubuntu-22.04
+          - 1.24.9-bookworm
+          - 1.25.3-bookworm
+    runs-on: ubuntu-24.04
     container: golang:${{matrix.containers}}
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/cache@v3
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
         with:
           path: |
             ~/.cache/go-build
@@ -35,7 +34,7 @@ jobs:
           # without this line `git status` does not work on containers
           # 1.19.5 and upper
           git config --global --add safe.directory `pwd`
-          go build -buildmode=c-archive -o ios/libpolygonid.a ./cmd/polygonid
+          go build -tags prover_disabled -buildmode=c-archive -o ios/libpolygonid.a ./cmd/polygonid
           cp ios/libpolygonid.h ios/libpolygonid-darwin-arm64.h
           mkdir examples/build
           cd examples/build
@@ -44,14 +43,14 @@ jobs:
           make test ARGS="--rerun-failed --output-on-failure"
 
   integration-test-macos:
-    runs-on: macos-12
+    runs-on: macos-15
     if: github.event_name == 'push' || github.event_name == 'release'
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-go@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
-          go-version: 1.21.4
-      - uses: actions/cache@v3
+          go-version: 1.25.3
+      - uses: actions/cache@v4
         with:
           path: |
             ~/go/pkg/mod
@@ -61,7 +60,7 @@ jobs:
             ${{ runner.os }}-go-
       - name: Run ctests
         run: |
-          go build -buildmode=c-archive -o ios/libpolygonid.a ./cmd/polygonid
+          go build -tags prover_disabled -buildmode=c-archive -o ios/libpolygonid.a ./cmd/polygonid
           cp ios/libpolygonid.h ios/libpolygonid-darwin-arm64.h
           brew install cjson
           mkdir examples/build

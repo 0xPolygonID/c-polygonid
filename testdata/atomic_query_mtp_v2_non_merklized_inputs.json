@@ -1,13 +1,13 @@
 {
   "id": "2qHrsSHq8RG9YzDkFUU7R8x5z8HjfEWuAzWCAEK6g5",
   "profileNonce": "123",
-  "claimSubjectProfileNonce": "234",
+  "claimSubjectProfileNonce": "0",
   "verifiableCredentials": {
     "id": "http://localhost:8001/api/v1/identities/did:polygonid:polygon:mumbai:2qFuKxq6iPem5w2U6T6druwGFjqTinE1kqNkSN7oo9/claims/e715a44e-9d47-11ed-a5ed-e24d9cbdb31b",
     "@context": [
       "https://www.w3.org/2018/credentials/v1",
       "https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld",
-      "https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld"
+      "https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3-non-merklized.json-ld"
     ],
     "type": [
       "VerifiableCredential",
@@ -83,7 +83,7 @@
     "circuitId": "credentialAtomicQueryMTPV2",
     "query": {
       "allowedIssuers": "2qFuKxq6iPem5w2U6T6druwGFjqTinE1kqNkSN7oo9",
-      "context": "https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld",
+      "context": "https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3-non-merklized.json-ld",
       "type": "KYCAgeCredential",
       "credentialSubject": {
         "documentType": {

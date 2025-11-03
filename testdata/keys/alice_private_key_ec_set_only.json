@@ -1,0 +1,12 @@
+{
+    "keys": [
+        {
+            "alg": "ECDH-ES+A256KW",
+            "crv": "P-384",
+            "d": "6z1PUjyfDKzYq4PrP7ZzJ-pOtT9gbCqGoJSdZ8ZNknbIFM7f-ihKnp-uhiwUz4bc",
+            "kty": "EC",
+            "x": "7CFCaNFaRd9L2OA-hfEJ5PLlFm3GSjLmyRF1qgtdgDTLQXJXOTPTEhkQTnSc-ugL",
+            "y": "7tVljSB4a7Xc2kEPOl5Vt0jJp4jW6093vdvBZZgpmyZbVIMA8jjvAuZC-OQeGPw7"
+        }
+    ]
+}

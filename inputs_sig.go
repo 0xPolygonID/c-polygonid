@@ -3,26 +3,26 @@ package c_polygonid
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	_ "embed"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
+	"log/slog"
 	"math/big"
-	"net/http"
-	"net/url"
+	"runtime/trace"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	gocircuitexternal "github.com/0xPolygonID/go-circuit-external/AnonAadhaar"
+	externalpassport "github.com/0xPolygonID/go-circuit-external/passport"
+	"github.com/dgraph-io/badger/v4"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethereum/go-ethereum/rpc"
-	onchainABI "github.com/iden3/contracts-abi/onchain-credential-status-resolver/go/abi"
-	"github.com/iden3/contracts-abi/state/go/abi"
 	"github.com/iden3/go-circuits/v2"
 	core "github.com/iden3/go-iden3-core/v2"
 	"github.com/iden3/go-iden3-core/v2/w3c"
@@ -31,18 +31,19 @@ import (
 	"github.com/iden3/go-iden3-crypto/utils"
 	"github.com/iden3/go-merkletree-sql/v2"
 	json2 "github.com/iden3/go-schema-processor/v2/json"
-	"github.com/iden3/go-schema-processor/v2/loaders"
 	"github.com/iden3/go-schema-processor/v2/merklize"
 	"github.com/iden3/go-schema-processor/v2/processor"
 	"github.com/iden3/go-schema-processor/v2/verifiable"
-	mp "github.com/iden3/merkletree-proof"
-	shell "github.com/ipfs/go-ipfs-api"
+	"github.com/iden3/iden3comm/v2"
+	"github.com/iden3/iden3comm/v2/packers"
+	i3cResolvers "github.com/iden3/iden3comm/v2/resolvers"
+	"github.com/iden3/merkletree-proof/resolvers"
 	"github.com/piprate/json-gold/ld"
 )
 
-type jsonObj = map[string]any
+const mtLevels = 40
 
-var httpClient = &http.Client{}
+type jsonObj = map[string]any
 
 //go:embed schemas/credentials-v1.json-ld
 var credentialsV1JsonLDBytes []byte
@@ -59,6 +60,16 @@ func stringByPath(obj jsonObj, path string) (string, error) {
 		return "", fmt.Errorf("not a string at path: %v", path)
 	}
 	return s, nil
+}
+
+func bigIntOrZeroByPath(obj jsonObj, path string,
+	allowNumbers bool) (*big.Int, error) {
+
+	i, err := bigIntByPath(obj, path, allowNumbers)
+	if errors.As(err, &errPathNotFound{}) {
+		return big.NewInt(0), nil
+	}
+	return i, err
 }
 
 // if allowNumbers is true, then the value can also be a number, not only strings
@@ -140,58 +151,10 @@ func getByPath(obj jsonObj, path string) (any, error) {
 	return nil, errors.New("should not happen")
 }
 
-func resolveRevocationStatusFromIssuerService(ctx context.Context,
-	url string) (out circuits.MTProof, err error) {
+type errProofNotFound verifiable.ProofType
 
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, url,
-		http.NoBody)
-	if err != nil {
-		return out, err
-	}
-	httpResp, err := httpClient.Do(httpReq)
-	if err != nil {
-		return out, err
-	}
-	defer func() {
-		err2 := httpResp.Body.Close()
-		if err == nil {
-			err = err2
-		}
-	}()
-	if httpResp.StatusCode != http.StatusOK {
-		return out, fmt.Errorf("unexpected status code: %v",
-			httpResp.StatusCode)
-	}
-	respData, err := io.ReadAll(io.LimitReader(httpResp.Body, 16*1024))
-	if err != nil {
-		return out, err
-	}
-	var obj struct {
-		TreeState struct {
-			State          *hexHash `json:"state"`              // identity state
-			ClaimsRoot     *hexHash `json:"claimsTreeRoot"`     // claims tree root
-			RevocationRoot *hexHash `json:"revocationTreeRoot"` // revocation tree root
-			RootOfRoots    *hexHash `json:"rootOfRoots"`        // root of roots tree root
-
-		} `json:"issuer"`
-		Proof *merkletree.Proof `json:"mtp"`
-	}
-	err = json.Unmarshal(respData, &obj)
-	if err != nil {
-		return out, err
-	}
-	out.Proof = obj.Proof
-	out.TreeState.State = (*merkletree.Hash)(obj.TreeState.State)
-	out.TreeState.ClaimsRoot = (*merkletree.Hash)(obj.TreeState.ClaimsRoot)
-	out.TreeState.RevocationRoot = (*merkletree.Hash)(obj.TreeState.RevocationRoot)
-	if out.TreeState.RevocationRoot == nil {
-		out.TreeState.RevocationRoot = &merkletree.Hash{}
-	}
-	out.TreeState.RootOfRoots = (*merkletree.Hash)(obj.TreeState.RootOfRoots)
-	if out.TreeState.RootOfRoots == nil {
-		out.TreeState.RootOfRoots = &merkletree.Hash{}
-	}
-	return out, nil
+func (e errProofNotFound) Error() string {
+	return fmt.Sprintf("proof not found: %v", string(e))
 }
 
 func claimWithSigProofFromObj(ctx context.Context, cfg EnvConfig,
@@ -202,8 +165,7 @@ func claimWithSigProofFromObj(ctx context.Context, cfg EnvConfig,
 
 	proofI := findProofByType(w3cCred, verifiable.BJJSignatureProofType)
 	if proofI == nil {
-		return out, fmt.Errorf("no %v proofs found",
-			verifiable.BJJSignatureProofType)
+		return out, errProofNotFound(verifiable.BJJSignatureProofType)
 	}
 
 	var err error
@@ -217,7 +179,8 @@ func claimWithSigProofFromObj(ctx context.Context, cfg EnvConfig,
 	}
 	issuerID, err := core.IDFromDID(*issuerDID)
 	if err != nil {
-		return out, err
+		return out, fmt.Errorf("can't get issuer ID from DID (%v): %w",
+			issuerDID, err)
 	}
 	out.IssuerID = &issuerID
 	out.Claim, err = proof.GetCoreClaim()
@@ -229,12 +192,21 @@ func claimWithSigProofFromObj(ctx context.Context, cfg EnvConfig,
 	if !ok {
 		return out, errors.New("not a json object")
 	}
-	out.NonRevProof, err = buildAndValidateCredentialStatus(ctx, cfg,
-		credStatus, out.IssuerID, skipClaimRevocationCheck)
+	userDID, err := userDIDFromCred(w3cCred)
 	if err != nil {
 		return out, err
 	}
-	out.SignatureProof, err = signatureProof(ctx, cfg, *proof, out.IssuerID)
+
+	out.NonRevProof, err = buildAndValidateCredentialStatus(ctx, cfg,
+		credStatus, issuerDID, userDID, skipClaimRevocationCheck)
+	if err != nil {
+		return out, ErrCredentialStatus{
+			err:   err,
+			owner: CredentialStatusOwnerUser,
+		}
+	}
+	out.SignatureProof, err = signatureProof(ctx, cfg, *proof, issuerDID,
+		userDID)
 	if err != nil {
 		return out, err
 	}
@@ -242,46 +214,206 @@ func claimWithSigProofFromObj(ctx context.Context, cfg EnvConfig,
 	return out, nil
 }
 
+// returned DID maybe nil if we do not find it in the credential
+func userDIDFromCred(w3cCred verifiable.W3CCredential) (*w3c.DID, error) {
+	if userDIDi, ok := w3cCred.CredentialSubject["id"]; ok {
+		var userDIDs string
+		userDIDs, ok = userDIDi.(string)
+		if ok {
+			userDID, err := w3c.ParseDID(userDIDs)
+			if err != nil {
+				return nil, fmt.Errorf(
+					"error parsing user DID from credentialSubject.id field: %w",
+					err)
+			}
+			return userDID, nil
+		} else {
+			return nil, errors.New(
+				"credentialSubject.id field supposed to be a string type and in DID format")
+		}
+	}
+	return nil, nil
+}
+
+func getResolversRegistry(ctx context.Context,
+	cfg PerChainConfig) (*verifiable.CredentialStatusResolverRegistry, func(), error) {
+
+	var ethClients = make(map[core.ChainID]*ethclient.Client, len(cfg))
+	var stateContractAddresses = make(map[core.ChainID]common.Address, len(cfg))
+	var registry = &verifiable.CredentialStatusResolverRegistry{}
+
+	cleanupFn := func() {
+		registry.Delete(verifiable.SparseMerkleTreeProof)
+		registry.Delete(verifiable.Iden3ReverseSparseMerkleTreeProof)
+		registry.Delete(verifiable.Iden3OnchainSparseMerkleTreeProof2023)
+		registry.Delete(verifiable.Iden3commRevocationStatusV1)
+
+		for _, cli := range ethClients {
+			cli.Close()
+		}
+	}
+
+	for chainID, chainCfg := range cfg {
+		err := chainCfg.validate()
+		if err != nil {
+			cleanupFn()
+			return nil, nil, fmt.Errorf(
+				"chain config validation failed for chain ID %v: %w",
+				chainID, err)
+		}
+
+		ethCli, err := ethclient.DialContext(ctx, chainCfg.RPCUrl)
+		if err != nil {
+			cleanupFn()
+			return nil, nil, err
+		}
+
+		ethClients[chainID] = ethCli
+		stateContractAddresses[chainID] = chainCfg.StateContractAddr
+	}
+
+	registry.Register(verifiable.SparseMerkleTreeProof,
+		verifiable.IssuerResolver{})
+
+	rhsResolver := resolvers.NewRHSResolver(ethClients, stateContractAddresses)
+	registry.Register(verifiable.Iden3ReverseSparseMerkleTreeProof, rhsResolver)
+
+	onChainRHSResolver := resolvers.NewOnChainResolver(ethClients,
+		stateContractAddresses)
+	registry.Register(verifiable.Iden3OnchainSparseMerkleTreeProof2023,
+		onChainRHSResolver)
+
+	pm := iden3comm.NewPackageManager()
+	err := pm.RegisterPackers(&packers.PlainMessagePacker{})
+	if err != nil {
+		cleanupFn()
+		return nil, nil, err
+	}
+	iden3comResolver := i3cResolvers.NewAgentResolver(
+		i3cResolvers.AgentResolverConfig{PackageManager: pm})
+	registry.Register(verifiable.Iden3commRevocationStatusV1, iden3comResolver)
+
+	return registry, cleanupFn, nil
+}
+
+func stringToHash(h string) (*merkletree.Hash, error) {
+	if h == "" {
+		return nil, nil
+	}
+	return merkletree.NewHashFromHex(h)
+}
+
+func verifiableTreeStateToCircuitsTreeState(
+	s verifiable.TreeState) (circuits.TreeState, error) {
+
+	var err error
+	var out circuits.TreeState
+
+	out.ClaimsRoot = &merkletree.HashZero
+	out.RootOfRoots = &merkletree.HashZero
+	out.RevocationRoot = &merkletree.HashZero
+
+	if s.State != nil {
+		out.State, err = stringToHash(*s.State)
+		if err != nil {
+			return out, fmt.Errorf("can't parse state: %w", err)
+		}
+	}
+
+	if s.ClaimsTreeRoot != nil {
+		out.ClaimsRoot, err = stringToHash(*s.ClaimsTreeRoot)
+		if err != nil {
+			return out, fmt.Errorf("can't parse claims tree root: %w", err)
+		}
+	}
+
+	if s.RevocationTreeRoot != nil {
+		out.RevocationRoot, err = stringToHash(*s.RevocationTreeRoot)
+		if err != nil {
+			return out, fmt.Errorf("can't parse revocation tree root: %w", err)
+		}
+	}
+
+	if s.RootOfRoots != nil {
+		out.RootOfRoots, err = stringToHash(*s.RootOfRoots)
+		if err != nil {
+			return out, fmt.Errorf("can't parse root of roots tree root: %w", err)
+		}
+	}
+
+	return out, nil
+}
+
+func revStatusToCircuitsMTPProof(
+	revStatus verifiable.RevocationStatus) (circuits.MTProof, error) {
+
+	p := circuits.MTProof{Proof: &revStatus.MTP}
+	var err error
+	p.TreeState, err = verifiableTreeStateToCircuitsTreeState(revStatus.Issuer)
+	if err != nil {
+		return p, fmt.Errorf(
+			"can't convert verifiable.TreeState to circuits.TreeState: %w", err)
+	}
+
+	return p, nil
+}
+
 func buildAndValidateCredentialStatus(ctx context.Context, cfg EnvConfig,
-	credStatus jsonObj, issuerID *core.ID,
+	credStatus jsonObj, issuerDID, userDID *w3c.DID,
 	skipClaimRevocationCheck bool) (circuits.MTProof, error) {
 
-	proof, err := resolveRevStatus(ctx, cfg, credStatus, issuerID)
+	credStatus2, err := credStatusFromJsonObj(credStatus)
 	if err != nil {
-		return proof, err
+		return circuits.MTProof{}, ErrCredentialStatusExtract{err: err}
+	}
+
+	revStatus, err := cachedResolve(ctx, cfg, issuerDID, userDID,
+		credStatus2, getResolversRegistry)
+	if err != nil {
+		return circuits.MTProof{}, ErrCredentialStatusResolve{err: err}
+	}
+
+	cProof, err := revStatusToCircuitsMTPProof(revStatus)
+	if err != nil {
+		return circuits.MTProof{}, ErrCredentialStatusTreeBuild{err: err}
 	}
 
 	if skipClaimRevocationCheck {
-		return proof, nil
+		return cProof, nil
 	}
 
-	treeStateOk, err := validateTreeState(proof.TreeState)
+	treeStateOk, err := validateTreeState(cProof.TreeState)
 	if err != nil {
-		return proof, err
+		return circuits.MTProof{},
+			ErrCredentialStatusTreeState{
+				msg: "tree state validation failed",
+				err: err,
+			}
 	}
 	if !treeStateOk {
-		return proof, errors.New("invalid tree state")
+		return circuits.MTProof{},
+			ErrCredentialStatusTreeState{
+				msg: "invalid tree state",
+				err: err,
+			}
+
 	}
 
-	// revocationNonce is float64, but if we meet valid string representation
-	// of Int, we will use it.
-	// circuits.MTProof
-	revNonce, err := bigIntByPath(credStatus, "revocationNonce", true)
-	if err != nil {
-		return proof, err
-	}
+	revNonce := new(big.Int).SetUint64(credStatus2.RevocationNonce)
 
-	proofValid := merkletree.VerifyProof(proof.TreeState.RevocationRoot,
-		proof.Proof, revNonce, big.NewInt(0))
+	proofValid := merkletree.VerifyProof(cProof.TreeState.RevocationRoot,
+		cProof.Proof, revNonce, big.NewInt(0))
 	if !proofValid {
-		return proof, fmt.Errorf("proof validation failed. revNonce=%d", revNonce)
+		return circuits.MTProof{}, ErrCredentialStatusTreeState{
+			msg: "proof validation failed",
+		}
 	}
 
-	if proof.Proof.Existence {
-		return proof, errCredentialsRevoked
+	if cProof.Proof.Existence {
+		return circuits.MTProof{}, ErrCredentialStatusRevoked
 	}
 
-	return proof, nil
+	return cProof, nil
 }
 
 // check TreeState consistency
@@ -326,8 +458,8 @@ func sigFromHex(sigHex string) (*babyjub.Signature, error) {
 }
 
 func signatureProof(ctx context.Context, cfg EnvConfig,
-	proof verifiable.BJJSignatureProof2021,
-	issuerID *core.ID) (out circuits.BJJSignatureProof, err error) {
+	proof verifiable.BJJSignatureProof2021, issuerDID,
+	userDID *w3c.DID) (out circuits.BJJSignatureProof, err error) {
 
 	out.Signature, err = sigFromHex(proof.Signature)
 	if err != nil {
@@ -336,7 +468,7 @@ func signatureProof(ctx context.Context, cfg EnvConfig,
 	out.IssuerAuthClaim = new(core.Claim)
 	err = out.IssuerAuthClaim.FromHex(proof.IssuerData.AuthCoreClaim)
 	if err != nil {
-		return
+		return out, err
 	}
 	out.IssuerAuthIncProof.TreeState, err = circuitsTreeStateFromSchemaState(proof.IssuerData.State)
 	if err != nil {
@@ -348,9 +480,13 @@ func signatureProof(ctx context.Context, cfg EnvConfig,
 		return out, errors.New("credential status is not of object type")
 	}
 	out.IssuerAuthNonRevProof, err =
-		buildAndValidateCredentialStatus(ctx, cfg, credStatus, issuerID, false)
+		buildAndValidateCredentialStatus(ctx, cfg, credStatus, issuerDID,
+			userDID, false)
 	if err != nil {
-		return out, err
+		return out, ErrCredentialStatus{
+			err:   err,
+			owner: CredentialStatusOwnerIssuer,
+		}
 	}
 
 	return out, nil
@@ -376,6 +512,17 @@ type inputsRequest struct {
 	Request                  jsonObj         `json:"request"`
 }
 
+type v3InputsRequest struct {
+	inputsRequest
+	VerifierID *w3c.DID   `json:"verifierId"`
+	LinkNonce  JsonBigInt `json:"linkNonce"`
+}
+
+type linkedMultiQueryInputsRequest struct {
+	inputsRequest
+	LinkNonce *JsonBigInt `json:"linkNonce"`
+}
+
 type onChainInputsRequest struct {
 	ID                       *core.ID            `json:"id"`
 	ProfileNonce             *JsonBigInt         `json:"profileNonce"`
@@ -391,6 +538,18 @@ type onChainInputsRequest struct {
 	Request                  jsonObj             `json:"request"`
 }
 
+type txData struct {
+	ContractAddress common.Address `json:"contractAddress"`
+	ChainID         core.ChainID   `json:"chainId"`
+}
+
+type v3OnChainInputsRequest struct {
+	onChainInputsRequest
+	VerifierID *w3c.DID   `json:"verifierId"`
+	LinkNonce  JsonBigInt `json:"linkNonce"`
+	TxData     *txData    `json:"transactionData"`
+}
+
 type AtomicQueryInputsResponse struct {
 	Inputs                 circuits.InputsMarshaller
 	VerifiablePresentation map[string]any
@@ -398,6 +557,9 @@ type AtomicQueryInputsResponse struct {
 
 func AtomicQueryMtpV2InputsFromJson(ctx context.Context, cfg EnvConfig,
 	in []byte) (AtomicQueryInputsResponse, error) {
+
+	ctx, task := trace.NewTask(ctx, "AtomicQueryMtpV2InputsFromJson")
+	defer task.End()
 
 	var out AtomicQueryInputsResponse
 	var inpMarsh circuits.AtomicQueryMTPV2Inputs
@@ -416,13 +578,14 @@ func AtomicQueryMtpV2InputsFromJson(ctx context.Context, cfg EnvConfig,
 	inpMarsh.ProfileNonce = obj.ProfileNonce.BigInt()
 	inpMarsh.ClaimSubjectProfileNonce = obj.ClaimSubjectProfileNonce.BigInt()
 
-	circuitID, err := stringByPath(obj.Request, "circuitId")
+	circuitID, err := getCircuitID(obj.Request)
 	if err != nil {
 		return out, err
 	}
-	if circuitID != string(circuits.AtomicQueryMTPV2CircuitID) {
+	if circuitID != circuits.AtomicQueryMTPV2CircuitID {
 		return out, errors.New("wrong circuit")
 	}
+
 	var w3cCred verifiable.W3CCredential
 	err = json.Unmarshal(obj.VerifiableCredentials, &w3cCred)
 	if err != nil {
@@ -433,16 +596,39 @@ func AtomicQueryMtpV2InputsFromJson(ctx context.Context, cfg EnvConfig,
 	if err != nil {
 		return out, err
 	}
-	inpMarsh.Claim, err = claimWithMtpProofFromObj(ctx, cfg, w3cCred,
-		inpMarsh.SkipClaimRevocationCheck)
-	if err != nil {
-		return out, err
+
+	var wg sync.WaitGroup
+
+	var queryErr error
+	var proofErr error
+
+	onClaimReady := func(claim *core.Claim) {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			start := time.Now()
+			inpMarsh.Query, out.VerifiablePresentation, queryErr = queryFromObj(
+				ctx, w3cCred, obj.Request, claim, cfg.documentLoader(),
+				circuitID, cfg.CacheDir)
+			slog.Debug("query done in", "time", time.Since(start))
+		}()
 	}
 
-	inpMarsh.Query, out.VerifiablePresentation, err = queryFromObj(ctx, w3cCred,
-		obj.Request, inpMarsh.Claim.Claim, cfg.documentLoader())
-	if err != nil {
-		return out, err
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		start := time.Now()
+		inpMarsh.Claim, proofErr = claimWithMtpProofFromObj(ctx, cfg, w3cCred,
+			inpMarsh.SkipClaimRevocationCheck, onClaimReady)
+		slog.Debug("rev proof done in", "time", time.Since(start))
+	}()
+
+	wg.Wait()
+	if proofErr != nil {
+		return out, proofErr
+	}
+	if queryErr != nil {
+		return out, queryErr
 	}
 
 	inpMarsh.CurrentTimeStamp = time.Now().Unix()
@@ -452,71 +638,57 @@ func AtomicQueryMtpV2InputsFromJson(ctx context.Context, cfg EnvConfig,
 	return out, nil
 }
 
-func verifiablePresentationFromCred(ctx context.Context,
-	w3cCred verifiable.W3CCredential, requestObj jsonObj, field string,
-	documentLoader ld.DocumentLoader) (verifiablePresentation map[string]any,
-	mzValue merklize.Value, datatype string, hasher merklize.Hasher,
-	err error) {
-
-	mz, err := w3cCred.Merklize(ctx,
-		merklize.WithDocumentLoader(documentLoader))
-	if err != nil {
-		return nil, nil, datatype, hasher, err
-	}
-
-	hasher = mz.Hasher()
-
-	var contextType string
-	contextType, err = stringByPath(requestObj, "query.type")
-	if err != nil {
-		return nil, nil, datatype, hasher, err
-	}
-
-	var contextURL string
-	contextURL, err = stringByPath(requestObj, "query.context")
-	if err != nil {
-		return nil, nil, datatype, hasher, err
-	}
-
-	path, err := buildQueryPath(ctx, contextURL, contextType, field,
-		documentLoader)
-	if err != nil {
-		return nil, nil, datatype, hasher, err
-	}
-
-	datatype, err = mz.JSONLDType(path)
-	if err != nil {
-		return nil, nil, datatype, hasher, err
-	}
-
-	rawValue, err := mz.RawValue(path)
-	if err != nil {
-		return nil, nil, datatype, hasher, err
-	}
-
-	_, mzValue, err = mz.Proof(ctx, path)
-	if err != nil {
-		return nil, nil, datatype, hasher, err
-	}
-
-	verifiablePresentation = fmtVerifiablePresentation(contextURL,
-		contextType, field, rawValue)
-
-	return
+type objEntry struct {
+	key   string
+	value any
 }
 
-func mkVPObj(field string, value any) (string, any) {
-	idx := strings.Index(field, ".")
+func mkVPObj(tp string, kvs ...objEntry) (jsonObj, error) {
+	out := jsonObj{"type": tp}
+	for _, kv := range kvs {
+		err := insertKV(out, kv)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return out, nil
+}
+
+func insertKV(obj jsonObj, kv objEntry) error {
+	if kv.key == "" {
+		return errors.New("empty key")
+	}
+
+	idx := strings.Index(kv.key, ".")
 	if idx == -1 {
-		return field, value
+		if _, ok := obj[kv.key]; ok {
+			return fmt.Errorf("key already exists: %v", kv.key)
+		}
+
+		obj[kv.key] = kv.value
+		return nil
 	}
 
-	nestedField, value := mkVPObj(field[idx+1:], value)
-	return field[:idx], map[string]any{nestedField: value}
+	if idx == 0 || idx == len(kv.key)-1 {
+		return fmt.Errorf("invalid key with an empty part: %v", kv.key)
+	}
+
+	var nestedObj jsonObj
+	nestedObjI, ok := obj[kv.key[:idx]]
+	if !ok {
+		nestedObj = make(jsonObj)
+		obj[kv.key[:idx]] = nestedObj
+	} else {
+		nestedObj, ok = nestedObjI.(jsonObj)
+		if !ok {
+			return fmt.Errorf("not a json object: %v", kv.key[:idx])
+		}
+	}
+	return insertKV(nestedObj, objEntry{key: kv.key[idx+1:], value: kv.value})
 }
 
-func fmtVerifiablePresentation(context string, tp string, field string,
-	value any) map[string]any {
+func fmtVerifiablePresentation(context string, tp string,
+	kvs ...objEntry) (map[string]any, error) {
 
 	var ldContext any
 
@@ -532,21 +704,20 @@ func fmtVerifiablePresentation(context string, tp string, field string,
 		vcTypes = append(vcTypes, tp)
 	}
 
-	// if field name is a dot-separated path, create nested object from it.
-	field, value = mkVPObj(field, value)
+	credSubject, err := mkVPObj(tp, kvs...)
+	if err != nil {
+		return nil, err
+	}
 
 	return map[string]any{
 		"@context": baseContext,
-		"@type":    "VerifiablePresentation",
+		"type":     "VerifiablePresentation",
 		"verifiableCredential": map[string]any{
-			"@context": ldContext,
-			"@type":    vcTypes,
-			"credentialSubject": map[string]any{
-				"@type": tp,
-				field:   value,
-			},
+			"@context":          ldContext,
+			"type":              vcTypes,
+			"credentialSubject": credSubject,
 		},
-	}
+	}, nil
 }
 
 func AtomicQuerySigV2InputsFromJson(ctx context.Context, cfg EnvConfig,
@@ -569,13 +740,14 @@ func AtomicQuerySigV2InputsFromJson(ctx context.Context, cfg EnvConfig,
 	inpMarsh.ProfileNonce = obj.ProfileNonce.BigInt()
 	inpMarsh.ClaimSubjectProfileNonce = obj.ClaimSubjectProfileNonce.BigInt()
 
-	circuitID, err := stringByPath(obj.Request, "circuitId")
+	circuitID, err := getCircuitID(obj.Request)
 	if err != nil {
 		return out, err
 	}
-	if circuitID != string(circuits.AtomicQuerySigV2CircuitID) {
+	if circuitID != circuits.AtomicQuerySigV2CircuitID {
 		return out, errors.New("wrong circuit")
 	}
+
 	var w3cCred verifiable.W3CCredential
 	err = json.Unmarshal(obj.VerifiableCredentials, &w3cCred)
 	if err != nil {
@@ -593,7 +765,8 @@ func AtomicQuerySigV2InputsFromJson(ctx context.Context, cfg EnvConfig,
 	}
 
 	inpMarsh.Query, out.VerifiablePresentation, err = queryFromObj(ctx, w3cCred,
-		obj.Request, inpMarsh.Claim.Claim, cfg.documentLoader())
+		obj.Request, inpMarsh.Claim.Claim, cfg.documentLoader(), circuitID,
+		cfg.CacheDir)
 	if err != nil {
 		return out, err
 	}
@@ -647,13 +820,14 @@ func AtomicQueryMtpV2OnChainInputsFromJson(ctx context.Context, cfg EnvConfig,
 	inpMarsh.Signature = (*babyjub.Signature)(obj.Signature)
 	inpMarsh.Challenge = obj.Challenge.BigInt()
 
-	circuitID, err := stringByPath(obj.Request, "circuitId")
+	circuitID, err := getCircuitID(obj.Request)
 	if err != nil {
 		return out, err
 	}
-	if circuitID != string(circuits.AtomicQueryMTPV2OnChainCircuitID) {
+	if circuitID != circuits.AtomicQueryMTPV2OnChainCircuitID {
 		return out, errors.New("wrong circuit")
 	}
+
 	var w3cCred verifiable.W3CCredential
 	err = json.Unmarshal(obj.VerifiableCredentials, &w3cCred)
 	if err != nil {
@@ -664,16 +838,35 @@ func AtomicQueryMtpV2OnChainInputsFromJson(ctx context.Context, cfg EnvConfig,
 	if err != nil {
 		return out, err
 	}
-	inpMarsh.Claim, err = claimWithMtpProofFromObj(ctx, cfg, w3cCred,
-		inpMarsh.SkipClaimRevocationCheck)
-	if err != nil {
-		return out, err
+
+	var wg sync.WaitGroup
+
+	var queryErr error
+	var proofErr error
+
+	onClaimReady := func(claim *core.Claim) {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			inpMarsh.Query, out.VerifiablePresentation, queryErr = queryFromObj(
+				ctx, w3cCred, obj.Request, claim, cfg.documentLoader(),
+				circuitID, cfg.CacheDir)
+		}()
 	}
 
-	inpMarsh.Query, out.VerifiablePresentation, err = queryFromObj(ctx, w3cCred,
-		obj.Request, inpMarsh.Claim.Claim, cfg.documentLoader())
-	if err != nil {
-		return out, err
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		inpMarsh.Claim, proofErr = claimWithMtpProofFromObj(ctx, cfg, w3cCred,
+			inpMarsh.SkipClaimRevocationCheck, onClaimReady)
+	}()
+
+	wg.Wait()
+	if proofErr != nil {
+		return out, proofErr
+	}
+	if queryErr != nil {
+		return out, queryErr
 	}
 
 	inpMarsh.CurrentTimeStamp = time.Now().Unix()
@@ -725,13 +918,14 @@ func AtomicQuerySigV2OnChainInputsFromJson(ctx context.Context, cfg EnvConfig,
 	inpMarsh.Signature = (*babyjub.Signature)(obj.Signature)
 	inpMarsh.Challenge = obj.Challenge.BigInt()
 
-	circuitID, err := stringByPath(obj.Request, "circuitId")
+	circuitID, err := getCircuitID(obj.Request)
 	if err != nil {
 		return out, err
 	}
-	if circuitID != string(circuits.AtomicQuerySigV2OnChainCircuitID) {
+	if circuitID != circuits.AtomicQuerySigV2OnChainCircuitID {
 		return out, errors.New("wrong circuit")
 	}
+
 	var w3cCred verifiable.W3CCredential
 	err = json.Unmarshal(obj.VerifiableCredentials, &w3cCred)
 	if err != nil {
@@ -749,7 +943,8 @@ func AtomicQuerySigV2OnChainInputsFromJson(ctx context.Context, cfg EnvConfig,
 	}
 
 	inpMarsh.Query, out.VerifiablePresentation, err = queryFromObj(ctx, w3cCred,
-		obj.Request, inpMarsh.Claim.Claim, cfg.documentLoader())
+		obj.Request, inpMarsh.Claim.Claim, cfg.documentLoader(), circuitID,
+		cfg.CacheDir)
 	if err != nil {
 		return out, err
 	}
@@ -761,7 +956,317 @@ func AtomicQuerySigV2OnChainInputsFromJson(ctx context.Context, cfg EnvConfig,
 	return out, nil
 }
 
-func buildQueryPath(ctx context.Context, contextURL string, contextType string,
+func AtomicQueryV3OnChainInputsFromJson(ctx context.Context, cfg EnvConfig,
+	in []byte) (AtomicQueryInputsResponse, error) {
+
+	var out AtomicQueryInputsResponse
+	var inpMarsh circuits.AtomicQueryV3OnChainInputs
+	inpMarsh.IsBJJAuthEnabled = 1
+
+	var obj v3OnChainInputsRequest
+	err := json.Unmarshal(in, &obj)
+	if err != nil {
+		return out, err
+	}
+
+	inpMarsh.RequestID, err = bigIntByPath(obj.Request, "id", true)
+	if err != nil {
+		return out, err
+	}
+
+	if obj.ID == nil {
+		return out, errors.New(`"id" field is required`)
+	}
+
+	inpMarsh.ID = obj.ID
+	inpMarsh.ProfileNonce = obj.ProfileNonce.BigInt()
+	inpMarsh.ClaimSubjectProfileNonce = obj.ClaimSubjectProfileNonce.BigInt()
+
+	inpMarsh.AuthClaim = obj.AuthClaim
+	inpMarsh.AuthClaimIncMtp = obj.AuthClaimIncMtp
+	inpMarsh.AuthClaimNonRevMtp = obj.AuthClaimNonRevMtp
+
+	if obj.TreeState == nil {
+		return out, errors.New("treeState is required")
+	}
+	inpMarsh.TreeState = *obj.TreeState
+
+	if obj.GistProof == nil {
+		return out, errors.New("gistProof is required")
+	}
+	inpMarsh.GISTProof = *obj.GistProof
+
+	inpMarsh.Signature = (*babyjub.Signature)(obj.Signature)
+	inpMarsh.Challenge = obj.Challenge.BigInt()
+
+	circuitID, err := getCircuitID(obj.Request)
+	if err != nil {
+		return out, err
+	}
+	if circuitID != circuits.AtomicQueryV3OnChainCircuitID {
+		return out, errors.New("wrong circuit")
+	}
+
+	var w3cCred verifiable.W3CCredential
+	err = json.Unmarshal(obj.VerifiableCredentials, &w3cCred)
+	if err != nil {
+		return out, err
+	}
+
+	inpMarsh.SkipClaimRevocationCheck, err = querySkipRevocation(obj.Request)
+	if err != nil {
+		return out, err
+	}
+
+	reqProofType, err := queryProofType(obj.Request)
+	if err != nil {
+		return out, err
+	}
+
+	inpMarsh.Claim, inpMarsh.ProofType, err = claimWithSigAndMtpProofFromObj(
+		ctx, cfg, w3cCred, inpMarsh.SkipClaimRevocationCheck, reqProofType)
+	if err != nil {
+		return out, err
+	}
+
+	inpMarsh.Query, out.VerifiablePresentation, err = queryFromObj(ctx, w3cCred,
+		obj.Request, inpMarsh.Claim.Claim, cfg.documentLoader(), circuitID,
+		cfg.CacheDir)
+	if err != nil {
+		return out, err
+	}
+
+	inpMarsh.CurrentTimeStamp = time.Now().Unix()
+
+	inpMarsh.LinkNonce = obj.LinkNonce.BigInt()
+	if obj.VerifierID != nil {
+		id, err := core.IDFromDID(*obj.VerifierID)
+		if err != nil {
+			return out, err
+		}
+		inpMarsh.VerifierID = &id
+	} else {
+		inpMarsh.VerifierID = &core.ID{}
+	}
+
+	inpMarsh.NullifierSessionID, err = bigIntOrZeroByPath(obj.Request,
+		"params.nullifierSessionId", true)
+	if err != nil {
+		return out, err
+	}
+
+	out.Inputs = inpMarsh
+
+	return out, nil
+}
+
+func AtomicQueryV3InputsFromJson(ctx context.Context, cfg EnvConfig,
+	in []byte) (AtomicQueryInputsResponse, error) {
+
+	var out AtomicQueryInputsResponse
+	var inpMarsh circuits.AtomicQueryV3Inputs
+
+	var obj v3InputsRequest
+	err := json.Unmarshal(in, &obj)
+	if err != nil {
+		return out, err
+	}
+
+	inpMarsh.RequestID, err = bigIntByPath(obj.Request, "id", true)
+	if err != nil {
+		return out, err
+	}
+	inpMarsh.ID = &obj.ID
+	inpMarsh.ProfileNonce = obj.ProfileNonce.BigInt()
+	inpMarsh.ClaimSubjectProfileNonce = obj.ClaimSubjectProfileNonce.BigInt()
+
+	circuitID, err := getCircuitID(obj.Request)
+	if err != nil {
+		return out, err
+	}
+	if circuitID != circuits.AtomicQueryV3CircuitID {
+		return out, errors.New("wrong circuit")
+	}
+
+	var w3cCred verifiable.W3CCredential
+	err = json.Unmarshal(obj.VerifiableCredentials, &w3cCred)
+	if err != nil {
+		return out, err
+	}
+
+	inpMarsh.SkipClaimRevocationCheck, err = querySkipRevocation(obj.Request)
+	if err != nil {
+		return out, err
+	}
+
+	reqProofType, err := queryProofType(obj.Request)
+	if err != nil {
+		return out, err
+	}
+
+	inpMarsh.Claim, inpMarsh.ProofType, err = claimWithSigAndMtpProofFromObj(
+		ctx, cfg, w3cCred, inpMarsh.SkipClaimRevocationCheck, reqProofType)
+	if err != nil {
+		return out, err
+	}
+
+	inpMarsh.Query, out.VerifiablePresentation, err = queryFromObj(ctx, w3cCred,
+		obj.Request, inpMarsh.Claim.Claim, cfg.documentLoader(), circuitID,
+		cfg.CacheDir)
+	if err != nil {
+		return out, err
+	}
+
+	inpMarsh.CurrentTimeStamp = time.Now().Unix()
+
+	inpMarsh.NullifierSessionID, err = bigIntOrZeroByPath(obj.Request,
+		"params.nullifierSessionId", true)
+	if err != nil {
+		return out, err
+	}
+
+	if obj.VerifierID != nil {
+		id, err := core.IDFromDID(*obj.VerifierID)
+		if err != nil {
+			return out, err
+		}
+		inpMarsh.VerifierID = &id
+	} else {
+		inpMarsh.VerifierID = &core.ID{}
+	}
+
+	inpMarsh.LinkNonce = obj.LinkNonce.BigInt()
+
+	out.Inputs = inpMarsh
+
+	return out, nil
+}
+
+func GenericInputsFromJson(ctx context.Context, cfg EnvConfig,
+	in []byte) (AtomicQueryInputsResponse, error) {
+	var req struct {
+		Request struct {
+			CircuitID circuits.CircuitID `json:"circuitId"`
+		} `json:"request"`
+	}
+
+	err := json.Unmarshal(in, &req)
+	if err != nil {
+		return AtomicQueryInputsResponse{}, err
+	}
+
+	switch req.Request.CircuitID {
+	case circuits.AtomicQueryMTPV2CircuitID:
+		return AtomicQueryMtpV2InputsFromJson(ctx, cfg, in)
+	case circuits.AtomicQuerySigV2CircuitID:
+		return AtomicQuerySigV2InputsFromJson(ctx, cfg, in)
+	case circuits.AtomicQueryMTPV2OnChainCircuitID:
+		return AtomicQueryMtpV2OnChainInputsFromJson(ctx, cfg, in)
+	case circuits.AtomicQuerySigV2OnChainCircuitID:
+		return AtomicQuerySigV2OnChainInputsFromJson(ctx, cfg, in)
+	case circuits.AtomicQueryV3CircuitID:
+		return AtomicQueryV3InputsFromJson(ctx, cfg, in)
+	case circuits.AtomicQueryV3OnChainCircuitID:
+		return AtomicQueryV3OnChainInputsFromJson(ctx, cfg, in)
+	case circuits.LinkedMultiQuery10CircuitID:
+		return LinkedMultiQueryInputsFromJson(ctx, cfg, in)
+	case circuits.AuthV2CircuitID:
+		return AuthV2InputsFromJson(ctx, cfg, in)
+	case gocircuitexternal.AnonAadhaarV1:
+		return AnonAadhaarInputsFromJson(ctx, cfg, in)
+	case externalpassport.CredentialSHA1,
+		externalpassport.CredentialSHA224,
+		externalpassport.CredentialSHA256,
+		externalpassport.CredentialSHA384,
+		externalpassport.CredentialSHA512:
+		return PassportInputsFromJson(ctx, cfg, in)
+	}
+
+	return AtomicQueryInputsResponse{}, errors.New("unknown circuit")
+}
+
+func LinkedMultiQueryInputsFromJson(ctx context.Context, cfg EnvConfig,
+	in []byte) (AtomicQueryInputsResponse, error) {
+
+	var out AtomicQueryInputsResponse
+	var inpMarsh circuits.LinkedMultiQueryInputs
+
+	var obj linkedMultiQueryInputsRequest
+	err := json.Unmarshal(in, &obj)
+	if err != nil {
+		return out, err
+	}
+
+	if obj.LinkNonce == nil {
+		return out, errors.New(`"linkNonce" field is required`)
+	}
+	inpMarsh.LinkNonce = obj.LinkNonce.BigInt()
+
+	circuitID, err := getCircuitID(obj.Request)
+	if err != nil {
+		return out, err
+	}
+	if circuitID != circuits.LinkedMultiQuery10CircuitID {
+		return out, errors.New("wrong circuit")
+	}
+
+	var w3cCred verifiable.W3CCredential
+	err = json.Unmarshal(obj.VerifiableCredentials, &w3cCred)
+	if err != nil {
+		return out, err
+	}
+
+	reqProofType, err := queryProofType(obj.Request)
+	if err != nil {
+		return out, err
+	}
+
+	claim, _, err := claimWithSigAndMtpProofFromObj(ctx, cfg, w3cCred, true,
+		reqProofType)
+	if err != nil {
+		return out, err
+	}
+
+	inpMarsh.Claim = claim.Claim
+
+	inpMarsh.Query, out.VerifiablePresentation, err = queriesFromObj(ctx,
+		w3cCred, obj.Request, inpMarsh.Claim, cfg.documentLoader(), circuitID,
+		cfg.CacheDir)
+	if err != nil {
+		return out, err
+	}
+
+	out.Inputs = inpMarsh
+
+	return out, nil
+}
+
+// return empty circuits.ProofType if not found
+func queryProofType(requestObj jsonObj) (circuits.ProofType, error) {
+	result, err := getByPath(requestObj, "query.proofType")
+	if errors.As(err, &errPathNotFound{}) {
+		return "", nil
+	}
+	if err != nil {
+		return "", err
+	}
+
+	resS, ok := result.(string)
+	if !ok {
+		return "", errors.New("value of proofType is not string")
+	}
+
+	switch circuits.ProofType(resS) {
+	case circuits.Iden3SparseMerkleTreeProofType:
+		return circuits.Iden3SparseMerkleTreeProofType, nil
+	case circuits.BJJSignatureProofType:
+		return circuits.BJJSignatureProofType, nil
+	}
+	return "", fmt.Errorf("unknown proofType: %v", resS)
+
+}
+
+func buildQueryPath(_ context.Context, contextURL string, contextType string,
 	field string,
 	documentLoader ld.DocumentLoader) (path merklize.Path, err error) {
 
@@ -780,12 +1285,23 @@ func buildQueryPath(ctx context.Context, contextURL string, contextType string,
 		return
 	}
 	// took from identity-server prepareMerklizedQuery func
-	err = path.Prepend("https://www.w3.org/2018/credentials#credentialSubject")
+	err = path.Prepend(iriCredentialSubject)
 	if err != nil {
 		return
 	}
 
 	return
+}
+
+func datatypeFromContext(contextURL string, contextType string, field string,
+	documentLoader ld.DocumentLoader, hasher merklize.Hasher) (string, error) {
+
+	return merklize.Options{
+		Hasher:         hasher,
+		DocumentLoader: documentLoader,
+	}.TypeFromContext(
+		[]byte(`{"@context":"`+contextURL+`"}`),
+		contextType+"."+field)
 }
 
 func querySkipRevocation(requestObj jsonObj) (bool, error) {
@@ -805,8 +1321,8 @@ func querySkipRevocation(requestObj jsonObj) (bool, error) {
 }
 
 func queryFromObj(ctx context.Context, w3cCred verifiable.W3CCredential,
-	requestObj jsonObj, claim *core.Claim,
-	documentLoader ld.DocumentLoader) (out circuits.Query,
+	requestObj jsonObj, claim *core.Claim, documentLoader ld.DocumentLoader,
+	circuitID circuits.CircuitID, cacheDir string) (out circuits.Query,
 	verifiablePresentation jsonObj, err error) {
 
 	merklizePosition, err := claim.GetMerklizedPosition()
@@ -814,86 +1330,261 @@ func queryFromObj(ctx context.Context, w3cCred verifiable.W3CCredential,
 		return out, nil, err
 	}
 
+	var queries []*circuits.Query
+	var vp jsonObj
 	if merklizePosition == core.MerklizedRootPositionNone {
-		return queryFromObjNonMerklized(ctx, w3cCred, requestObj,
-			documentLoader)
+		queries, vp, err = queriesFromObjNonMerklized(ctx, w3cCred, requestObj,
+			documentLoader, circuitID, cacheDir)
+	} else {
+		queries, vp, err = queriesFromObjMerklized(ctx, w3cCred, requestObj,
+			documentLoader, circuitID, claim, cacheDir)
+	}
+	if err != nil {
+		return circuits.Query{}, nil, err
 	}
 
-	return queryFromObjMerklized(ctx, w3cCred, requestObj, documentLoader)
+	for i := 1; i < len(queries); i++ {
+		if queries[i] != nil {
+			return circuits.Query{}, nil,
+				errors.New("multiple queries are not supported")
+		}
+	}
+
+	if len(queries) == 0 || queries[0] == nil {
+		// we should not reach here
+		return circuits.Query{}, nil, errors.New("[assertion] no query found")
+	}
+
+	return *queries[0], vp, nil
 }
 
-func queryFromObjNonMerklized(ctx context.Context,
+func queriesFromObj(ctx context.Context, w3cCred verifiable.W3CCredential,
+	requestObj jsonObj, claim *core.Claim, documentLoader ld.DocumentLoader,
+	circuitID circuits.CircuitID, cacheDir string) ([]*circuits.Query, jsonObj, error) {
+
+	merklizePosition, err := claim.GetMerklizedPosition()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if merklizePosition == core.MerklizedRootPositionNone {
+		return queriesFromObjNonMerklized(ctx, w3cCred, requestObj,
+			documentLoader, circuitID, cacheDir)
+	}
+
+	return queriesFromObjMerklized(ctx, w3cCred, requestObj, documentLoader,
+		circuitID, claim, cacheDir)
+}
+
+func wrapMerklizeWithRegion(ctx context.Context,
+	w3cCred verifiable.W3CCredential, documentLoader ld.DocumentLoader,
+	cacheDir string) (*merklize.Merklizer, error) {
+
+	var mz *merklize.Merklizer
+	var err error
+	trace.WithRegion(ctx, "merklize", func() {
+		mz, err = merklizeCred(ctx, w3cCred, documentLoader, true, cacheDir)
+	})
+	return mz, err
+}
+
+func isV2Circuit(circuitID circuits.CircuitID) bool {
+	return circuitID == circuits.AtomicQueryMTPV2CircuitID ||
+		circuitID == circuits.AtomicQueryMTPV2OnChainCircuitID ||
+		circuitID == circuits.AtomicQuerySigV2CircuitID ||
+		circuitID == circuits.AtomicQuerySigV2OnChainCircuitID
+}
+
+var sdOperator = map[circuits.CircuitID]int{
+	circuits.AtomicQueryMTPV2CircuitID:        circuits.EQ,
+	circuits.AtomicQueryMTPV2OnChainCircuitID: circuits.EQ,
+	circuits.AtomicQuerySigV2CircuitID:        circuits.EQ,
+	circuits.AtomicQuerySigV2OnChainCircuitID: circuits.EQ,
+	circuits.AtomicQueryV3CircuitID:           circuits.SD,
+	circuits.AtomicQueryV3OnChainCircuitID:    circuits.SD,
+	circuits.LinkedMultiQuery10CircuitID:      circuits.SD,
+}
+
+func opName(opID int) string {
+	for name, id := range circuits.QueryOperators {
+		if id == opID {
+			return name
+		}
+	}
+	return fmt.Sprintf("Operator<%d>", opID)
+}
+
+func queriesFromObjNonMerklized(ctx context.Context,
 	w3cCred verifiable.W3CCredential, requestObj jsonObj,
-	documentLoader ld.DocumentLoader) (out circuits.Query,
-	verifiablePresentation jsonObj, err error) {
+	documentLoader ld.DocumentLoader, circuitID circuits.CircuitID,
+	cacheDir string) ([]*circuits.Query, jsonObj, error) {
+
+	var err error
+
+	region := trace.StartRegion(ctx, "queryFromObjNonMerklized")
+	defer region.End()
 
 	pr := processor.InitProcessorOptions(&processor.Processor{
 		DocumentLoader: documentLoader,
 		Parser:         json2.Parser{},
 	})
 
-	field, op, err := getQueryFieldAndOperator(requestObj)
+	var queries = make([]*circuits.Query, circuits.LinkedMultiQueryLength)
+	var queryIndex = 0
+	credSubjObj, err := objByBath(requestObj, "query.credentialSubject")
 	if errors.As(err, &errPathNotFound{}) {
-		out.Operator = circuits.NOOP
-		out.Values = []*big.Int{}
-		return out, nil, nil
+
+		queries[0] = new(circuits.Query)
+
+		if isV2Circuit(circuitID) {
+			return nil, nil, errors.New(
+				"credentialSubject field is not found in query")
+		}
+		queries[0].Operator = circuits.NOOP
+		queries[0].Values = []*big.Int{}
+		return queries, nil, nil
 	} else if err != nil {
-		return out, nil,
-			fmt.Errorf("unable to extract field from query: %w", err)
+		return nil, nil, fmt.Errorf(
+			"unable to extract credentialSubject field from query: %w", err)
 	}
 
-	schemaURL, typeName, err := getQuerySchemaAndType(requestObj)
+	contextURL, contextType, err := getQuerySchemaAndType(requestObj)
 	if err != nil {
-		return out, nil, err
+		return nil, nil, err
 	}
 
-	schema, err := pr.Load(ctx, schemaURL)
+	schema, err := pr.Load(ctx, contextURL)
 	if err != nil {
-		return out, nil, err
+		return nil, nil, err
 	}
 
-	out.SlotIndex, err = pr.GetFieldSlotIndex(field, typeName, schema)
+	var mz *merklize.Merklizer
+	mz, err = wrapMerklizeWithRegion(ctx, w3cCred, documentLoader, cacheDir)
 	if err != nil {
-		return out, nil, err
+		return nil, nil, err
 	}
 
-	var opObj jsonObj
-	var ok bool
-	opObj, ok = op.(jsonObj)
-	if !ok {
-		return out, nil, errors.New("operation on field is not a json object")
-	}
-
-	vp, mzValue, datatype, hasher, err := verifiablePresentationFromCred(ctx,
-		w3cCred, requestObj, field, documentLoader)
-	if err != nil {
-		return out, nil, err
-	}
-
-	opStr, val, err := extractSingleEntry(opObj)
-	switch err {
-	case errMultipleEntries:
-		return out, nil, errors.New("only one operation per field is supported")
-	case errNoEntry:
-		// handle selective disclosure
-		var valueEntry *big.Int
-		valueEntry, err = mzValue.MtEntry()
+	var vpEntries []objEntry
+	fields := sortedKeys(credSubjObj)
+	for _, field := range fields {
+		var slotIndex int
+		slotIndex, err = pr.GetFieldSlotIndex(field, contextType, schema)
 		if err != nil {
-			return out, nil, err
+			return nil, nil, err
 		}
 
-		verifiablePresentation = vp
-		out.Operator = circuits.EQ
-		out.Values = []*big.Int{valueEntry}
-	default:
-		out.Operator, out.Values, err = unpackOperatorWithArgs(opStr, val,
-			datatype, hasher)
+		var path merklize.Path
+		path, err = buildQueryPath(ctx, contextURL, contextType, field,
+			documentLoader)
 		if err != nil {
-			return out, nil, err
+			return nil, nil, err
+		}
+
+		var datatype string
+		datatype, err = mz.JSONLDType(path)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		ops, ok := credSubjObj[field].(jsonObj)
+		if !ok {
+			return nil, nil, fmt.Errorf(
+				"for query field '%v' the operator object is of incorrect type: %T",
+				field, credSubjObj[field])
+		}
+
+		if len(ops) == 0 {
+			// handle selective disclosure
+
+			if queryIndex >= circuits.LinkedMultiQueryLength {
+				return nil, nil, errors.New("too many queries")
+			}
+
+			query := circuits.Query{SlotIndex: slotIndex}
+
+			var sdOp int
+			sdOp, ok = sdOperator[circuitID]
+			if !ok {
+				return nil, nil, errSDCircuitNotSupported{circuitID}
+			}
+
+			switch sdOp {
+			case circuits.SD:
+				query.Operator = sdOp
+				query.Values = []*big.Int{}
+			case circuits.EQ:
+				var mzValue merklize.Value
+				var p *merkletree.Proof
+				p, mzValue, err = mz.Proof(ctx, path)
+				if err != nil {
+					return nil, nil, err
+				}
+				if !p.Existence {
+					return nil, nil, fmt.Errorf(
+						"value not found in verifiable credential by path %v",
+						fmtPath(path))
+				}
+				if mzValue == nil {
+					// should not happen because of the existence check previously
+					return nil, nil, fmt.Errorf(
+						"[assertion] merklized value is nil for path %v",
+						fmtPath(path))
+				}
+
+				var valueEntry *big.Int
+				valueEntry, err = mzValue.MtEntry()
+				if err != nil {
+					return nil, nil, err
+				}
+				query.Operator = sdOp
+				query.Values = []*big.Int{valueEntry}
+			default:
+				return nil, nil, errSDOperatorNotSupported{sdOp}
+			}
+
+			queries[queryIndex] = &query
+			queryIndex++
+
+			vpEntry := objEntry{key: field}
+			vpEntry.value, err = mz.RawValue(path)
+			if err != nil {
+				return nil, nil, err
+			}
+			vpEntries = append(vpEntries, vpEntry)
+
+		} else {
+			sortedOps := sortedKeys(ops)
+			for _, op := range sortedOps {
+				val := ops[op]
+
+				if queryIndex >= circuits.LinkedMultiQueryLength {
+					return nil, nil, errors.New("too many queries")
+				}
+
+				query := circuits.Query{SlotIndex: slotIndex}
+				query.Operator, query.Values, err = unpackOperatorWithArgs(op,
+					val, datatype, mz.Hasher())
+				if err != nil {
+					return nil, nil, err
+				}
+
+				queries[queryIndex] = &query
+				queryIndex++
+			}
+		}
+
+	}
+
+	var verifiablePresentation jsonObj
+	if len(vpEntries) > 0 {
+		verifiablePresentation, err = fmtVerifiablePresentation(contextURL,
+			contextType, vpEntries...)
+		if err != nil {
+			return nil, nil, err
 		}
 	}
 
-	return out, verifiablePresentation, nil
+	return queries, verifiablePresentation, nil
 }
 
 func getQuerySchemaAndType(requestObj jsonObj) (string, string, error) {
@@ -908,117 +1599,277 @@ func getQuerySchemaAndType(requestObj jsonObj) (string, string, error) {
 	return schemaURL, typeName, nil
 }
 
-func queryFromObjMerklized(ctx context.Context,
+func getCircuitID(requestObj jsonObj) (circuits.CircuitID, error) {
+	circuitID, err := stringByPath(requestObj, "circuitId")
+	if err != nil {
+		return "", err
+	}
+	return circuits.CircuitID(circuitID), nil
+}
+
+const iriCredentialSubject = "https://www.w3.org/2018/credentials#credentialSubject"
+
+func mkValueProof(ctx context.Context, mz *merklize.Merklizer,
+	path merklize.Path) (*circuits.ValueProof, error) {
+
+	existenceProof, mzValue, err := mz.Proof(ctx, path)
+	if err != nil {
+		return nil, err
+	}
+
+	var valueEntry *big.Int
+	if existenceProof.Existence {
+		valueEntry, err = mzValue.MtEntry()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		valueEntry = big.NewInt(0)
+	}
+
+	var pathEntry *big.Int
+	pathEntry, err = path.MtEntry()
+	if err != nil {
+		return nil, err
+	}
+
+	return &circuits.ValueProof{
+		Path:  pathEntry,
+		Value: valueEntry,
+		MTP:   existenceProof,
+	}, nil
+}
+
+func mkEqQuery(ctx context.Context, mz *merklize.Merklizer,
+	path merklize.Path) (circuits.Query, error) {
+
+	valueProof, err := mkValueProof(ctx, mz, path)
+	if err != nil {
+		return circuits.Query{}, err
+	}
+
+	return circuits.Query{
+		Operator:   circuits.EQ,
+		Values:     []*big.Int{valueProof.Value},
+		ValueProof: valueProof,
+	}, nil
+}
+
+type errSDCircuitNotSupported struct {
+	circuitID circuits.CircuitID
+}
+
+func (e errSDCircuitNotSupported) Error() string {
+	return fmt.Sprintf("selective disclosure is not supported by circuit %v",
+		e.circuitID)
+}
+
+type errSDOperatorNotSupported struct {
+	operator int
+}
+
+func (e errSDOperatorNotSupported) Error() string {
+	return fmt.Sprintf("operator %v is not supported for selective disclosure",
+		opName(e.operator))
+}
+
+func sortedKeys(m jsonObj) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+func queriesFromObjMerklized(ctx context.Context,
 	w3cCred verifiable.W3CCredential, requestObj jsonObj,
-	documentLoader ld.DocumentLoader) (out circuits.Query,
-	verifiablePresentation jsonObj, err error) {
+	documentLoader ld.DocumentLoader, circuitID circuits.CircuitID,
+	_ *core.Claim, cacheDir string) ([]*circuits.Query, jsonObj, error) {
 
-	mz, err := w3cCred.Merklize(ctx,
-		merklize.WithDocumentLoader(documentLoader))
+	region := trace.StartRegion(ctx, "queryFromObjMerklized")
+	defer region.End()
+
+	mz, err := wrapMerklizeWithRegion(ctx, w3cCred, documentLoader, cacheDir)
 	if err != nil {
-		return out, nil, err
+		return nil, nil, err
 	}
 
-	var contextURL string
-	contextURL, err = stringByPath(requestObj, "query.context")
+	// TODO uncomment this on tests fixes
+	//mzRoot, err := claim.GetMerklizedRoot()
+	//if err != nil {
+	//	return out, nil, err
+	//}
+	//if mzRoot.Cmp(mz.Root().BigInt()) != 0 {
+	//	return out, nil, fmt.Errorf(
+	//		"claim's merklized root does not match calculated merklized "+
+	//			"credential root. Claim's merklized root: %v, "+
+	//			"credential merklized croot: %v",
+	//		mzRoot.String(), mz.Root().BigInt().String())
+	//}
+
+	var contextURL, contextType string
+	contextURL, contextType, err = getQuerySchemaAndType(requestObj)
 	if err != nil {
-		return out, nil, err
+		return nil, nil, err
 	}
-	var contextType string
-	contextType, err = stringByPath(requestObj, "query.type")
-	if err != nil {
-		return out, nil, err
-	}
-	field, op, err := getQueryFieldAndOperator(requestObj)
+
+	var queries = make([]*circuits.Query, circuits.LinkedMultiQueryLength)
+	var queryIndex = 0
+	var credSubjObj jsonObj
+	credSubjObj, err = objByBath(requestObj, "query.credentialSubject")
 	if errors.As(err, &errPathNotFound{}) {
-		out.Operator = circuits.EQ
-		var path merklize.Path
-		path, err = merklize.NewPath(
-			"https://www.w3.org/2018/credentials#credentialSubject")
-		if err != nil {
-			return out, nil, err
+
+		queries[0] = new(circuits.Query)
+
+		if circuitID == circuits.AtomicQueryV3CircuitID ||
+			circuitID == circuits.AtomicQueryV3OnChainCircuitID ||
+			circuitID == circuits.LinkedMultiQuery10CircuitID {
+			queries[0].Operator = circuits.NOOP
+			queries[0].Values = []*big.Int{}
+		} else {
+			var path merklize.Path
+			path, err = merklize.NewPath(iriCredentialSubject)
+			if err != nil {
+				return nil, nil, err
+			}
+			*queries[0], err = mkEqQuery(ctx, mz, path)
+			if err != nil {
+				return nil, nil, err
+			}
 		}
-		out.ValueProof = new(circuits.ValueProof)
-		var mzValue merklize.Value
-		out.ValueProof.MTP, mzValue, err = mz.Proof(ctx, path)
-		if err != nil {
-			return out, nil, err
-		}
-		var val *big.Int
-		val, err = mzValue.MtEntry()
-		if err != nil {
-			return out, nil, err
-		}
-		out.Values = []*big.Int{val}
-		out.ValueProof.Value = val
-		out.ValueProof.Path, err = path.MtEntry()
-		if err != nil {
-			return out, nil, err
-		}
-		return out, nil, nil
+
+		return queries, nil, nil
 	} else if err != nil {
-		return out, nil,
+		return nil, nil,
 			fmt.Errorf("unable to extract field from query: %w", err)
 	}
-	path, err := buildQueryPath(ctx, contextURL, contextType, field,
-		documentLoader)
-	if err != nil {
-		return out, nil, err
-	}
 
-	out.ValueProof = new(circuits.ValueProof)
-	out.ValueProof.Path, err = path.MtEntry()
-	if err != nil {
-		return out, nil, err
-	}
-	var mzValue merklize.Value
-	out.ValueProof.MTP, mzValue, err = mz.Proof(ctx, path)
-	if err != nil {
-		return out, nil, err
-	}
-	out.ValueProof.Value, err = mzValue.MtEntry()
-	if err != nil {
-		return out, nil, err
-	}
+	var vpEntries []objEntry
+	fields := sortedKeys(credSubjObj)
+	for _, field := range fields {
+		ops, ok := credSubjObj[field].(jsonObj)
+		if !ok {
+			return nil, nil, fmt.Errorf(
+				"for query field '%v' the operator object is of incorrect type: %T",
+				field, credSubjObj[field])
 
-	var opObj jsonObj
-	var ok bool
-	opObj, ok = op.(jsonObj)
-	if !ok {
-		return out, nil, errors.New("operation on field is not a json object")
-	}
-	opStr, val, err := extractSingleEntry(opObj)
-	switch err {
-	case errMultipleEntries:
-		return out, nil, errors.New("only one operation per field is supported")
-	case errNoEntry:
-		// handle selective disclosure
-		out.Operator = circuits.EQ
-		out.Values = []*big.Int{out.ValueProof.Value}
-		rawValue, err := mz.RawValue(path)
-		if err != nil {
-			return out, nil, err
-		}
-		verifiablePresentation = fmtVerifiablePresentation(contextURL,
-			contextType, field, rawValue)
-	default:
-		fieldDatatype, err := mz.JSONLDType(path)
-		if err != nil {
-			return out, nil, err
 		}
 
-		out.Operator, out.Values, err = unpackOperatorWithArgs(opStr, val,
-			fieldDatatype, mz.Hasher())
+		var path merklize.Path
+		path, err = buildQueryPath(ctx, contextURL, contextType, field,
+			documentLoader)
 		if err != nil {
-			return out, nil, err
+			return nil, nil, err
+		}
+
+		var valueProof *circuits.ValueProof
+		valueProof, err = mkValueProof(ctx, mz, path)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		if len(ops) == 0 {
+
+			// Handle selective disclosure
+
+			if queryIndex >= circuits.LinkedMultiQueryLength {
+				return nil, nil, errors.New("too many queries")
+			}
+
+			var query = circuits.Query{ValueProof: valueProof}
+			var sdOp int
+			sdOp, ok = sdOperator[circuitID]
+			if !ok {
+				return nil, nil, errSDCircuitNotSupported{circuitID}
+			}
+
+			switch sdOp {
+			case circuits.SD:
+				query.Operator = circuits.SD
+				query.Values = []*big.Int{}
+			case circuits.EQ:
+				query.Operator = circuits.EQ
+				query.Values = []*big.Int{query.ValueProof.Value}
+			default:
+				return nil, nil, errSDOperatorNotSupported{sdOp}
+			}
+
+			queries[queryIndex] = &query
+			queryIndex++
+
+			vpEntry := objEntry{key: field}
+			vpEntry.value, err = mz.RawValue(path)
+			if err != nil {
+				return nil, nil, err
+			}
+			vpEntries = append(vpEntries, vpEntry)
+
+		} else {
+
+			sortedOps := sortedKeys(ops)
+			for _, op := range sortedOps {
+				val := ops[op]
+
+				var fieldDatatype string
+				if valueProof.MTP.Existence {
+					fieldDatatype, err = mz.JSONLDType(path)
+				} else {
+					fieldDatatype, err = datatypeFromContext(contextURL,
+						contextType, field, documentLoader, mz.Hasher())
+				}
+				if err != nil {
+					return nil, nil, err
+				}
+
+				var query = circuits.Query{ValueProof: valueProof}
+				query.Operator, query.Values, err = unpackOperatorWithArgs(op,
+					val, fieldDatatype, mz.Hasher())
+				if err != nil {
+					return nil, nil, err
+				}
+
+				if queryIndex >= circuits.LinkedMultiQueryLength {
+					return nil, nil, errors.New("too many queries")
+				}
+				queries[queryIndex] = &query
+				queryIndex++
+			}
 		}
 	}
-	return out, verifiablePresentation, nil
+
+	var verifiablePresentation jsonObj
+	if len(vpEntries) > 0 {
+		verifiablePresentation, err = fmtVerifiablePresentation(contextURL,
+			contextType, vpEntries...)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
+	return queries, verifiablePresentation, nil
 }
 
 // Return int operator value by its name and arguments as big.Ints array.
 func unpackOperatorWithArgs(opStr string, opValue any,
 	datatype string, hasher merklize.Hasher) (int, []*big.Int, error) {
+
+	op, ok := circuits.QueryOperators[opStr]
+	if !ok {
+		return 0, nil, errors.New("unknown operator")
+	}
+
+	if op == circuits.EXISTS {
+		var existsVal bool
+		existsVal, ok = opValue.(bool)
+		if !ok {
+			return 0, nil, errors.New("$exists operator value is not a boolean")
+		}
+		if existsVal {
+			return op, []*big.Int{big.NewInt(1)}, nil
+		}
+		return op, []*big.Int{big.NewInt(0)}, nil
+	}
 
 	hashFn := func(val any) (*big.Int, error) {
 		if hasher == nil {
@@ -1026,11 +1877,6 @@ func unpackOperatorWithArgs(opStr string, opValue any,
 		} else {
 			return merklize.HashValueWithHasher(hasher, datatype, val)
 		}
-	}
-
-	op, ok := circuits.QueryOperators[opStr]
-	if !ok {
-		return 0, nil, errors.New("unknown operator")
 	}
 
 	var err error
@@ -1052,27 +1898,6 @@ func unpackOperatorWithArgs(opStr string, opValue any,
 		}
 		return op, vals, nil
 	}
-}
-
-func getQueryFieldAndOperator(requestObj jsonObj) (string, any, error) {
-	credSubjObj, err := objByBath(requestObj, "query.credentialSubject")
-	if err != nil {
-		return "", nil, err
-	}
-	return extractSingleEntry(credSubjObj)
-}
-
-var errNoEntry = errors.New("no entry")
-var errMultipleEntries = errors.New("multiple entries")
-
-func extractSingleEntry(obj jsonObj) (key string, val any, err error) {
-	if len(obj) > 1 {
-		return key, val, errMultipleEntries
-	}
-	for key, val = range obj {
-		return key, val, nil
-	}
-	return key, val, errNoEntry
 }
 
 type hexHash merkletree.Hash
@@ -1102,7 +1927,11 @@ func (h *hexHash) UnmarshalJSON(i []byte) error {
 
 func claimWithMtpProofFromObj(ctx context.Context, cfg EnvConfig,
 	w3cCred verifiable.W3CCredential,
-	skipClaimRevocationCheck bool) (circuits.ClaimWithMTPProof, error) {
+	skipClaimRevocationCheck bool,
+	claimProcessFn func(claim *core.Claim)) (circuits.ClaimWithMTPProof, error) {
+
+	region := trace.StartRegion(ctx, "claimWithMtpProofFromObj")
+	defer region.End()
 
 	var out circuits.ClaimWithMTPProof
 	var err error
@@ -1143,12 +1972,13 @@ func claimWithMtpProofFromObj(ctx context.Context, cfg EnvConfig,
 		if err != nil {
 			return out, err
 		}
-
-	} else if proofI = findProofByType(w3cCred, verifiable.ProofType(verifiable.Iden3OnchainSparseMerkleTreeProof2023)); proofI != nil {
-
 	} else {
-		return out, fmt.Errorf("no %v proofs found",
-			verifiable.Iden3SparseMerkleTreeProofType)
+		return out, errProofNotFound(verifiable.Iden3SparseMerkleTreeProofType)
+	}
+
+	userDID, err := userDIDFromCred(w3cCred)
+	if err != nil {
+		return out, err
 	}
 
 	issuerID, err := core.IDFromDID(*issuerDID)
@@ -1162,18 +1992,89 @@ func claimWithMtpProofFromObj(ctx context.Context, cfg EnvConfig,
 		return out, err
 	}
 
+	if claimProcessFn != nil {
+		claimProcessFn(out.Claim)
+	}
+
 	credStatus, ok := w3cCred.CredentialStatus.(jsonObj)
 	if !ok {
 		return out, errors.New("not a json object")
 	}
 
 	out.NonRevProof, err = buildAndValidateCredentialStatus(ctx, cfg,
-		credStatus, out.IssuerID, skipClaimRevocationCheck)
+		credStatus, issuerDID, userDID, skipClaimRevocationCheck)
 	if err != nil {
-		return out, err
+		return out, ErrCredentialStatus{
+			err:   err,
+			owner: CredentialStatusOwnerUser,
+		}
 	}
 
 	return out, nil
+}
+
+func v3ProofFromMTP(
+	p circuits.ClaimWithMTPProof) circuits.ClaimWithSigAndMTPProof {
+	return circuits.ClaimWithSigAndMTPProof{
+		IssuerID:    p.IssuerID,
+		Claim:       p.Claim,
+		NonRevProof: p.NonRevProof,
+		IncProof:    &p.IncProof,
+	}
+}
+
+func v3ProofFromSig(p circuits.ClaimWithSigProof) circuits.ClaimWithSigAndMTPProof {
+	return circuits.ClaimWithSigAndMTPProof{
+		IssuerID:       p.IssuerID,
+		Claim:          p.Claim,
+		NonRevProof:    p.NonRevProof,
+		SignatureProof: &p.SignatureProof,
+	}
+
+}
+
+func claimWithSigAndMtpProofFromObj(ctx context.Context, cfg EnvConfig,
+	w3cCred verifiable.W3CCredential, skipClaimRevocationCheck bool,
+	proofType circuits.ProofType) (circuits.ClaimWithSigAndMTPProof, circuits.ProofType, error) {
+
+	switch proofType {
+	case circuits.Iden3SparseMerkleTreeProofType:
+		claimWithMtpProof, err := claimWithMtpProofFromObj(ctx, cfg, w3cCred,
+			skipClaimRevocationCheck, nil)
+		if err != nil {
+			return circuits.ClaimWithSigAndMTPProof{}, proofType, err
+		}
+		return v3ProofFromMTP(claimWithMtpProof), proofType, nil
+	case circuits.BJJSignatureProofType:
+		claimWithSigProof, err := claimWithSigProofFromObj(ctx, cfg, w3cCred,
+			skipClaimRevocationCheck)
+		if err != nil {
+			return circuits.ClaimWithSigAndMTPProof{}, proofType, err
+		}
+		return v3ProofFromSig(claimWithSigProof), proofType, nil
+	case "":
+		claimWithMtpProof, err := claimWithMtpProofFromObj(ctx, cfg, w3cCred,
+			skipClaimRevocationCheck, nil)
+		var tErr errProofNotFound
+		switch {
+		case errors.As(err, &tErr):
+			claimWithSigProof, err := claimWithSigProofFromObj(ctx, cfg,
+				w3cCred, skipClaimRevocationCheck)
+			if err != nil {
+				return circuits.ClaimWithSigAndMTPProof{}, proofType, err
+			}
+			return v3ProofFromSig(claimWithSigProof),
+				circuits.BJJSignatureProofType, nil
+		case err != nil:
+			return circuits.ClaimWithSigAndMTPProof{}, proofType, err
+		}
+
+		return v3ProofFromMTP(claimWithMtpProof),
+			circuits.Iden3SparseMerkleTreeProofType, nil
+	default:
+		return circuits.ClaimWithSigAndMTPProof{}, proofType,
+			fmt.Errorf("unknown proofType: %v", proofType)
+	}
 }
 
 func circuitsTreeStateFromSchemaState(
@@ -1213,54 +2114,10 @@ func circuitsTreeStateFromSchemaState(
 	return
 }
 
-var supportedCredentialStatusTypes = map[verifiable.CredentialStatusType]bool{
-	verifiable.Iden3ReverseSparseMerkleTreeProof:     true,
-	verifiable.SparseMerkleTreeProof:                 true,
-	verifiable.Iden3OnchainSparseMerkleTreeProof2023: true,
-}
-
-func resolveRevStatus(ctx context.Context, cfg EnvConfig,
-	credStatus interface{}, issuerID *core.ID) (circuits.MTProof, error) {
-
-	switch status := credStatus.(type) {
-	case *verifiable.CredentialStatus:
-		if status.Type == verifiable.Iden3ReverseSparseMerkleTreeProof {
-			revNonce := new(big.Int).SetUint64(status.RevocationNonce)
-			return resolveRevStatusFromRHS(ctx, status.ID, cfg, issuerID,
-				revNonce)
-		}
-		if status.Type == verifiable.Iden3OnchainSparseMerkleTreeProof2023 {
-			return resolverOnChainRevocationStatus(ctx, cfg, issuerID, status)
-		}
-		return resolveRevocationStatusFromIssuerService(ctx, status.ID)
-
-	case verifiable.CredentialStatus:
-		return resolveRevStatus(ctx, cfg, &status, issuerID)
-
-	case jsonObj:
-		credStatusType, ok := status["type"].(string)
-		if !ok {
-			return circuits.MTProof{},
-				errors.New("credential status doesn't contain type")
-		}
-		credentialStatusType := verifiable.CredentialStatusType(credStatusType)
-		if !supportedCredentialStatusTypes[credentialStatusType] {
-			return circuits.MTProof{}, fmt.Errorf(
-				"credential status type %s id not supported",
-				credStatusType)
-		}
-
-		var typedCredentialStatus verifiable.CredentialStatus
-		err := remarshalObj(&typedCredentialStatus, status)
-		if err != nil {
-			return circuits.MTProof{}, err
-		}
-		return resolveRevStatus(ctx, cfg, &typedCredentialStatus, issuerID)
-
-	default:
-		return circuits.MTProof{},
-			errors.New("unknown credential status format")
-	}
+func credStatusFromJsonObj(obj jsonObj) (verifiable.CredentialStatus, error) {
+	var typedCredentialStatus verifiable.CredentialStatus
+	err := remarshalObj(&typedCredentialStatus, obj)
+	return typedCredentialStatus, err
 }
 
 // marshal/unmarshal object from one type to ther
@@ -1270,263 +2127,6 @@ func remarshalObj(dst, src any) error {
 		return err
 	}
 	return json.Unmarshal(objBytes, dst)
-}
-
-type stateContractIDKey struct {
-	contractAddr common.Address
-	id           core.ID
-}
-
-var idsInStateContract = map[stateContractIDKey]bool{}
-var idsInStateContractLock sync.RWMutex
-
-func stateContractHasID(ctx context.Context, id *core.ID, cfg ChainConfig,
-	cli bind.ContractCaller) (bool, error) {
-	key := stateContractIDKey{
-		contractAddr: cfg.StateContractAddr,
-		id:           *id,
-	}
-
-	idsInStateContractLock.RLock()
-	ok := idsInStateContract[key]
-	idsInStateContractLock.RUnlock()
-	if ok {
-		return ok, nil
-	}
-
-	idsInStateContractLock.Lock()
-	defer idsInStateContractLock.Unlock()
-
-	ok = idsInStateContract[key]
-	if ok {
-		return ok, nil
-	}
-
-	_, err := lastStateFromContractWithClient(ctx, cfg, id, cli)
-	if errors.Is(err, errIdentityDoesNotExist) {
-		return false, nil
-	} else if err != nil {
-		return false, err
-	}
-
-	idsInStateContract[key] = true
-	return true, err
-}
-
-type onchainRevStatus struct {
-	chainID         ChainID
-	contractAddress common.Address
-	revNonce        uint64
-	genesisState    *big.Int
-}
-
-func newOnchainRevStatusFromURI(stateID string) (onchainRevStatus, error) {
-	var s onchainRevStatus
-
-	uri, err := url.Parse(stateID)
-	if err != nil {
-		return s, errors.New("OnChainCredentialStatus ID is not a valid URI")
-	}
-
-	contract := uri.Query().Get("contractAddress")
-	if contract == "" {
-		return s, errors.New("OnChainCredentialStatus contract address is empty")
-	}
-
-	contractParts := strings.Split(contract, ":")
-	if len(contractParts) != 2 {
-		return s, errors.New(
-			"OnChainCredentialStatus contract address is not valid")
-	}
-
-	s.chainID, err = newChainIDFromString(contractParts[0])
-	if err != nil {
-		return s, err
-	}
-
-	if !common.IsHexAddress(contractParts[1]) {
-		return s, errors.New(
-			"OnChainCredentialStatus incorrect contract address")
-	}
-	s.contractAddress = common.HexToAddress(contractParts[1])
-
-	revocationNonce := uri.Query().Get("revocationNonce")
-	if revocationNonce == "" {
-		return s, errors.New("revocationNonce is empty in OnChainCredentialStatus ID")
-	}
-
-	s.revNonce, err = strconv.ParseUint(revocationNonce, 10, 64)
-	if err != nil {
-		return s, errors.New("revocationNonce is not a number in OnChainCredentialStatus ID")
-	}
-
-	// state may be nil if params is absent in query
-	s.genesisState, err = newIntFromHexQueryParam(uri, "state")
-	if err != nil {
-		return s, err
-	}
-
-	return s, nil
-}
-
-// Currently, our library does not have a Close function. As a result, we
-// create and destroy an Ethereum client for each usage of this function.
-// Although this approach may be inefficient, it is acceptable if the function
-// is rarely called. If this becomes an issue in the future, or if a Close
-// function is implemented, we will need to refactor this function to use a
-// global Ethereum client.
-func resolverOnChainRevocationStatus(ctx context.Context, cfg EnvConfig,
-	id *core.ID,
-	status *verifiable.CredentialStatus) (circuits.MTProof, error) {
-
-	var zeroID core.ID
-	if id == nil || *id == zeroID {
-		return circuits.MTProof{}, errors.New("issuer ID is empty")
-	}
-
-	onchainRevStatus, err := newOnchainRevStatusFromURI(status.ID)
-	if err != nil {
-		return circuits.MTProof{}, err
-	}
-
-	if onchainRevStatus.revNonce != status.RevocationNonce {
-		return circuits.MTProof{}, fmt.Errorf(
-			"revocationNonce is not equal to the one "+
-				"in OnChainCredentialStatus ID {%d} {%d}",
-			onchainRevStatus.revNonce, status.RevocationNonce)
-	}
-
-	networkCfg, err := cfg.networkCfgByChainID(onchainRevStatus.chainID)
-	if err != nil {
-		return circuits.MTProof{}, err
-	}
-
-	client, err := ethclient.Dial(networkCfg.RPCUrl)
-	if err != nil {
-		return circuits.MTProof{}, err
-	}
-	defer client.Close()
-
-	contractCaller, err := onchainABI.NewOnchainCredentialStatusResolverCaller(
-		onchainRevStatus.contractAddress, client)
-	if err != nil {
-		return circuits.MTProof{}, err
-	}
-
-	isStateContractHasID, err := stateContractHasID(ctx, id, networkCfg, client)
-	if err != nil {
-		return circuits.MTProof{}, err
-	}
-
-	opts := &bind.CallOpts{Context: ctx}
-	var resp onchainABI.IOnchainCredentialStatusResolverCredentialStatus
-	if isStateContractHasID {
-		// TODO: it is not finial version of contract GetRevocationProof must accept issuer id as parameter
-		resp, err = contractCaller.GetRevocationStatus(opts, id.BigInt(),
-			onchainRevStatus.revNonce)
-		if err != nil {
-			msg := err.Error()
-			if isErrInvalidRootsLength(err) {
-				msg = "roots were not saved to identity tree store"
-			}
-			return circuits.MTProof{}, fmt.Errorf(
-				"GetRevocationProof smart contract call [GetRevocationStatus]: %s",
-				msg)
-		}
-	} else {
-		if onchainRevStatus.genesisState == nil {
-			return circuits.MTProof{}, errors.New(
-				"genesis state is not specified in OnChainCredentialStatus ID")
-		}
-		resp, err = contractCaller.GetRevocationStatusByIdAndState(opts,
-			id.BigInt(), onchainRevStatus.genesisState,
-			onchainRevStatus.revNonce)
-		if err != nil {
-			return circuits.MTProof{}, fmt.Errorf(
-				"GetRevocationProof smart contract call [GetRevocationStatusByIdAndState]: %s",
-				err.Error())
-		}
-	}
-
-	return toMerkleTreeProof(resp)
-}
-
-func toMerkleTreeProof(status onchainABI.IOnchainCredentialStatusResolverCredentialStatus) (circuits.MTProof, error) {
-	var existence bool
-	var nodeAux *merkletree.NodeAux
-	var err error
-
-	if status.Mtp.Existence {
-		existence = true
-	} else {
-		existence = false
-		if status.Mtp.AuxExistence {
-			nodeAux = &merkletree.NodeAux{}
-			nodeAux.Key, err = merkletree.NewHashFromBigInt(status.Mtp.AuxIndex)
-			if err != nil {
-				return circuits.MTProof{}, errors.New("aux index is not a number")
-			}
-			nodeAux.Value, err = merkletree.NewHashFromBigInt(status.Mtp.AuxValue)
-			if err != nil {
-				return circuits.MTProof{}, errors.New("aux value is not a number")
-			}
-		}
-	}
-
-	//allSiblings := make([]*merkletree.Hash, len(status.Mtp.Siblings))
-	depth := calculateDepth(status.Mtp.Siblings)
-	allSiblings := make([]*merkletree.Hash, depth)
-	for i := 0; i < depth; i++ {
-		sh, err2 := merkletree.NewHashFromBigInt(status.Mtp.Siblings[i])
-		if err2 != nil {
-			return circuits.MTProof{}, errors.New("sibling is not a number")
-		}
-		allSiblings[i] = sh
-	}
-
-	proof, err := merkletree.NewProofFromData(existence, allSiblings, nodeAux)
-	if err != nil {
-		return circuits.MTProof{}, errors.New("failed to create proof")
-	}
-
-	state, err := merkletree.NewHashFromBigInt(status.Issuer.State)
-	if err != nil {
-		return circuits.MTProof{}, errors.New("state is not a number")
-	}
-
-	claimsRoot, err := merkletree.NewHashFromBigInt(status.Issuer.ClaimsTreeRoot)
-	if err != nil {
-		return circuits.MTProof{}, errors.New("state is not a number")
-	}
-
-	revocationRoot, err := merkletree.NewHashFromBigInt(status.Issuer.RevocationTreeRoot)
-	if err != nil {
-		return circuits.MTProof{}, errors.New("state is not a number")
-	}
-
-	rootOfRoots, err := merkletree.NewHashFromBigInt(status.Issuer.RootOfRoots)
-	if err != nil {
-		return circuits.MTProof{}, errors.New("state is not a number")
-	}
-
-	return circuits.MTProof{
-		Proof: proof,
-		TreeState: circuits.TreeState{
-			State:          state,
-			ClaimsRoot:     claimsRoot,
-			RevocationRoot: revocationRoot,
-			RootOfRoots:    rootOfRoots,
-		},
-	}, nil
-}
-
-func calculateDepth(siblings []*big.Int) int {
-	for i := len(siblings) - 1; i >= 0; i-- {
-		if siblings[i].Cmp(big.NewInt(0)) != 0 {
-			return i + 1
-		}
-	}
-	return 0
 }
 
 type ChainConfig struct {
@@ -1546,7 +2146,7 @@ func (cc ChainConfig) validate() error {
 	return nil
 }
 
-type PerChainConfig map[ChainID]ChainConfig
+type PerChainConfig map[core.ChainID]ChainConfig
 
 func (p *PerChainConfig) UnmarshalJSON(bytes []byte) error {
 	if (*p) == nil {
@@ -1558,7 +2158,7 @@ func (p *PerChainConfig) UnmarshalJSON(bytes []byte) error {
 		return err
 	}
 	for k, v := range o {
-		var chainID ChainID
+		var chainID core.ChainID
 		chainID, err = newChainIDFromString(k)
 		if err != nil {
 			return err
@@ -1568,340 +2168,624 @@ func (p *PerChainConfig) UnmarshalJSON(bytes []byte) error {
 	return nil
 }
 
-type EnvConfig struct {
-	ChainConfigs          PerChainConfig
-	EthereumURL           string         // Deprecated: Use ChainConfigs instead
-	StateContractAddr     common.Address // Deprecated: Use ChainConfigs instead
-	ReverseHashServiceUrl string         // Deprecated
-	IPFSNodeURL           string
-}
-
-func (cfg EnvConfig) documentLoader() ld.DocumentLoader {
-	var ipfsNode *shell.Shell
-	if cfg.IPFSNodeURL != "" {
-		ipfsNode = shell.NewShell(cfg.IPFSNodeURL)
+func newChainIDFromString(in string) (core.ChainID, error) {
+	radix := 10
+	if strings.HasPrefix(in, "0x") || strings.HasPrefix(in, "0X") {
+		radix = 16
+		in = in[2:]
 	}
 
-	var opts []loaders.DocumentLoaderOption
-
-	cacheEngine, err := loaders.NewMemoryCacheEngine(
-		loaders.WithEmbeddedDocumentBytes(
-			"https://www.w3.org/2018/credentials/v1",
-			credentialsV1JsonLDBytes))
-	if err == nil {
-		opts = append(opts, loaders.WithCacheEngine(cacheEngine))
+	var chainID core.ChainID
+	assertUnderlineTypeInt32(chainID)
+	i, err := strconv.ParseInt(in, radix, 32)
+	if err != nil {
+		return 0, fmt.Errorf("can't parse ChainID type: %w", err)
 	}
-
-	return loaders.NewDocumentLoader(ipfsNode, "", opts...)
+	return core.ChainID(i), nil
 }
 
-type ChainID uint64
+func merklizeCred(ctx context.Context, w3cCred verifiable.W3CCredential,
+	documentLoader ld.DocumentLoader, ignoreCacheErrors bool,
+	cacheDir string) (*merklize.Merklizer, error) {
 
-func newChainIDFromString(in string) (ChainID, error) {
-	var chainID uint64
-	var err error
-	if strings.HasPrefix(in, "0x") ||
-		strings.HasPrefix(in, "0X") {
-		chainID, err = strconv.ParseUint(in[2:], 16, 64)
+	w3cCred.Proof = nil
+	credentialBytes, err := json.Marshal(w3cCred)
+	if err != nil {
+		return nil, err
+	}
+
+	cacheKey := sha256.Sum256(credentialBytes)
+
+	db, cleanup, err := getCacheDB(cacheDir)
+	if err != nil {
+		if !ignoreCacheErrors {
+			return nil, err
+		}
+		slog.ErrorContext(ctx, "failed to get cache db", "err", err)
+		db = nil
+	} else {
+		defer cleanup()
+	}
+
+	var mz *merklize.Merklizer
+	var storage *inMemoryStorage
+
+	if db != nil {
+		mz, storage, err = getMzCache(ctx, db, cacheKey[:], documentLoader)
 		if err != nil {
-			return 0, err
+			if !ignoreCacheErrors {
+				return nil, err
+			}
+			slog.ErrorContext(ctx, "failed to read value from cache db",
+				"err", err)
+			mz = nil
+			storage = nil
+		}
+	}
+
+	if mz == nil || storage == nil {
+		slog.Debug("merklizeCred: cache miss")
+		storage = newInMemoryStorage()
+
+		var mt *merkletree.MerkleTree
+		mt, err = merkletree.NewMerkleTree(ctx, storage, mtLevels)
+		if err != nil {
+			return nil, err
+		}
+
+		warmUpSchemaLoader(w3cCred.Context, documentLoader)
+
+		mz, err = merklize.MerklizeJSONLD(ctx, bytes.NewReader(credentialBytes),
+			merklize.WithDocumentLoader(documentLoader),
+			merklize.WithMerkleTree(merklize.MerkleTreeSQLAdapter(mt)))
+		if err != nil {
+			return nil, err
+		}
+
+		if db != nil {
+			err = saveMzCache(db, cacheKey[:], mz, storage)
+			if err != nil {
+				if !ignoreCacheErrors {
+					return nil, err
+				}
+				slog.ErrorContext(ctx, "failed to save to the cache db",
+					"err", err)
+			}
 		}
 	} else {
-		chainID, err = strconv.ParseUint(in, 10, 64)
+		slog.Debug("merklizeCred: cache hit")
+	}
+
+	return mz, nil
+}
+
+func mzCacheKey(vcChecksum []byte) []byte {
+	return appendSuffix("_mz", vcChecksum)
+}
+
+func storageCacheKey(vcChecksum []byte) []byte {
+	return appendSuffix("_mt", vcChecksum)
+}
+
+func appendSuffix(suffix string, val []byte) []byte {
+	newVal := make([]byte, len(val)+len(suffix))
+	copy(newVal, val)
+	copy(newVal[len(val):], suffix)
+	return newVal
+}
+
+func saveMzCache(db *badger.DB, vcChecksum []byte, mz *merklize.Merklizer,
+	storage *inMemoryStorage) error {
+
+	expireAt := time.Now().Add(30 * 24 * time.Hour).Unix()
+
+	var storageEntry = badger.Entry{
+		Key:       storageCacheKey(vcChecksum),
+		ExpiresAt: uint64(expireAt)}
+	var mzEntry = badger.Entry{
+		Key:       mzCacheKey(vcChecksum),
+		ExpiresAt: uint64(expireAt)}
+
+	var err error
+	storageEntry.Value, err = storage.MarshalBinary()
+	if err != nil {
+		return fmt.Errorf("failed to marshal storage: %w", err)
+	}
+
+	mzEntry.Value, err = mz.MarshalBinary()
+	if err != nil {
+		return fmt.Errorf("failed to marshal merklizer: %w", err)
+	}
+
+	err = db.Update(func(txn *badger.Txn) error {
+		if err := txn.SetEntry(&storageEntry); err != nil {
+			return err
+		}
+		return txn.SetEntry(&mzEntry)
+	})
+	if err != nil {
+		return fmt.Errorf("failed to save value to cache db: %w", err)
+	}
+	return nil
+}
+
+//func logWhatWasPutInCache(msg string, key []byte, value []byte) {
+//	valueHex := hex.EncodeToString(value)
+//	checksum := md5.Sum(value)
+//	checksumHex := hex.EncodeToString(checksum[:])
+//	keyHex := hex.EncodeToString(key)
+//	slog.Debug(msg, "key", keyHex, "len", len(value),
+//		"md5", checksumHex, "value", valueHex)
+//}
+
+func getMzCache(ctx context.Context, db *badger.DB, vcChecksum []byte,
+	documentLoader ld.DocumentLoader) (*merklize.Merklizer, *inMemoryStorage,
+	error) {
+
+	var mz *merklize.Merklizer
+	var storage *inMemoryStorage
+
+	err := db.View(func(txn *badger.Txn) error {
+		mtKey := storageCacheKey(vcChecksum)
+		v, err := txn.Get(mtKey)
+		if errors.Is(err, badger.ErrKeyNotFound) {
+			return nil
+		} else if err != nil {
+			return err
+		}
+
+		storage = newInMemoryStorage()
+		err = v.Value(func(val []byte) error {
+			err = storage.UnmarshalBinary(val)
+			if err != nil {
+				return err
+			}
+			return nil
+		})
 		if err != nil {
-			return 0, err
+			return err
+		}
+
+		mzKey := mzCacheKey(vcChecksum)
+		v, err = txn.Get(mzKey)
+		if errors.Is(err, badger.ErrKeyNotFound) {
+			return errors.New("merklized data not found in cache db")
+		} else if err != nil {
+			return err
+		}
+
+		var mt *merkletree.MerkleTree
+		mt, err = merkletree.NewMerkleTree(ctx, storage, mtLevels)
+		if err != nil {
+			return err
+		}
+
+		return v.Value(func(val []byte) error {
+			mz, err = merklize.MerklizerFromBytes(val,
+				merklize.WithDocumentLoader(documentLoader),
+				merklize.WithMerkleTree(merklize.MerkleTreeSQLAdapter(mt)))
+			return err
+		})
+	})
+
+	return mz, storage, err
+}
+
+func warmUpSchemaLoader(schemaURLs []string, docLoader ld.DocumentLoader) {
+	var wg sync.WaitGroup
+	start := time.Now()
+	for _, schemaURL := range schemaURLs {
+		wg.Add(1)
+		go func(schemaURL string) {
+			defer wg.Done()
+			_, _ = docLoader.LoadDocument(schemaURL)
+		}(schemaURL)
+	}
+	wg.Wait()
+	slog.Debug("pre download schemas",
+		"time", time.Since(start),
+		"docsNum", len(schemaURLs))
+}
+
+func PreCacheVC(ctx context.Context, cfg EnvConfig, in []byte) error {
+	var obj struct {
+		VerifiableCredentials json.RawMessage `json:"verifiableCredentials"`
+	}
+	err := json.Unmarshal(in, &obj)
+	if err != nil {
+		return err
+	}
+
+	var w3cCred verifiable.W3CCredential
+	err = json.Unmarshal(obj.VerifiableCredentials, &w3cCred)
+	if err != nil {
+		return err
+	}
+
+	_, err = merklizeCred(ctx, w3cCred, cfg.documentLoader(), false,
+		cfg.CacheDir)
+	return err
+}
+
+func fmtPath(path merklize.Path) string {
+	var parts []string
+	for _, p := range path.Parts() {
+		parts = append(parts, fmt.Sprintf("%v", p))
+	}
+	return "[" + strings.Join(parts, ",") + "]"
+}
+
+type GenesysIDResponse struct {
+	DID     string `json:"did"`
+	ID      string `json:"id"`
+	IDAsInt string `json:"idAsInt"`
+}
+
+func NewGenesysID(ctx context.Context, cfg EnvConfig,
+	in []byte) (GenesysIDResponse, error) {
+
+	var req struct {
+		ClaimsTreeRoot *JsonFieldIntStr `json:"claimsTreeRoot"`
+		Blockchain     *core.Blockchain `json:"blockchain"`
+		Network        *core.NetworkID  `json:"network"`
+		Method         *core.DIDMethod  `json:"method"`
+	}
+
+	if in == nil {
+		return GenesysIDResponse{}, errors.New("request is empty")
+	}
+
+	err := json.Unmarshal(in, &req)
+	if err != nil {
+		return GenesysIDResponse{},
+			fmt.Errorf("failed to unmarshal request: %w", err)
+	}
+
+	if req.ClaimsTreeRoot == nil {
+		return GenesysIDResponse{},
+			errors.New("claims tree root is not set in the request")
+	}
+
+	if req.Blockchain == nil {
+		return GenesysIDResponse{},
+			errors.New("blockchain is not set in the request")
+	}
+
+	if req.Network == nil {
+		return GenesysIDResponse{},
+			errors.New("network is not set in the request")
+	}
+
+	if req.Method == nil {
+		// for backward compatibility, if method is not set, use polygon
+		var m = core.DIDMethodPolygonID
+		req.Method = &m
+	}
+
+	state, err := merkletree.HashElems(req.ClaimsTreeRoot.Int(),
+		merkletree.HashZero.BigInt(), merkletree.HashZero.BigInt())
+	if err != nil {
+		return GenesysIDResponse{},
+			fmt.Errorf("failed to calculate state: %w", err)
+	}
+
+	typ, err := core.BuildDIDType(*req.Method, *req.Blockchain,
+		*req.Network)
+	if err != nil {
+		return GenesysIDResponse{},
+			fmt.Errorf("failed to build DID type: %w", err)
+	}
+
+	coreID, err := core.NewIDFromIdenState(typ, state.BigInt())
+	if err != nil {
+		return GenesysIDResponse{},
+			fmt.Errorf("failed to create ID: %w", err)
+	}
+
+	did, err := core.ParseDIDFromID(*coreID)
+	if err != nil {
+		return GenesysIDResponse{},
+			fmt.Errorf("failed to make DID from ID: %w", err)
+	}
+
+	return GenesysIDResponse{
+			DID:     did.String(),
+			ID:      coreID.String(),
+			IDAsInt: coreID.BigInt().String(),
+		},
+		nil
+}
+
+func NewGenesysIDFromEth(ctx context.Context, cfg EnvConfig,
+	in []byte) (GenesysIDResponse, error) {
+
+	var req struct {
+		EthAddr    *common.Address  `json:"ethAddress"`
+		Blockchain *core.Blockchain `json:"blockchain"`
+		Network    *core.NetworkID  `json:"network"`
+		Method     *core.DIDMethod  `json:"method"`
+	}
+
+	if in == nil {
+		return GenesysIDResponse{}, errors.New("request is empty")
+	}
+
+	err := json.Unmarshal(in, &req)
+	if err != nil {
+		return GenesysIDResponse{},
+			fmt.Errorf("failed to unmarshal request: %w", err)
+	}
+
+	if req.EthAddr == nil {
+		return GenesysIDResponse{},
+			errors.New("ethereum address is not set in the request")
+	}
+
+	if req.Blockchain == nil {
+		return GenesysIDResponse{},
+			errors.New("blockchain is not set in the request")
+	}
+
+	if req.Network == nil {
+		return GenesysIDResponse{},
+			errors.New("network is not set in the request")
+	}
+
+	if req.Method == nil {
+		// for backward compatibility, if method is not set, use polygon
+		var m = core.DIDMethodPolygonID
+		req.Method = &m
+	}
+
+	typ, err := core.BuildDIDType(*req.Method, *req.Blockchain,
+		*req.Network)
+	if err != nil {
+		return GenesysIDResponse{},
+			fmt.Errorf("failed to build DID type: %w", err)
+	}
+
+	genesis := core.GenesisFromEthAddress(*req.EthAddr)
+	coreID := core.NewID(typ, genesis)
+
+	did, err := core.ParseDIDFromID(coreID)
+	if err != nil {
+		return GenesysIDResponse{},
+			fmt.Errorf("failed to make DID from ID: %w", err)
+	}
+
+	return GenesysIDResponse{
+			DID:     did.String(),
+			ID:      coreID.String(),
+			IDAsInt: coreID.BigInt().String(),
+		},
+		nil
+}
+
+type DescribeIDResponse struct {
+	DID     string `json:"did"`
+	ID      string `json:"id"`
+	IDAsInt string `json:"idAsInt"`
+}
+
+func DescribeID(ctx context.Context, cfg EnvConfig,
+	in []byte) (DescribeIDResponse, error) {
+
+	var req struct {
+		ID      *core.ID         `json:"id"`
+		IDAsInt *JsonFieldIntStr `json:"idAsInt"`
+	}
+
+	if in == nil {
+		return DescribeIDResponse{}, errors.New("request is empty")
+	}
+
+	err := json.Unmarshal(in, &req)
+	if err != nil {
+		return DescribeIDResponse{},
+			fmt.Errorf("failed to unmarshal request: %w", err)
+	}
+
+	var id *core.ID
+	if req.ID != nil {
+		id = req.ID
+	}
+
+	if req.IDAsInt != nil {
+		newID, err := core.IDFromInt(req.IDAsInt.Int())
+		if err != nil {
+			return DescribeIDResponse{},
+				fmt.Errorf("failed to create ID from int: %w", err)
+		}
+		if id == nil {
+			id = &newID
+		} else if !id.Equal(&newID) {
+			return DescribeIDResponse{},
+				errors.New("id and idAsInt are different")
 		}
 	}
-	return ChainID(chainID), nil
-}
 
-type chainIDKey struct {
-	blockchain core.Blockchain
-	networkID  core.NetworkID
-}
+	if id == nil {
+		return DescribeIDResponse{}, errors.New("id is not set in the request")
+	}
 
-var knownChainIDs = map[chainIDKey]ChainID{
-	{core.Ethereum, core.Main}:    1,
-	{core.Ethereum, core.Goerli}:  5,
-	{core.Polygon, core.Main}:     137,
-	{core.ZkEVM, core.Main}:       1101,
-	{core.ZkEVM, core.Test}:       1442,
-	{core.Polygon, core.Mumbai}:   80001,
-	{core.Ethereum, core.Sepolia}: 11155111,
-}
-
-func (cfg EnvConfig) networkCfgByID(id *core.ID) (ChainConfig, error) {
-	chainID, err := chainIDFromID(id)
+	did, err := core.ParseDIDFromID(*id)
 	if err != nil {
-		return ChainConfig{}, err
+		return DescribeIDResponse{},
+			fmt.Errorf("failed to make DID from ID: %w", err)
 	}
 
-	return cfg.networkCfgByChainID(chainID)
-}
-
-func (cfg EnvConfig) networkCfgByChainID(chainID ChainID) (ChainConfig, error) {
-	chainCfg, ok := cfg.ChainConfigs[chainID]
-	if !ok {
-		chainCfg = cfg.defaultChainCfg()
-	}
-
-	return chainCfg, chainCfg.validate()
-}
-
-func (cfg EnvConfig) defaultChainCfg() ChainConfig {
-	return ChainConfig{
-		RPCUrl:            cfg.EthereumURL,
-		StateContractAddr: cfg.StateContractAddr,
-	}
-}
-
-func chainIDFromID(id *core.ID) (ChainID, error) {
-	blockchain, err := core.BlockchainFromID(*id)
-	if err != nil {
-		return 0, err
-	}
-
-	networkID, err := core.NetworkIDFromID(*id)
-	if err != nil {
-		return 0, err
-	}
-
-	key := chainIDKey{blockchain, networkID}
-	chainID, ok := knownChainIDs[key]
-	if !ok {
-		return 0, fmt.Errorf("unknown chain: %s", id.String())
-	}
-
-	return chainID, nil
-}
-
-// Currently, our library does not have a Close function. As a result, we
-// create and destroy an Ethereum client for each usage of this function.
-// Although this approach may be inefficient, it is acceptable if the function
-// is rarely called. If this becomes an issue in the future, or if a Close
-// function is implemented, we will need to refactor this function to use a
-// global Ethereum client.
-func lastStateFromContract(ctx context.Context, cfg EnvConfig,
-	id *core.ID) (*merkletree.Hash, error) {
-
-	networkCfg, err := cfg.networkCfgByID(id)
-	if err != nil {
-		return nil, err
-	}
-
-	var zeroID core.ID
-	if id == nil || *id == zeroID {
-		return nil, errors.New("ID is empty")
-	}
-
-	client, err := ethclient.Dial(networkCfg.RPCUrl)
-	if err != nil {
-		return nil, err
-	}
-	defer client.Close()
-
-	return lastStateFromContractWithClient(ctx, networkCfg, id, client)
-}
-
-func lastStateFromContractWithClient(ctx context.Context, cfg ChainConfig,
-	id *core.ID, cli bind.ContractCaller) (*merkletree.Hash, error) {
-
-	contractCaller, err := abi.NewStateCaller(cfg.StateContractAddr, cli)
-	if err != nil {
-		return nil, err
-	}
-
-	opts := &bind.CallOpts{Context: ctx}
-	resp, err := contractCaller.GetStateInfoById(opts, id.BigInt())
-	if isErrIdentityDoesNotExist(err) {
-		return nil, errIdentityDoesNotExist
-	} else if err != nil {
-		return nil, err
-	}
-
-	if resp.State == nil {
-		return nil, errors.New("got nil state from contract")
-	}
-
-	return merkletree.NewHashFromBigInt(resp.State)
-}
-
-var errIdentityDoesNotExist = errors.New("identity does not exist")
-
-func isErrIdentityDoesNotExist(err error) bool {
-	rpcErr, isRPCErr := err.(rpc.Error)
-	if !isRPCErr {
-		return false
-	}
-	return rpcErr.ErrorCode() == 3 &&
-		rpcErr.Error() == "execution reverted: Identity does not exist"
-}
-
-func isErrInvalidRootsLength(err error) bool {
-	rpcErr, isRPCErr := err.(rpc.Error)
-	if !isRPCErr {
-		return false
-	}
-	return rpcErr.ErrorCode() == 3 &&
-		rpcErr.Error() == "execution reverted: Invalid roots length"
-}
-
-func newRhsCli(rhsURL string) (*mp.HTTPReverseHashCli, error) {
-	if rhsURL == "" {
-		return nil, errors.New("reverse hash service url is empty")
-	}
-
-	return &mp.HTTPReverseHashCli{
-		URL:         rhsURL,
-		HTTPTimeout: 10 * time.Second,
+	return DescribeIDResponse{
+		DID:     did.String(),
+		ID:      id.String(),
+		IDAsInt: id.BigInt().String(),
 	}, nil
 }
 
-func treeStateFromRHS(ctx context.Context, rhsCli *mp.HTTPReverseHashCli,
-	state *merkletree.Hash) (circuits.TreeState, error) {
+// AuthV2InputsFromJson converts JSON input to AuthV2Inputs response.
+func AuthV2InputsFromJson(_ context.Context, _ EnvConfig,
+	in []byte) (AtomicQueryInputsResponse, error) {
 
-	var treeState circuits.TreeState
+	var out AtomicQueryInputsResponse
 
-	stateNode, err := rhsCli.GetNode(ctx, state)
+	var obj map[string]any
+	err := json.Unmarshal(in, &obj)
 	if err != nil {
-		return treeState, err
+		return out, err
 	}
 
-	if len(stateNode.Children) != 3 {
-		return treeState, errors.New(
-			"invalid state node, should have 3 children")
+	didI, ok := obj["genesisDID"]
+	if !ok {
+		return out, errors.New("no genesisDID field found")
 	}
 
-	treeState.State = state
-	treeState.ClaimsRoot = stateNode.Children[0]
-	treeState.RevocationRoot = stateNode.Children[1]
-	treeState.RootOfRoots = stateNode.Children[2]
+	didS, ok := didI.(string)
+	if !ok {
+		return out, errors.New("genesisDID is not a string")
+	}
 
-	return treeState, err
+	did, err := w3c.ParseDID(didS)
+	if err != nil {
+		return out, fmt.Errorf("failed to parse genesisDID: %w", err)
+	}
+
+	id, err := core.IDFromDID(*did)
+	if err != nil {
+		return out, fmt.Errorf("failed to get ID from genesisDID: %w", err)
+	}
+	obj["genesisID"] = id.String()
+
+	authV2InputsData, err := json.Marshal(obj)
+	if err != nil {
+		return out, fmt.Errorf("failed to marshal data: %w", err)
+	}
+
+	var inputs circuits.AuthV2Inputs
+	err = json.Unmarshal(authV2InputsData, &inputs)
+	if err != nil {
+		return out, fmt.Errorf("failed to re-unmarshal authV2 inputs: %w", err)
+	}
+
+	out.Inputs = inputs
+
+	return out, nil
 }
 
-func identityStateForRHS(ctx context.Context, cfg EnvConfig, issuerID *core.ID,
-	genesisState *merkletree.Hash) (*merkletree.Hash, error) {
+func AnonAadhaarInputsFromJson(ctx context.Context, cfg EnvConfig,
+	in []byte) (AtomicQueryInputsResponse, error) {
 
-	state, err := lastStateFromContract(ctx, cfg, issuerID)
-	if !errors.Is(err, errIdentityDoesNotExist) {
-		return state, err
-	}
-
-	if genesisState == nil {
-		return nil, errors.New("current state is not found for the identity")
-	}
-
-	stateIsGenesis, err := genesisStateMatch(genesisState, *issuerID)
+	var out AtomicQueryInputsResponse
+	var inputs anonAadhaarV1Inputs
+	err := json.Unmarshal(in, &inputs)
 	if err != nil {
-		return nil, err
+		return out, err
 	}
 
-	if !stateIsGenesis {
-		return nil, errors.New("state is not genesis for the identity")
-	}
-
-	return genesisState, nil
+	out.Inputs = inputs.asAnonAadhaarV1Inputs()
+	return out, nil
 }
 
-// check if genesis state matches the state from the ID
-func genesisStateMatch(state *merkletree.Hash, id core.ID) (bool, error) {
-	var tp [2]byte
-	copy(tp[:], id[:2])
-	otherID, err := core.NewIDFromIdenState(tp, state.BigInt())
+func PassportInputsFromJson(ctx context.Context, cfg EnvConfig,
+	in []byte) (AtomicQueryInputsResponse, error) {
+
+	var inputs externalpassport.PassportV1Inputs
+	err := json.Unmarshal(in, &inputs)
 	if err != nil {
-		return false, err
+		return AtomicQueryInputsResponse{}, err
 	}
-	return bytes.Equal(otherID[:], id[:]), nil
+
+	return AtomicQueryInputsResponse{
+		Inputs: &inputs,
+	}, nil
 }
 
-func rhsBaseURL(rhsURL string) (string, *merkletree.Hash, error) {
-	u, err := url.Parse(rhsURL)
+func W3cCredentialsFromAnonAadhaarInputsJson(ctx context.Context, cfg EnvConfig,
+	in []byte) (verifiable.W3CCredential, error) {
+
+	var inputs anonAadhaarV1Inputs
+	err := json.Unmarshal(in, &inputs)
 	if err != nil {
-		return "", nil, err
+		return verifiable.W3CCredential{}, err
 	}
-	var state *merkletree.Hash
-	stateStr := u.Query().Get("state")
-	if stateStr != "" {
-		state, err = merkletree.NewHashFromHex(stateStr)
-		if err != nil {
-			return "", nil, err
+
+	w3cCred, err := inputs.asAnonAadhaarV1Inputs().W3CCredential()
+	if err != nil {
+		return verifiable.W3CCredential{}, err
+	}
+
+	return *w3cCred, nil
+}
+
+func W3cCredentialsFromPassportInputsJson(ctx context.Context, cfg EnvConfig,
+	in []byte) (verifiable.W3CCredential, error) {
+	var inputs externalpassport.PassportV1Inputs
+	err := json.Unmarshal(in, &inputs)
+	if err != nil {
+		return verifiable.W3CCredential{}, err
+	}
+
+	w3cCred, err := inputs.W3CCredential()
+	if err != nil {
+		return verifiable.W3CCredential{}, err
+	}
+
+	return *w3cCred, nil
+}
+
+type CoreClaimResponse struct {
+	CoreClaim          *core.Claim `json:"coreClaim"`
+	CoreClaimHex       string      `json:"coreClaimHex"`
+	CoreClaimIndexHash *JsonBigInt `json:"coreClaimHIndex"`
+	CoreClaimValueHash *JsonBigInt `json:"coreClaimHValue"`
+}
+
+func W3CCredentialToCoreClaim(ctx context.Context, cfg EnvConfig, in []byte) (CoreClaimResponse, error) {
+	var req struct {
+		W3CCredential    *verifiable.W3CCredential    `json:"w3cCredential"`
+		CoreClaimOptions *verifiable.CoreClaimOptions `json:"coreClaimOptions"`
+	}
+	err := json.Unmarshal(in, &req)
+	if err != nil {
+		return CoreClaimResponse{}, err
+	}
+	if req.W3CCredential == nil {
+		return CoreClaimResponse{},
+			errors.New("w3cCredential is not set in the request")
+	}
+
+	if req.CoreClaimOptions == nil {
+		req.CoreClaimOptions = &verifiable.CoreClaimOptions{
+			RevNonce:              0,
+			Version:               0,
+			SubjectPosition:       verifiable.CredentialSubjectPositionIndex,
+			MerklizedRootPosition: verifiable.CredentialMerklizedRootPositionNone,
+			Updatable:             false,
+			MerklizerOpts:         nil,
 		}
 	}
 
-	if strings.HasSuffix(u.Path, "/node") {
-		u.Path = strings.TrimSuffix(u.Path, "node")
-	}
-	if strings.HasSuffix(u.Path, "/node/") {
-		u.Path = strings.TrimSuffix(u.Path, "node/")
-	}
+	req.CoreClaimOptions.MerklizerOpts = append(
+		req.CoreClaimOptions.MerklizerOpts,
+		merklize.WithDocumentLoader(cfg.documentLoader()))
 
-	u.RawQuery = ""
-	return u.String(), state, nil
-}
+	var resp CoreClaimResponse
 
-func resolveRevStatusFromRHS(ctx context.Context, rhsURL string, cfg EnvConfig,
-	issuerID *core.ID, revNonce *big.Int) (circuits.MTProof, error) {
-
-	var p circuits.MTProof
-
-	baseRHSURL, genesisState, err := rhsBaseURL(rhsURL)
+	resp.CoreClaim, err = req.W3CCredential.ToCoreClaim(ctx,
+		req.CoreClaimOptions)
 	if err != nil {
-		return p, err
+		return CoreClaimResponse{}, err
 	}
 
-	state, err := identityStateForRHS(ctx, cfg, issuerID, genesisState)
+	ih, vh, err := resp.CoreClaim.HiHv()
 	if err != nil {
-		return p, err
+		return CoreClaimResponse{}, err
 	}
+	resp.CoreClaimIndexHash = NewJsonBigInt(ih)
+	resp.CoreClaimValueHash = NewJsonBigInt(vh)
 
-	rhsCli, err := newRhsCli(baseRHSURL)
+	resp.CoreClaimHex, err = resp.CoreClaim.Hex()
 	if err != nil {
-		return p, err
+		return CoreClaimResponse{}, err
 	}
 
-	p.TreeState, err = treeStateFromRHS(ctx, rhsCli, state)
-	if errors.Is(err, mp.ErrNodeNotFound) {
-		if genesisState != nil && state.Equals(genesisState) {
-			return p, errors.New("genesis state is not found in RHS")
-		} else {
-			return p, errors.New("current state is not found in RHS")
-		}
-	} else if err != nil {
-		return p, err
-	}
-
-	revNonceHash, err := merkletree.NewHashFromBigInt(revNonce)
-	if err != nil {
-		return p, err
-	}
-
-	p.Proof, err = rhsCli.GenerateProof(ctx, p.TreeState.RevocationRoot,
-		revNonceHash)
-	if err != nil {
-		return p, err
-	}
-
-	return p, nil
-}
-
-func newIntFromBytesLE(bs []byte) *big.Int {
-	return new(big.Int).SetBytes(utils.SwapEndianness(bs))
-}
-
-// newIntFromHexQueryParam search for query param `paramName`, parse it
-// as hex string of LE bytes of *big.Int. Return nil if param is not found.
-func newIntFromHexQueryParam(uri *url.URL, paramName string) (*big.Int, error) {
-	stateParam := uri.Query().Get(paramName)
-	if stateParam == "" {
-		return nil, nil
-	}
-
-	stateParam = strings.TrimSuffix(stateParam, "0x")
-	stateBytes, err := hex.DecodeString(stateParam)
-	if err != nil {
-		return nil, err
-	}
-
-	return newIntFromBytesLE(stateBytes), nil
+	return resp, nil
 }
