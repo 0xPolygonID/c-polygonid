@@ -168,6 +168,10 @@ github.com/iden3/go-circuits/v2 v2.4.3 h1:J/fAIDl0d/mYWCVDBSIlmtwMbyrIYONRBoAjpr
 github.com/iden3/go-circuits/v2 v2.4.3/go.mod h1:LnbASvfhsDajwOYSdPmbQ585KuzwHF/AUS7pICol5ss=
 github.com/iden3/go-iden3-auth/v2 v2.7.5 h1:gpcOj+E6yk/PJSDLQWs1b96rZoe3t3piAgsP1fVYdTE=
 github.com/iden3/go-iden3-auth/v2 v2.7.5/go.mod h1:gWgwBEg6gGhHkD3bRO5zuDiHV2vWTRBtxqYy29a7v3M=
+github.com/iden3/go-iden3-auth/v2 v2.7.6-0.20251031161058-429fdc785249 h1:sEAn8fiDHjmp2Lzv0gS80Hpnq4MzZQDpjzsZvOtT55U=
+github.com/iden3/go-iden3-auth/v2 v2.7.6-0.20251031161058-429fdc785249/go.mod h1:IuabTv5heDDUSU4Ks/i0wABt/V295JxryBHItfi8ZJg=
+github.com/iden3/go-iden3-auth/v2 v2.7.6-0.20251103130107-133bceb565fd h1:y46pnf0ZHo0n2DaA36w0saC1Qj7HIYktYVeAQVA3IK0=
+github.com/iden3/go-iden3-auth/v2 v2.7.6-0.20251103130107-133bceb565fd/go.mod h1:IuabTv5heDDUSU4Ks/i0wABt/V295JxryBHItfi8ZJg=
 github.com/iden3/go-iden3-core/v2 v2.3.2 h1:kZq/TiSUmBKO/mvPUucfFE45ugTW+hXXlGT+Jf6CQTg=
 github.com/iden3/go-iden3-core/v2 v2.3.2/go.mod h1:8vmG6y8k9VS7iNoxuiKukKbRQFsMyabCc+i8er07zOs=
 github.com/iden3/go-iden3-crypto v0.0.17 h1:NdkceRLJo/pI4UpcjVah4lN/a3yzxRUGXqxbWcYh9mY=

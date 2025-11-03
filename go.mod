@@ -9,7 +9,7 @@ require (
 	github.com/fxamacker/cbor/v2 v2.5.0
 	github.com/iden3/driver-did-iden3 v0.0.14
 	github.com/iden3/go-circuits/v2 v2.4.3
-	github.com/iden3/go-iden3-auth/v2 v2.7.5
+	github.com/iden3/go-iden3-auth/v2 v2.7.6-0.20251103130107-133bceb565fd
 	github.com/iden3/go-iden3-core/v2 v2.3.2
 	github.com/iden3/go-iden3-crypto v0.0.17
 	github.com/iden3/go-merkletree-sql/v2 v2.0.6

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	auth "github.com/iden3/go-iden3-auth/v2"
 	"github.com/iden3/go-iden3-auth/v2/loaders"
@@ -13,9 +14,14 @@ import (
 	"github.com/iden3/iden3comm/v2/protocol"
 )
 
+type proofVerificationOptions struct {
+	AcceptedStateTransitionDelay string `json:"accepted_state_transition_delay"`
+	AcceptedProofGenerationDelay string `json:"accepted_proof_generation_delay"`
+}
 type proofVerification struct {
 	AuthRequest  protocol.AuthorizationRequestMessage `json:"auth_request"`
 	AuthResponse string                               `json:"auth_response"`
+	Options      proofVerificationOptions             `json:"options"`
 }
 
 // VerifyAuthResponse verifies an authorization response using the provided environment configuration.
@@ -45,9 +51,30 @@ func VerifyAuthResponse(ctx context.Context, cfg EnvConfig, in []byte) (protocol
 		resolvers[fmt.Sprintf("%s:%s", c, n)] = resolver
 	}
 
+	verificationOptions := []pubsignals.VerifyOpt{}
+	if p.Options.AcceptedStateTransitionDelay != "" {
+		d, err := time.ParseDuration(p.Options.AcceptedStateTransitionDelay)
+		if err != nil {
+			return protocol.AuthorizationResponseMessage{},
+				fmt.Errorf("failed to parse accepted state transition delay: %w", err)
+		}
+		o := pubsignals.WithAcceptedStateTransitionDelay(d)
+		verificationOptions = append(verificationOptions, o)
+	}
+	if p.Options.AcceptedProofGenerationDelay != "" {
+		d, err := time.ParseDuration(p.Options.AcceptedProofGenerationDelay)
+		if err != nil {
+			return protocol.AuthorizationResponseMessage{},
+				fmt.Errorf("failed to parse accepted proof generation delay: %w", err)
+		}
+		o := pubsignals.WithAcceptedProofGenerationDelay(d)
+		verificationOptions = append(verificationOptions, o)
+	}
+
 	keyloader := loaders.NewEmbeddedKeyLoader()
 	opts := []auth.VerifierOption{
 		auth.WithDocumentLoader(cfg.documentLoader()),
+		auth.WithStateVerificationOpts(verificationOptions...),
 	}
 
 	verifier, err := auth.NewVerifier(keyloader, resolvers, opts...)
@@ -56,7 +83,7 @@ func VerifyAuthResponse(ctx context.Context, cfg EnvConfig, in []byte) (protocol
 			fmt.Errorf("failed to create auth verifier: %w", err)
 	}
 
-	authResponseMessage, err := verifier.FullVerify(ctx, p.AuthResponse, p.AuthRequest)
+	authResponseMessage, err := verifier.FullVerify(ctx, p.AuthResponse, p.AuthRequest, verificationOptions...)
 	if err != nil {
 		return protocol.AuthorizationResponseMessage{},
 			fmt.Errorf("failed to verify auth response: %w", err)

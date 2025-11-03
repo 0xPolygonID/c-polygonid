@@ -8,6 +8,7 @@ import (
 
 	httpmock "github.com/0xPolygonID/c-polygonid/testing"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/iden3/go-iden3-auth/v2/pubsignals"
 	core "github.com/iden3/go-iden3-core/v2"
 	"github.com/stretchr/testify/require"
 )
@@ -26,33 +27,8 @@ func TestVerifyAuthResponse(t *testing.T) {
 	cid := uploadIPFSFile(t, ipfsURL, fn("liveness_credential.json-ld"))
 	require.Equal(t, "QmcomGJQwJDCg3RE6FjsFYCjjMSTWJXY3fUWeq43Mc5CCJ", cid)
 
-	in := []byte(`{
-  "auth_response": "eyJhbGciOiJncm90aDE2IiwiY2lyY3VpdElkIjoiYXV0aFYyIiwiY3JpdCI6WyJjaXJjdWl0SWQiXSwidHlwIjoiYXBwbGljYXRpb24vaWRlbjMtemtwLWpzb24ifQ.eyJpZCI6IjllZTg3YjgwLTJkMDctNDE4MC05MmU2LTY2ZDZiNDc1ZjAyMyIsInR5cCI6ImFwcGxpY2F0aW9uL2lkZW4zLXprcC1qc29uIiwidHlwZSI6Imh0dHBzOi8vaWRlbjMtY29tbXVuaWNhdGlvbi5pby9hdXRob3JpemF0aW9uLzEuMC9yZXNwb25zZSIsInRoaWQiOiJjMWY0ZmViZi03YjM3LTQ0ZWUtYTA5OC1lNGFkZjIxZmY3NzgiLCJib2R5Ijp7InNjb3BlIjpbeyJpZCI6MTc2MjUwMDUwNiwiY2lyY3VpdElkIjoiY3JlZGVudGlhbEF0b21pY1F1ZXJ5VjMtYmV0YS4xIiwicHJvb2YiOnsicGlfYSI6WyIyMTcwMzAyNTgyNDYzOTkxMzQ5MDc5NjQ4MDgyNTgyOTY4NzUwMDkwNzk4NDA1MjkwMTg4NzkxNDI2MjY0NDk3MjQ5NDY2ODg3NjUxOCIsIjIwNjU0MzY3NTA0MzkxMTQ1ODc1NjkzOTQxMDU3NDQwMzg3MDA4NzUwNTAzMDMxMTI0NDYwNjA4NTU4NzE1NjY3NzQzNTczODUzODg4IiwiMSJdLCJwaV9iIjpbWyIyMTM2NjQxOTMxODE5NDg2MTA1ODI5MDI2MzY3Njc1NDY5NzI5MDY3MjMyMTM2MDUwNTcxNTM0NTEzMjI3MzQwOTgxNjk2NzA1MDgwNSIsIjc4NjI4MDUwODk3MTQzMTEyMTg2OTg1NDg2ODY0MjU0ODY1MTUyODYxNDU2MDk2MjAyNzgxNDAxMzQyMjU2ODcyNDQwNzUyMTExNTYiXSxbIjk0NTA1NDcwNzE3MjU0NzgyMDM1MTk3NjUwNjAwMDUzNTU0MDc0NTQ3MzgxNDI4MTg4NjIwMDU5MDE5MDgxNDI0NzAyODgwNTU3NjEiLCIxNDcwNTIyMjgwNDExNDI0MTA5NzQyMjg5Nzg2Mjk3NjA3NTc1ODIzMDg5NzY4ODA4NjEwNzMyMzczNjU3NTM3NTY5NzI2NDU2MDk5MSJdLFsiMSIsIjAiXV0sInBpX2MiOlsiMjE0NjQxNjIzNjY4OTQ0NzcwOTM4ODI4NzY0MTExMTczMTc3MzIzNTg1NzYyMTg2NTM3MTM3NTE1MDQ1NTQwNjEwNTE5OTQ2NzgwMjIiLCIxNjI3MDExNDUwNTc3MDI3MTUwMzM5MDAwOTEyNDI0MjA2Mzg0Mzc5NDQxMTQxMTA4MDE3MzQxMTcxNjEyODkyNDQ2NTc1NzgwNzkwNSIsIjEiXSwicHJvdG9jb2wiOiJncm90aDE2IiwiY3VydmUiOiJibjEyOCJ9LCJwdWJfc2lnbmFscyI6WyIxIiwiMjIyNjYwMjE3NTIyOTQyNDczOTE2ODczMjk5NjQwNDQwMDI0OTQwNzQ5MDc3MjA2MzYyNDQ2NzMyNDgyNDY5NjU3OTM4OTQ2NTciLCI3ODIwMTQ5NTcwNTM3MTk0NTQ5ODk5OTU4Mjg5MTM5MjgzMTM3MTAxNDYzMjMyNzUxMzI5ODA0NzQyNDAwMDA0OTk1NzExODkzOTUzIiwiMCIsIjAiLCIwIiwiMSIsIjE3NjI1MDA1MDYiLCIyMjc0ODYyMjA3NjI1ODk0MDUzNjQxNzk1MzE2NjE4MjMwODQwOTY2MTk0Njk0NzY0NTE5MDM4MjIzMzY3NTY3NTk5MzM1NDQ5NyIsIjEiLCI3ODIwMTQ5NTcwNTM3MTk0NTQ5ODk5OTU4Mjg5MTM5MjgzMTM3MTAxNDYzMjMyNzUxMzI5ODA0NzQyNDAwMDA0OTk1NzExODkzOTUzIiwiMTc2MTczMzgxNyIsIjIzMDAwMzQ3ODQ3NDcyMjE2MTk0MTI0MDkwOTk3Njg1NDkwMzk4MCIsIjQ3OTIxMzAwNzk0NjI2ODExNjU0Mjg1MTEyMDEyNTMyMzU4NTAwMTU2NDgzNTI4ODMyNDA1NzczMTUwMjY0Nzc3ODA0OTMxMTA2NzUiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMjY4MDc2NjE5MzkyNjk4MzU3NzYzNDQ3NDAyNDA0NDQ3NDUxMTYwOTM4OTE5NjgyMTQ0OTQwNjE5NjcwNzQ4ODQwMzE4MTIzNTMiLCIwIl19XX0sImZyb20iOiJkaWQ6aWRlbjM6YmlsbGlvbnM6bWFpbjoyVm5OMmJORENhanVWYktiSlM0MkJ0em5BSlMzQVdXTlU0RTFLZVVzZloiLCJ0byI6ImRpZDppZGVuMzpwb2x5Z29uOmFtb3k6eENrWHViUDJUMXpzVVFwRkx3Y3p3ZmJXcGRCWUJ4bUpEdFVUV0FVQ0UifQ.eyJwcm9vZiI6eyJwaV9hIjpbIjU2NDY2ODY5NjAyODcwOTQ3MjUzNzMyODYxOTE2NTg0NzYxNjM3MTEyMjk1ODUyMTY0MDg1MjM4NTY5MTA4MjYxMjc4Mzc5ODA5NjYiLCIxMzQ5ODYyMjE5MjIwNTM4NTQzMjY3MjM4MzQ3NDAwNjk5OTkwNzY0MzEzNjE2MDQxNDMxNjU2NTkwODY1MjgzMDQ3NjM2NjM2Mzk4MyIsIjEiXSwicGlfYiI6W1siMTk5NjgzMjU3MDM4MTcyMjU1NDc3NTQ1NDg2NDk3MDI5OTc3MDE3Nzk2MjI5OTM3MTQ4NjQ2NzEzMTQ0MzU3NDg0Njg4OTQyNDcxNTEiLCIxMzMyMzQzMjE0NjAwNDAxNjQwNjgwNTUzNDkxMjMxMDMyOTA2MTc5NzA3NjA5ODMzMjEzOTA5NTczMzI5ODkzNTM1NzcyNzUyMzkwOSJdLFsiMjE3MDMzNjQyMDU5MTIwODc2MDkyNjkyMTY2Njc0MDk0NDc2NDIxNjczMjExNzQzNzYxODc2NjQ3NTAzNzkxMDYxNDM4MjExMTI5NDAiLCIxMTcyMDk3MTIyOTQ4MDA1MjA5MzkxMDA1MDYyMjkyNjU4NDUxODUwMjEzMDM5Nzg4NDM1NTIzOTY3MDI3NzYxOTcwNDUzMDk5MTEyNiJdLFsiMSIsIjAiXV0sInBpX2MiOlsiMTYzMDQ5NDUzMjQ2NTU5NTY1NDMxMTI3ODQzNDg2NzI4MzE2ODc0NDM0NjExMzA3NDUzNDg1MjU3MzE5MjgzODUxODM4NjA5NTM3OTEiLCIxODU3Mzk5Njg5OTE0MjEyMDU0MzMzODQ3Mjk5OTM5MDA3NDAyNTExOTIyMDkzOTgwOTk2NzQ3NDY4MzkxNjY0ODgzNDY1Njc0NjIwNSIsIjEiXSwicHJvdG9jb2wiOiJncm90aDE2IiwiY3VydmUiOiJibjEyOCJ9LCJwdWJfc2lnbmFscyI6WyIyMjI2NjAyMTc1MjI5NDI0NzM5MTY4NzMyOTk2NDA0NDAwMjQ5NDA3NDkwNzcyMDYzNjI0NDY3MzI0ODI0Njk2NTc5Mzg5NDY1NyIsIjIxMzY2MTU2OTM2MzI0Mjk5MzkyNjcxMDMwODAwNDQ5MjY3OTY3MjczMTA1ODMwMDcxMDEzMzI5NjU2NTcxNjQ4OTc1MzA0NTE0Mjc0IiwiMCJdfQ",
-  "auth_request": {
-    "body": {
-      "callbackUrl": "https://verifier-backend.privado.id/callback?sessionID=4d5fd3c1-cd56-4ee1-af93-e9787c9a53c1",
-      "reason": "for testing purposes",
-      "scope": [
-        {
-          "circuitId": "credentialAtomicQueryV3-beta.1",
-          "id": 1762500506,
-          "query": {
-            "allowedIssuers": [
-              "did:iden3:billions:main:2VoW9Jfzj57KTTmBBuZe8wcqRJyPXnp3hoinXLmMHD"
-            ],
-            "context": "ipfs://QmcomGJQwJDCg3RE6FjsFYCjjMSTWJXY3fUWeq43Mc5CCJ",
-            "type": "LivenessCredential"
-          }
-        }
-      ]
-    },
-    "from": "did:iden3:polygon:amoy:xCkXubP2T1zsUQpFLwczwfbWpdBYBxmJDtUTWAUCE",
-    "id": "c1f4febf-7b37-44ee-a098-e4adf21ff778",
-    "thid": "c1f4febf-7b37-44ee-a098-e4adf21ff778",
-    "typ": "application/iden3comm-plain-json",
-    "type": "https://iden3-communication.io/authorization/1.0/request"
-  }
-}`)
+	in, err := os.ReadFile(fn("auth_response_with_options.json"))
+	require.NoError(t, err)
 
 	defer httpmock.MockHTTPClient(t,
 		map[string]string{
@@ -77,34 +53,52 @@ func TestVerifyAuthResponse(t *testing.T) {
 	require.NotEmpty(t, b)
 }
 
+func TestVerifyAuthResponse_Error_ProofIsOutdated(t *testing.T) {
+	ipfsURL := os.Getenv("IPFS_URL")
+	if ipfsURL == "" {
+		t.Fatal("IPFS_URL is not set")
+	}
+
+	fn := func(path string) string {
+		return fmt.Sprintf("testdata/%s", path)
+	}
+
+	defer preserveIPFSHttpCli()()
+	cid := uploadIPFSFile(t, ipfsURL, fn("liveness_credential.json-ld"))
+	require.Equal(t, "QmcomGJQwJDCg3RE6FjsFYCjjMSTWJXY3fUWeq43Mc5CCJ", cid)
+
+	in, err := os.ReadFile(fn("auth_response_without_options.json"))
+	require.NoError(t, err)
+
+	defer httpmock.MockHTTPClient(t,
+		map[string]string{
+			`https://localhost:8080%%%{"jsonrpc":"2.0","id":1,"method":"eth_call","params":[{"from":"0x0000000000000000000000000000000000000000","input":"0x7c1a66de0000000000000000000000000000000000000000000000000000000000000000","to":"0x3c9acb2205aa72a05f6d77d708b5cf85fca3a896"},"latest"]}`:                                                                 fn("httpresp_eth_state_auth_input_0x7c1a66de0000000000000000000000000000000000000000000000000000000000000000.json"),
+			`https://localhost:8080%%%{"jsonrpc":"2.0","id":2,"method":"eth_call","params":[{"from":"0x0000000000000000000000000000000000000000","input":"0x53c87312000ce0114a0c3cdd02a4c5f0b761f51d51da5903ea12680b30e3c2c06b33b101114a0c3cdd02a4c5f0b761f51d51da5903ea12680b30e3c2c06b33d3792201c1","to":"0x3c9acb2205aa72a05f6d77d708b5cf85fca3a896"},"latest"]}`: fn("httpresp_eth_state_genesis_not_exist_0x53c87312000ce0114a0c3cdd02a4c5f0b761f51d51da5903ea12680b30e3c2c06b33b101114a0c3cdd02a4c5f0b761f51d51da5903ea12680b30e3c2c06b33d3792201c1.json"),
+		},
+		httpmock.IgnoreUntouchedURLs(),
+	)()
+
+	cfg := EnvConfig{
+		ChainConfigs: map[core.ChainID]ChainConfig{
+			45056: {
+				RPCUrl:            "https://localhost:8080",
+				StateContractAddr: common.HexToAddress("0x3C9acB2205Aa72A05F6D77d708b5Cf85FCa3a896"),
+			},
+		},
+		IPFSNodeURL: ipfsURL,
+	}
+
+	_, err = VerifyAuthResponse(context.Background(), cfg, in)
+	require.Error(t, err, pubsignals.ErrProofGenerationOutdated)
+}
+
 func BenchmarkProofVerification_OnlineContract(b *testing.B) {
-	in := []byte(`{
-  "auth_response": "eyJhbGciOiJncm90aDE2IiwiY2lyY3VpdElkIjoiYXV0aFYyIiwiY3JpdCI6WyJjaXJjdWl0SWQiXSwidHlwIjoiYXBwbGljYXRpb24vaWRlbjMtemtwLWpzb24ifQ.eyJpZCI6IjllZTg3YjgwLTJkMDctNDE4MC05MmU2LTY2ZDZiNDc1ZjAyMyIsInR5cCI6ImFwcGxpY2F0aW9uL2lkZW4zLXprcC1qc29uIiwidHlwZSI6Imh0dHBzOi8vaWRlbjMtY29tbXVuaWNhdGlvbi5pby9hdXRob3JpemF0aW9uLzEuMC9yZXNwb25zZSIsInRoaWQiOiJjMWY0ZmViZi03YjM3LTQ0ZWUtYTA5OC1lNGFkZjIxZmY3NzgiLCJib2R5Ijp7InNjb3BlIjpbeyJpZCI6MTc2MjUwMDUwNiwiY2lyY3VpdElkIjoiY3JlZGVudGlhbEF0b21pY1F1ZXJ5VjMtYmV0YS4xIiwicHJvb2YiOnsicGlfYSI6WyIyMTcwMzAyNTgyNDYzOTkxMzQ5MDc5NjQ4MDgyNTgyOTY4NzUwMDkwNzk4NDA1MjkwMTg4NzkxNDI2MjY0NDk3MjQ5NDY2ODg3NjUxOCIsIjIwNjU0MzY3NTA0MzkxMTQ1ODc1NjkzOTQxMDU3NDQwMzg3MDA4NzUwNTAzMDMxMTI0NDYwNjA4NTU4NzE1NjY3NzQzNTczODUzODg4IiwiMSJdLCJwaV9iIjpbWyIyMTM2NjQxOTMxODE5NDg2MTA1ODI5MDI2MzY3Njc1NDY5NzI5MDY3MjMyMTM2MDUwNTcxNTM0NTEzMjI3MzQwOTgxNjk2NzA1MDgwNSIsIjc4NjI4MDUwODk3MTQzMTEyMTg2OTg1NDg2ODY0MjU0ODY1MTUyODYxNDU2MDk2MjAyNzgxNDAxMzQyMjU2ODcyNDQwNzUyMTExNTYiXSxbIjk0NTA1NDcwNzE3MjU0NzgyMDM1MTk3NjUwNjAwMDUzNTU0MDc0NTQ3MzgxNDI4MTg4NjIwMDU5MDE5MDgxNDI0NzAyODgwNTU3NjEiLCIxNDcwNTIyMjgwNDExNDI0MTA5NzQyMjg5Nzg2Mjk3NjA3NTc1ODIzMDg5NzY4ODA4NjEwNzMyMzczNjU3NTM3NTY5NzI2NDU2MDk5MSJdLFsiMSIsIjAiXV0sInBpX2MiOlsiMjE0NjQxNjIzNjY4OTQ0NzcwOTM4ODI4NzY0MTExMTczMTc3MzIzNTg1NzYyMTg2NTM3MTM3NTE1MDQ1NTQwNjEwNTE5OTQ2NzgwMjIiLCIxNjI3MDExNDUwNTc3MDI3MTUwMzM5MDAwOTEyNDI0MjA2Mzg0Mzc5NDQxMTQxMTA4MDE3MzQxMTcxNjEyODkyNDQ2NTc1NzgwNzkwNSIsIjEiXSwicHJvdG9jb2wiOiJncm90aDE2IiwiY3VydmUiOiJibjEyOCJ9LCJwdWJfc2lnbmFscyI6WyIxIiwiMjIyNjYwMjE3NTIyOTQyNDczOTE2ODczMjk5NjQwNDQwMDI0OTQwNzQ5MDc3MjA2MzYyNDQ2NzMyNDgyNDY5NjU3OTM4OTQ2NTciLCI3ODIwMTQ5NTcwNTM3MTk0NTQ5ODk5OTU4Mjg5MTM5MjgzMTM3MTAxNDYzMjMyNzUxMzI5ODA0NzQyNDAwMDA0OTk1NzExODkzOTUzIiwiMCIsIjAiLCIwIiwiMSIsIjE3NjI1MDA1MDYiLCIyMjc0ODYyMjA3NjI1ODk0MDUzNjQxNzk1MzE2NjE4MjMwODQwOTY2MTk0Njk0NzY0NTE5MDM4MjIzMzY3NTY3NTk5MzM1NDQ5NyIsIjEiLCI3ODIwMTQ5NTcwNTM3MTk0NTQ5ODk5OTU4Mjg5MTM5MjgzMTM3MTAxNDYzMjMyNzUxMzI5ODA0NzQyNDAwMDA0OTk1NzExODkzOTUzIiwiMTc2MTczMzgxNyIsIjIzMDAwMzQ3ODQ3NDcyMjE2MTk0MTI0MDkwOTk3Njg1NDkwMzk4MCIsIjQ3OTIxMzAwNzk0NjI2ODExNjU0Mjg1MTEyMDEyNTMyMzU4NTAwMTU2NDgzNTI4ODMyNDA1NzczMTUwMjY0Nzc3ODA0OTMxMTA2NzUiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMjY4MDc2NjE5MzkyNjk4MzU3NzYzNDQ3NDAyNDA0NDQ3NDUxMTYwOTM4OTE5NjgyMTQ0OTQwNjE5NjcwNzQ4ODQwMzE4MTIzNTMiLCIwIl19XX0sImZyb20iOiJkaWQ6aWRlbjM6YmlsbGlvbnM6bWFpbjoyVm5OMmJORENhanVWYktiSlM0MkJ0em5BSlMzQVdXTlU0RTFLZVVzZloiLCJ0byI6ImRpZDppZGVuMzpwb2x5Z29uOmFtb3k6eENrWHViUDJUMXpzVVFwRkx3Y3p3ZmJXcGRCWUJ4bUpEdFVUV0FVQ0UifQ.eyJwcm9vZiI6eyJwaV9hIjpbIjU2NDY2ODY5NjAyODcwOTQ3MjUzNzMyODYxOTE2NTg0NzYxNjM3MTEyMjk1ODUyMTY0MDg1MjM4NTY5MTA4MjYxMjc4Mzc5ODA5NjYiLCIxMzQ5ODYyMjE5MjIwNTM4NTQzMjY3MjM4MzQ3NDAwNjk5OTkwNzY0MzEzNjE2MDQxNDMxNjU2NTkwODY1MjgzMDQ3NjM2NjM2Mzk4MyIsIjEiXSwicGlfYiI6W1siMTk5NjgzMjU3MDM4MTcyMjU1NDc3NTQ1NDg2NDk3MDI5OTc3MDE3Nzk2MjI5OTM3MTQ4NjQ2NzEzMTQ0MzU3NDg0Njg4OTQyNDcxNTEiLCIxMzMyMzQzMjE0NjAwNDAxNjQwNjgwNTUzNDkxMjMxMDMyOTA2MTc5NzA3NjA5ODMzMjEzOTA5NTczMzI5ODkzNTM1NzcyNzUyMzkwOSJdLFsiMjE3MDMzNjQyMDU5MTIwODc2MDkyNjkyMTY2Njc0MDk0NDc2NDIxNjczMjExNzQzNzYxODc2NjQ3NTAzNzkxMDYxNDM4MjExMTI5NDAiLCIxMTcyMDk3MTIyOTQ4MDA1MjA5MzkxMDA1MDYyMjkyNjU4NDUxODUwMjEzMDM5Nzg4NDM1NTIzOTY3MDI3NzYxOTcwNDUzMDk5MTEyNiJdLFsiMSIsIjAiXV0sInBpX2MiOlsiMTYzMDQ5NDUzMjQ2NTU5NTY1NDMxMTI3ODQzNDg2NzI4MzE2ODc0NDM0NjExMzA3NDUzNDg1MjU3MzE5MjgzODUxODM4NjA5NTM3OTEiLCIxODU3Mzk5Njg5OTE0MjEyMDU0MzMzODQ3Mjk5OTM5MDA3NDAyNTExOTIyMDkzOTgwOTk2NzQ3NDY4MzkxNjY0ODgzNDY1Njc0NjIwNSIsIjEiXSwicHJvdG9jb2wiOiJncm90aDE2IiwiY3VydmUiOiJibjEyOCJ9LCJwdWJfc2lnbmFscyI6WyIyMjI2NjAyMTc1MjI5NDI0NzM5MTY4NzMyOTk2NDA0NDAwMjQ5NDA3NDkwNzcyMDYzNjI0NDY3MzI0ODI0Njk2NTc5Mzg5NDY1NyIsIjIxMzY2MTU2OTM2MzI0Mjk5MzkyNjcxMDMwODAwNDQ5MjY3OTY3MjczMTA1ODMwMDcxMDEzMzI5NjU2NTcxNjQ4OTc1MzA0NTE0Mjc0IiwiMCJdfQ",
-  "auth_request": {
-    "body": {
-      "callbackUrl": "https://verifier-backend.privado.id/callback?sessionID=4d5fd3c1-cd56-4ee1-af93-e9787c9a53c1",
-      "reason": "for testing purposes",
-      "scope": [
-        {
-          "circuitId": "credentialAtomicQueryV3-beta.1",
-          "id": 1762500506,
-          "query": {
-            "allowedIssuers": [
-              "did:iden3:billions:main:2VoW9Jfzj57KTTmBBuZe8wcqRJyPXnp3hoinXLmMHD"
-            ],
-            "context": "ipfs://QmcomGJQwJDCg3RE6FjsFYCjjMSTWJXY3fUWeq43Mc5CCJ",
-            "type": "LivenessCredential"
-          }
-        }
-      ]
-    },
-    "from": "did:iden3:polygon:amoy:xCkXubP2T1zsUQpFLwczwfbWpdBYBxmJDtUTWAUCE",
-    "id": "c1f4febf-7b37-44ee-a098-e4adf21ff778",
-    "thid": "c1f4febf-7b37-44ee-a098-e4adf21ff778",
-    "typ": "application/iden3comm-plain-json",
-    "type": "https://iden3-communication.io/authorization/1.0/request"
-  }
-}`)
+	fn := func(path string) string {
+		return fmt.Sprintf("testdata/%s", path)
+	}
+
+	in, err := os.ReadFile(fn("auth_response_with_options.json"))
+	require.NoError(b, err)
 
 	cfg := EnvConfig{
 		ChainConfigs: map[core.ChainID]ChainConfig{
