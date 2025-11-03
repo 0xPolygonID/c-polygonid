@@ -806,15 +806,15 @@ func PLGNACredentialStatusCheck(jsonResponse **C.char, in *C.char,
 
 	inData := C.GoBytes(unsafe.Pointer(in), C.int(C.strlen(in)))
 
-	envCfg, err := createEnvConfig(cfg)
+	envCfg, err := c_polygonid.NewEnvConfigFromJSON(cStrToGoSlice(cfg))
 	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
 		return false
 	}
 
 	isValid, err := c_polygonid.CredentialStatusCheck(ctx, envCfg, inData)
 	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, err.Error())
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
 		return false
 	}
 
