@@ -1,0 +1,18 @@
+{
+    "body": {
+        "issuer": {
+            "state": "e8f0256542d65ab4dd5fe2b4959075b1c54a810a644f2f950018866c25d70411",
+            "claimsTreeRoot": "695a3853cf8639d248e6d212d0ccd91e217d6499456db6a63f28953a25277911"
+        },
+        "mtp": {
+            "existence": false,
+            "siblings": []
+        }
+    },
+    "from": "did:polygonid:polygon:amoy:2qZpXYbQ9JA7xjxZXXh1WJkc9eaN49XChzCfgYCYMZ",
+    "id": "ff232479-e31e-42d0-91fc-dab44b3d47aa",
+    "thid": "019a01b0-011c-7d62-8a13-9f395feea333",
+    "to": "did:iden3:polygon:amoy:xCyw7Zbuw7Umx43ArACPY5hdHM7AFC6s7hahGE6vX",
+    "typ": "application/iden3comm-plain-json",
+    "type": "https://iden3-communication.io/revocation/1.0/status"
+}

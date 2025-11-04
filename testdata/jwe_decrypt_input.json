@@ -1,0 +1,29 @@
+{
+    "ciphertext": {
+        "ciphertext": "bIQMNMBa9gGBb2S9L6pN543KjcQMk2QwKU1n4IOTYEsL1CPsHahsM8LADOX9InjOmfkwP1anAZaDR1YM2cizW64NgdbZVd13nYSjK9VL5f-LSAMuK-CIUjSunO6JNoNbI7W4KkPIkUZHnB3nWn3gwhCA_AZuE-li6ESAAuSbW5lYRnxn8lhvLCdrg4z1_EnDwJSwpdjR1KVmAGQpJgk98i-1MJ59EP4Zgatn5OkZ-orhdEASHOSQEoA0fGigyLSUsKxYwIz9LpcjYcBVDalz9Ola_0eDa5SkkiTyKLVyDAfGkh9dpdJrxQ08JHAxcOULBv90XHcDbJtGnUPhxz99qhk4aEOfDmB4ZIn3o0S6LRGu3uD4SoFbH_nFj-47TGP-4ekehP0GuegO71ADuedbp5lh6I5eFUno4K2RsM0KAXIJu6P-f7F_k8I_YzhgAlNGtD4u0k7v9dK15TIyhRW7lHol7CzEI68xMo1e5WNylLLUDPNA4DnlXzZeHyB42z5boP-ZxL4anpFQNsNKDVek_R8LEIpxzJBwkC0u120XUQMj9HqSXW95y4gJ_TU0iHePmU15SWR42QK93nnsfHSdWyXIaroArKimPX51deowmRQe7AXK80a5_2pidP6gpevyqueDAVoUefqI7O6b3DHrivHGBC2obeLe8M-ldYc17r8GGVjKbLjChkDT40lE0tq_7Srj1vXmVGK7qcpkIJhCIA-kSzEPxS2Ab2TMDK10lu81Lcp71pp7bcXgyZqNpV5kopy2dpVjhcRIk0XWtDkkvle6BNI84IkCtX1bvlQOO2pcq0N0glYasU4eMWMgYYm6jkrviUsv-mqRyC2sfiBpAiFUT0O8TiA34qvDPd6bugwGl-4sMNuyUbjHPsJQqUjO4DRCDfVQWTCWP6-Fh5AIuOW1-gUsH8-5-139ylVLpMoG8j_eDP--K_WD1k6DzzmZgOOctzbmbPZmYL2zZTS_-_6kZB1ivtbwVZFLdqlGCaPANlnWYBhia-Pp5zX-Xak6CVrHfO9NMs9ZtAomWw-SnqCzvqcGdQO3E29MfnHaqf9jTVIHxKTPy-PBjxdq3J6ZoMgZG0CEA0wydDyD_CD9yiwTSWLU-21TQic88cA30Yz5jITpQUrKnquuVu7BioJ5fCZj8_mQ1WO-OIJi87CdRqKy0tX7p9uwDTx56p2WRyD6yJ2gRIq57siERkdDW10iOfTbd8zxMQuQnh5N1BdWqGhgwzBK58_wKWkGtqKJUwyw8hs-Qg",
+        "encrypted_key": "WbBAzrb5mbhMiGIFHII2prO1RJ9OntWypFpjFjD8uZbopfwhgVSAjisCb0HJngBInN3QJ65y4t7a0HFFhzfLUiEQYYVyaMGZw2Rq81XXpGtvgMyBaQX5IpxbLd5Uq33NjMkz_2clQ2B17lU2y8W1Kg4RiK3uE1DEe6IMDS_gIAUPrla1h50XRIhqEn2OgPxRgABr6WXPF1OxtOQqrGRIXa361f4B8412HFk2goeM0YdsvZaN-ZW8KDU8Md3SyFdnfnllTyqWvHQYLlN3uVrGqi7vl-pRU17x5CDk3yN1PJv0zHNXv_0NSZZtBQDTcABir89_wwu-5yx80gzFVMJP7g",
+        "iv": "jM-sFRf27lNSAGSU",
+        "protected": "eyJhbGciOiJSU0EtT0FFUC0yNTYiLCJlbmMiOiJBMjU2R0NNIiwia2lkIjoiZGlkOmV4YW1wbGU6YWxpY2Uja2V5LTEiLCJ0eXAiOiJhcHBsaWNhdGlvbi9pZGVuM2NvbW0tZW5jcnlwdGVkLWpzb24ifQ",
+        "tag": "1pmC4u9s3fK0xVcka25O2w",
+        "header": {
+            "alg": "RSA-OAEP-256",
+            "kid": "did:iden3:billions:main:2VsNPmGrMaUp5hz2gwuKXjy2gnEdUk8WJdiN9M2ZiW#RSA-OAEP-256:0x76761470b3a37a86c51a101491b3f7b031ce3bd0e326236340fc7de5289d0560"
+        }
+    },
+    "keySet": {
+        "keys": [
+            {
+                "alg": "RSA-OAEP-256",
+                "d": "V2kFRAzdBCQQ4FzKzYUlefBBs5uNSooAc71_0fDuiQzbgoKFLDfBKzR-5ucLUnBPTQohUS4-naCEy-M2kayXMkfbXRHD0u0mwE6AZGFnJpJVlHnk5EjvryW_rxQRmglXBkcnroSh3nDkuxHNLeWSf8uGgX-0RNh0b7j-XcYbxO5YKiVPg2101IAhe5fDrUew6NKQk2YW7yfIkDFtjGiRP5sR03dMiuBpGzsAL1EY1iMSsoH_wDCz7sr82q68H4WF4Oyo4tDoTuMtsgzD5k4YcOTrsh2KHGZ6sZ5Olro1IedEYaEZUQRMv_e_wI1lhXKocRvEXwsWBrPPzPzo3OITEQ",
+                "dp": "Bl8jCUQL5iae1GF4QDB3xS_uF6zOx0wZ67_EU7gTaEqJTgTxmy6G8ao84B4annG0BpBsQcivq1HUr0ecnZV-8Je2HjuklDErzgnnjmd6hrivTI427EpZnxPKvbE2NehsBM3cabgjSlgeoNUNa9ihFUEnrafrLguX7eXmX6oTqo8",
+                "dq": "rEtnwR_BcUKk8imibkUL-w67gyUx2WWLmiL5_i7gZAz0YGNzeYplPm7CEru1cCebTKOlKm0dubywAzrJzVNButQcqBEnGNyNuA1-EIP53XyiKczcRpNUV5C2zlrPWy69-aXxIhI1L7WeU77ofMOdoMoV8hmHJphXDE6UkmrwNLU",
+                "e": "AQAB",
+                "kty": "RSA",
+                "n": "ug3XPDJ-a5jgdXI_1yjIM-3wKxQ2IJ6p09mmf9ClLGkQtOeaWrv7s3z7lp99C0myUlMHywzitzVqRyNSxM-q2e3J3UnbFwF17UDO4sxUm2RBkvGxqc_Guy93Ju0IP63t3xfYZ3eDpG6CCWZRpRA_5iz7vCPEPaHbyLRfgWR3npRiUNlqsNvJifEWxHtWNFMnNK6rFMNlUCDoJCtQYY7Y35OTqJZAF63Tq1QAV5uyIuwokGQ_hNXis89wJL8pE49WaXNi6O5sZ6u6yQIf9gpFuIQR2OLEnY3WMTGOj7jNAdD0IFwe3mf_q9EXDF4RWh7Zu75FPStGdNUZmQLhvy7-Tw",
+                "p": "y5jTvXuW7bd6khLNKCfvuxBC2kryaHT7HQseRDNQzXEooor_5A6-frZM7oXlW4f8CgqWTkDWL94M3rX4aRwmNIEmT9poE7Cdq5Zap-Io9woc3N2cNZSlb6Nc7KW-vE2giwgD8Rc3mpMn73v5nyXvgnaxV3JP4ORpiCd55FjJSNs",
+                "q": "6fEYs-dBXU-NoenCRgS2DJsOIlHNCz8H3SgqpiGWPxyzh_vnm44sYFFMv8DoEt2vxosWLPpc4p0ZH7HTtq96P5pKf6FgDskErQcqhVapS6FFj-HoDjZQ64RTxj0_Qj100aY9-wrwF-dApSAa9oMSAjcp6srgzw8Q-Gs6FmlQ8J0",
+                "qi": "t2C2QEVo0rpE7tn7cTMNh1_XcRebyEeXdbvVjyje-HYcuwIQ2e8Lz9UdOl0eUYI9muPSVIR-oIoQmOHNrkf0Od5gXWH-vBJAfUOSA_avoWeAP8EeNnsPkDCGR2MbZcnZZClWb2WUItMKO9CeMFhrvfkL5yooG6Ryu4OSHXpWM-A"
+            }
+        ]
+    }
+}
