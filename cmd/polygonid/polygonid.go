@@ -791,6 +791,14 @@ func PLGNAGenerateInputs(jsonResponse **C.char, in *C.char,
 		jsonResponse, in, cfg, status)
 }
 
+//export PLGNACredentialStatusCheck
+func PLGNACredentialStatusCheck(jsonResponse **C.char, in *C.char, cfg *C.char,
+	status **C.PLGNStatus) bool {
+
+	return callGenericFn(c_polygonid.CredentialStatusCheck, jsonResponse, in,
+		cfg, status)
+}
+
 //export PLGNFreeStatus
 func PLGNFreeStatus(status *C.PLGNStatus) {
 	_, cancel := logAPITime()
@@ -1134,6 +1142,15 @@ func PLGNDecryptEncryptedCredential(jsonResponse **C.char, in *C.char,
 func PLGNVerifyProof(jsonResponse **C.char, in *C.char,
 	cfg *C.char, status **C.PLGNStatus) bool {
 	return callGenericFn(c_polygonid.VerifyProof, jsonResponse, in,
+		cfg, status)
+}
+
+// PLGNVerifyAuthResponse verifies an authentication response.
+//
+//export PLGNVerifyAuthResponse
+func PLGNVerifyAuthResponse(jsonResponse **C.char, in *C.char,
+	cfg *C.char, status **C.PLGNStatus) bool {
+	return callGenericFn(c_polygonid.VerifyAuthResponse, jsonResponse, in,
 		cfg, status)
 }
 
