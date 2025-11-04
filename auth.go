@@ -87,7 +87,11 @@ func VerifyAuthResponse(ctx context.Context, cfg EnvConfig, in []byte) (protocol
 			fmt.Errorf("failed to create auth verifier: %w", err)
 	}
 
-	verifier.SetPacker(&packers.PlainMessagePacker{})
+	if err := verifier.SetPacker(&packers.PlainMessagePacker{}); err != nil {
+		return protocol.AuthorizationResponseMessage{},
+			fmt.Errorf("failed to set plain message packer: %w", err)
+	}
+
 	if len(p.KeySet) > 0 {
 		keySet, err := jwk.Parse(p.KeySet)
 		if err != nil {
