@@ -3,6 +3,7 @@ package c_polygonid
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -11,16 +12,19 @@ import (
 	"github.com/iden3/go-iden3-auth/v2/pubsignals"
 	"github.com/iden3/go-iden3-auth/v2/state"
 	core "github.com/iden3/go-iden3-core/v2"
+	"github.com/iden3/iden3comm/v2/packers"
 	"github.com/iden3/iden3comm/v2/protocol"
+	"github.com/lestrrat-go/jwx/v3/jwk"
 )
 
 type proofVerificationOptions struct {
-	AcceptedStateTransitionDelay string `json:"accepted_state_transition_delay"`
-	AcceptedProofGenerationDelay string `json:"accepted_proof_generation_delay"`
+	AcceptedStateTransitionDelay string `json:"acceptedStateTransitionDelay"`
+	AcceptedProofGenerationDelay string `json:"acceptedProofGenerationDelay"`
 }
 type proofVerification struct {
-	AuthRequest  protocol.AuthorizationRequestMessage `json:"auth_request"`
-	AuthResponse string                               `json:"auth_response"`
+	AuthRequest  protocol.AuthorizationRequestMessage `json:"authRequest"`
+	AuthResponse json.RawMessage                      `json:"authResponse"`
+	KeySet       json.RawMessage                      `json:"keySet"`
 	Options      proofVerificationOptions             `json:"options"`
 }
 
@@ -83,7 +87,32 @@ func VerifyAuthResponse(ctx context.Context, cfg EnvConfig, in []byte) (protocol
 			fmt.Errorf("failed to create auth verifier: %w", err)
 	}
 
-	authResponseMessage, err := verifier.FullVerify(ctx, p.AuthResponse, p.AuthRequest, verificationOptions...)
+	verifier.SetPacker(&packers.PlainMessagePacker{})
+	if len(p.KeySet) > 0 {
+		keySet, err := jwk.Parse(p.KeySet)
+		if err != nil {
+			return protocol.AuthorizationResponseMessage{},
+				fmt.Errorf("failed to parse key set: %w", err)
+		}
+		resolveKeyFn := func(_ string) (interface{}, error) {
+			if keySet.Len() != 1 {
+				return nil, errors.New("key set must contain exactly one key")
+			}
+			key, ok := keySet.Key(0)
+			if !ok || key == nil {
+				return nil, errors.New("key idx: 0 not found in key set")
+			}
+			return key, nil
+		}
+
+		if err = verifier.SetPacker(packers.NewAnoncryptPacker(resolveKeyFn, nil)); err != nil {
+			return protocol.AuthorizationResponseMessage{},
+				fmt.Errorf("failed to set anoncrypt packer: %w", err)
+		}
+	}
+
+	authResponseMessage, err := verifier.FullVerify(
+		ctx, string(p.AuthResponse), p.AuthRequest, verificationOptions...)
 	if err != nil {
 		return protocol.AuthorizationResponseMessage{},
 			fmt.Errorf("failed to verify auth response: %w", err)

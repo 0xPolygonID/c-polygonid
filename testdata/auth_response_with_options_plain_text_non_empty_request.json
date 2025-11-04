@@ -1,0 +1,211 @@
+{
+    "authResponse": {
+        "id": "221f54b0-31ba-4143-a061-5a9680307655",
+        "typ": "application/iden3comm-plain-json",
+        "type": "https://iden3-communication.io/authorization/1.0/response",
+        "thid": "1eea2e9a-87c0-40cc-ac61-656bc03821a9",
+        "body": {
+            "message": "",
+            "scope": [
+                {
+                    "id": 1730736196,
+                    "circuitId": "credentialAtomicQueryV3-beta.1",
+                    "proof": {
+                        "pi_a": [
+                            "16980133431292788587316461450799292829287833516116270373882411736974857012755",
+                            "12184865222040307323279988997685328623574678099214001475118739289572196755172",
+                            "1"
+                        ],
+                        "pi_b": [
+                            [
+                                "7008051153346763681556508663094934036112540921835519538750525365787611777427",
+                                "18721088496243674443994598350728138579494499231903323091890361843375051329356"
+                            ],
+                            [
+                                "13965149759203813790283704406389739712618545041252720257693289991704501989411",
+                                "1931506307739604476262960484569436140426071275347774822138842661010103359209"
+                            ],
+                            [
+                                "1",
+                                "0"
+                            ]
+                        ],
+                        "pi_c": [
+                            "16849185452902933891687298575093820559489442997532777357016611771120337734457",
+                            "14907331786079374032638720391160172650721715661159426555312076436253315639594",
+                            "1"
+                        ],
+                        "protocol": "groth16",
+                        "curve": "bn128"
+                    },
+                    "pub_signals": [
+                        "1",
+                        "21575127216236248869702276246037557119007466180301957762196593786733007617",
+                        "4487386332479489158003597844990487984925471813907462483907054425759564175341",
+                        "0",
+                        "0",
+                        "0",
+                        "1",
+                        "1730736196",
+                        "25198543381200665770805816046271594885604002445105767653616878167826895617",
+                        "1",
+                        "9825378702528281403624130829967493160346534249838500892034361176934961813026",
+                        "1762253647",
+                        "41697469872903742870656853130427658339",
+                        "15120283578266271009438020795690502958172416356537603033570947597482817301489",
+                        "0",
+                        "9",
+                        "123456789",
+                        "1123456789",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "0",
+                        "2",
+                        "25198543381200665770805816046271594885604002445105767653616878167826895617",
+                        "0"
+                    ]
+                }
+            ]
+        },
+        "from": "did:iden3:polygon:amoy:x7Z95VkUuyo6mqraJw2VGwCfqTzdqhM1RVjRHzcpK",
+        "to": "did:iden3:polygon:amoy:xCRp75DgAdS63W65fmXHz6p9DwdonuRU9e46DifhX"
+    },
+    "authRequest": {
+        "id": "f50bbcc7-e7f7-4dd6-992a-290c5de3d4eb",
+        "thid": "f50bbcc7-e7f7-4dd6-992a-290c5de3d4eb",
+        "from": "did:iden3:polygon:amoy:xCRp75DgAdS63W65fmXHz6p9DwdonuRU9e46DifhX",
+        "typ": "application/iden3comm-plain-json",
+        "type": "https://iden3-communication.io/authorization/1.0/request",
+        "body": {
+            "accept": [
+                "iden3comm/v1;env=application/iden3-zkp-json;circuitId=authV2",
+                "iden3comm/v1;env=application/iden3comm-encrypted-json",
+                "iden3comm/v1;env=application/iden3comm-plain-json"
+            ],
+            "reason": "reason",
+            "message": "",
+            "callbackUrl": "http://localhost:8080/callback?id=1234442-123123-123123",
+            "scope": [
+                {
+                    "id": 1730736196,
+                    "circuitId": "credentialAtomicQueryV3-beta.1",
+                    "optional": false,
+                    "query": {
+                        "allowedIssuers": [
+                            "*"
+                        ],
+                        "context": "ipfs://Qmb48rJ5SiQMLXjVkaLQB6fWbT7C8LK75MHsCoHv8GAc15",
+                        "credentialSubject": {
+                            "positive-integer1": {
+                                "$between": [
+                                    "123456789",
+                                    "1123456789"
+                                ]
+                            }
+                        },
+                        "type": "operators"
+                    }
+                },
+                {
+                    "id": 1730736198,
+                    "circuitId": "credentialAtomicQueryV3-beta.1",
+                    "optional": true,
+                    "query": {
+                        "allowedIssuers": [
+                            "*"
+                        ],
+                        "context": "ipfs://Qmb48rJ5SiQMLXjVkaLQB6fWbT7C8LK75MHsCoHv8GAc15",
+                        "credentialSubject": {
+                            "string1": {
+                                "$eq": "non-existing-string-value"
+                            }
+                        },
+                        "type": "operators"
+                    }
+                },
+                {
+                    "id": 1730736199,
+                    "circuitId": "credentialAtomicQueryV3-beta.1",
+                    "optional": true,
+                    "query": {
+                        "allowedIssuers": [
+                            "*"
+                        ],
+                        "groupId": 1,
+                        "context": "ipfs://Qmb48rJ5SiQMLXjVkaLQB6fWbT7C8LK75MHsCoHv8GAc15",
+                        "credentialSubject": {
+                            "string1": {
+                                "$eq": "non-existing-string-value-2"
+                            }
+                        },
+                        "type": "operators"
+                    }
+                }
+            ]
+        },
+        "created_time": 1762253778
+    },
+    "options": {
+        "acceptedStateTransitionDelay": "8784h",
+        "acceptedProofGenerationDelay": "8784h"
+    }
+}

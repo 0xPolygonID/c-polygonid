@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestVerifyAuthResponse(t *testing.T) {
+func TestVerifyAuthResponse_JWZFormat_Non_Empty_Request(t *testing.T) {
 	ipfsURL := os.Getenv("IPFS_URL")
 	if ipfsURL == "" {
 		t.Fatal("IPFS_URL is not set")
@@ -27,7 +27,7 @@ func TestVerifyAuthResponse(t *testing.T) {
 	cid := uploadIPFSFile(t, ipfsURL, fn("liveness_credential.json-ld"))
 	require.Equal(t, "QmcomGJQwJDCg3RE6FjsFYCjjMSTWJXY3fUWeq43Mc5CCJ", cid)
 
-	in, err := os.ReadFile(fn("auth_response_with_options.json"))
+	in, err := os.ReadFile(fn("auth_response_with_options_jwz_format.json"))
 	require.NoError(t, err)
 
 	defer httpmock.MockHTTPClient(t,
@@ -43,6 +43,108 @@ func TestVerifyAuthResponse(t *testing.T) {
 			45056: {
 				RPCUrl:            "https://localhost:8080",
 				StateContractAddr: common.HexToAddress("0x3C9acB2205Aa72A05F6D77d708b5Cf85FCa3a896"),
+			},
+		},
+		IPFSNodeURL: ipfsURL,
+	}
+
+	b, err := VerifyAuthResponse(context.Background(), cfg, in)
+	require.NoError(t, err)
+	require.NotEmpty(t, b)
+}
+
+func TestVerifyAuthResponse_JWEFormat_Empty_Request(t *testing.T) {
+	fn := func(path string) string {
+		return fmt.Sprintf("testdata/%s", path)
+	}
+
+	in, err := os.ReadFile(fn("auth_response_with_options_jwe_format.json"))
+	require.NoError(t, err)
+
+	cfg := EnvConfig{
+		ChainConfigs: map[core.ChainID]ChainConfig{
+			45056: {
+				RPCUrl:            "https://localhost:8080",
+				StateContractAddr: common.HexToAddress("0x3C9acB2205Aa72A05F6D77d708b5Cf85FCa3a896"),
+			},
+		},
+	}
+
+	b, err := VerifyAuthResponse(context.Background(), cfg, in)
+	require.NoError(t, err)
+	require.NotEmpty(t, b)
+}
+
+func TestVerifyAuthResponse_JWEFormat_Non_Empty_Request(t *testing.T) {
+	ipfsURL := os.Getenv("IPFS_URL")
+	if ipfsURL == "" {
+		t.Fatal("IPFS_URL is not set")
+	}
+
+	fn := func(path string) string {
+		return fmt.Sprintf("testdata/%s", path)
+	}
+
+	defer preserveIPFSHttpCli()()
+	cid := uploadIPFSFile(t, ipfsURL, fn("liveness_credential.json-ld"))
+	require.Equal(t, "QmcomGJQwJDCg3RE6FjsFYCjjMSTWJXY3fUWeq43Mc5CCJ", cid)
+
+	in, err := os.ReadFile(fn("auth_response_with_options_jwe_non_empty_request.json"))
+	require.NoError(t, err)
+
+	defer httpmock.MockHTTPClient(t,
+		map[string]string{
+			`https://localhost:8081%%%{"jsonrpc":"2.0","id":1,"method":"eth_call","params":[{"from":"0x0000000000000000000000000000000000000000","input":"0x53c87312000e4309ebc549d974a1c8de06d5146790a53c667ed3a49f82079597ab78130109ebc549d974a1c8de06d5146790a53c667ed3a49f82079597ab788b7ea017ed","to":"0x1a4cc30f2aa0377b0c3bc9848766d90cb4404124"},"latest"]}`: fn("httpresp_polygon_amoy_0x53c87312000e4309ebc549d974a1c8de06d5146790a53c667ed3a49f82079597ab78130109ebc549d974a1c8de06d5146790a53c667ed3a49f82079597ab788b7ea017ed.json"),
+			`https://localhost:8081%%%{"jsonrpc":"2.0","id":2,"method":"eth_call","params":[{"from":"0x0000000000000000000000000000000000000000","input":"0x53c87312000e4309ebc549d974a1c8de06d5146790a53c667ed3a49f82079597ab78130115b8f79f299a51b57774d7bc3da79655dbeb670893d2f199f44ec0a4523e9622","to":"0x1a4cc30f2aa0377b0c3bc9848766d90cb4404124"},"latest"]}`: fn("httpresp_polygon_amoy_0x53c87312000e4309ebc549d974a1c8de06d5146790a53c667ed3a49f82079597ab78130115b8f79f299a51b57774d7bc3da79655dbeb670893d2f199f44ec0a4523e9622.json"),
+		},
+		httpmock.IgnoreUntouchedURLs(),
+	)()
+
+	cfg := EnvConfig{
+		ChainConfigs: map[core.ChainID]ChainConfig{
+			80002: {
+				RPCUrl:            "https://localhost:8081",
+				StateContractAddr: common.HexToAddress("0x1a4cC30f2aA0377b0c3bc9848766D90cb4404124"),
+			},
+		},
+		IPFSNodeURL: ipfsURL,
+	}
+
+	b, err := VerifyAuthResponse(context.Background(), cfg, in)
+	require.NoError(t, err)
+	require.NotEmpty(t, b)
+}
+
+func TestVerifyAuthResponse_PlainFormat_Non_Empty_Request(t *testing.T) {
+	ipfsURL := os.Getenv("IPFS_URL")
+	if ipfsURL == "" {
+		t.Fatal("IPFS_URL is not set")
+	}
+
+	fn := func(path string) string {
+		return fmt.Sprintf("testdata/%s", path)
+	}
+
+	defer preserveIPFSHttpCli()()
+	cid := uploadIPFSFile(t, ipfsURL, fn("liveness_credential.json-ld"))
+	require.Equal(t, "QmcomGJQwJDCg3RE6FjsFYCjjMSTWJXY3fUWeq43Mc5CCJ", cid)
+
+	in, err := os.ReadFile(fn("auth_response_with_options_plain_text_non_empty_request.json"))
+	require.NoError(t, err)
+
+	defer httpmock.MockHTTPClient(t,
+		map[string]string{
+			`https://localhost:8081%%%{"jsonrpc":"2.0","id":1,"method":"eth_call","params":[{"from":"0x0000000000000000000000000000000000000000","input":"0x53c87312000e4309ebc549d974a1c8de06d5146790a53c667ed3a49f82079597ab78130109ebc549d974a1c8de06d5146790a53c667ed3a49f82079597ab788b7ea017ed","to":"0x1a4cc30f2aa0377b0c3bc9848766d90cb4404124"},"latest"]}`: fn("httpresp_polygon_amoy_0x53c87312000e4309ebc549d974a1c8de06d5146790a53c667ed3a49f82079597ab78130109ebc549d974a1c8de06d5146790a53c667ed3a49f82079597ab788b7ea017ed.json"),
+			`https://localhost:8081%%%{"jsonrpc":"2.0","id":2,"method":"eth_call","params":[{"from":"0x0000000000000000000000000000000000000000","input":"0x53c87312000e4309ebc549d974a1c8de06d5146790a53c667ed3a49f82079597ab78130115b8f79f299a51b57774d7bc3da79655dbeb670893d2f199f44ec0a4523e9622","to":"0x1a4cc30f2aa0377b0c3bc9848766d90cb4404124"},"latest"]}`: fn("httpresp_polygon_amoy_0x53c87312000e4309ebc549d974a1c8de06d5146790a53c667ed3a49f82079597ab78130115b8f79f299a51b57774d7bc3da79655dbeb670893d2f199f44ec0a4523e9622.json"),
+		},
+		httpmock.IgnoreUntouchedURLs(),
+	)()
+
+	cfg := EnvConfig{
+		ChainConfigs: map[core.ChainID]ChainConfig{
+			80002: {
+				RPCUrl:            "https://localhost:8081",
+				StateContractAddr: common.HexToAddress("0x1a4cC30f2aA0377b0c3bc9848766D90cb4404124"),
 			},
 		},
 		IPFSNodeURL: ipfsURL,
@@ -97,7 +199,7 @@ func BenchmarkProofVerification_OnlineContract(b *testing.B) {
 		return fmt.Sprintf("testdata/%s", path)
 	}
 
-	in, err := os.ReadFile(fn("auth_response_with_options.json"))
+	in, err := os.ReadFile(fn("auth_response_with_options_jwz_format.json"))
 	require.NoError(b, err)
 
 	cfg := EnvConfig{
