@@ -48,6 +48,8 @@ type jsonObj = map[string]any
 //go:embed schemas/credentials-v1.json-ld
 var credentialsV1JsonLDBytes []byte
 
+var errCredentialsRevoked = errors.New("credential is revoked")
+
 func stringByPath(obj jsonObj, path string) (string, error) {
 	v, err := getByPath(obj, path)
 	if err != nil {
