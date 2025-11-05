@@ -43,7 +43,7 @@ func (m *mockedRouterTripper) RoundTrip(
 			postDataProcessed = postData
 			if m.opts.postRequestBodyProcessor != nil {
 				postDataProcessed =
-					m.opts.postRequestBodyProcessor(postDataProcessed)
+					m.opts.postRequestBodyProcessor(urlStr, postDataProcessed)
 			}
 
 			routerKey += "%%%" + string(postDataProcessed)
@@ -92,7 +92,7 @@ func (m *mockedRouterTripper) RoundTrip(
 
 type mockHTTPClientOptions struct {
 	ignoreUntouchedURLs      bool
-	postRequestBodyProcessor func([]byte) []byte
+	postRequestBodyProcessor func(string, []byte) []byte
 }
 
 type MockHTTPClientOption func(*mockHTTPClientOptions)
@@ -103,7 +103,7 @@ func IgnoreUntouchedURLs() MockHTTPClientOption {
 	}
 }
 
-func WithPostRequestBodyProcessor(fn func([]byte) []byte) MockHTTPClientOption {
+func WithPostRequestBodyProcessor(fn func(string, []byte) []byte) MockHTTPClientOption {
 	return func(opts *mockHTTPClientOptions) {
 		opts.postRequestBodyProcessor = fn
 	}

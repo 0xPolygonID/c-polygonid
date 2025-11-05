@@ -791,6 +791,14 @@ func PLGNAGenerateInputs(jsonResponse **C.char, in *C.char,
 		jsonResponse, in, cfg, status)
 }
 
+//export PLGNACredentialStatusCheck
+func PLGNACredentialStatusCheck(jsonResponse **C.char, in *C.char, cfg *C.char,
+	status **C.PLGNStatus) bool {
+
+	return callGenericFn(c_polygonid.CredentialStatusCheck, jsonResponse, in,
+		cfg, status)
+}
+
 //export PLGNFreeStatus
 func PLGNFreeStatus(status *C.PLGNStatus) {
 	_, cancel := logAPITime()
@@ -1048,6 +1056,102 @@ func PLGNValidateAttestationDocument(jsonResponse **C.char, in *C.char,
 
 	return callGenericFn(c_polygonid.ValidateAttestationDocument, jsonResponse,
 		in, cfg, status)
+}
+
+// PLGNAAnonPack creates a JWE token for the input data.
+//
+//export PLGNAAnonPack
+func PLGNAAnonPack(jsonResponse **C.char, in *C.char,
+	cfg *C.char, status **C.PLGNStatus) bool {
+	if jsonResponse == nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_NIL_POINTER,
+			"jsonResponse pointer is nil")
+		return false
+	}
+
+	inData := C.GoBytes(unsafe.Pointer(in), C.int(C.strlen(in)))
+
+	jwe, err := c_polygonid.AnonPack(inData)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
+		return false
+	}
+
+	*jsonResponse = C.CString(string(jwe))
+	return true
+}
+
+// PLGNAAnonUnpack decrypts a JWE message to an iden3comm basic message.
+//
+//export PLGNAAnonUnpack
+func PLGNAAnonUnpack(jsonResponse **C.char, in *C.char,
+	cfg *C.char, status **C.PLGNStatus) bool {
+	if jsonResponse == nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_NIL_POINTER,
+			"jsonResponse pointer is nil")
+		return false
+	}
+
+	inData := C.GoBytes(unsafe.Pointer(in), C.int(C.strlen(in)))
+
+	decryptedtext, err := c_polygonid.AnonUnpack(inData)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
+		return false
+	}
+
+	*jsonResponse = C.CString(string(decryptedtext))
+	return true
+}
+
+// PLGNDecryptJWE decrypts a JWE token.
+//
+//export PLGNDecryptJWE
+func PLGNDecryptJWE(jsonResponse **C.char, in *C.char,
+	cfg *C.char, status **C.PLGNStatus) bool {
+	if jsonResponse == nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_NIL_POINTER,
+			"jsonResponse pointer is nil")
+		return false
+	}
+
+	inData := C.GoBytes(unsafe.Pointer(in), C.int(C.strlen(in)))
+
+	jwe, err := c_polygonid.DecryptJWE(inData)
+	if err != nil {
+		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
+		return false
+	}
+
+	*jsonResponse = C.CString(string(jwe))
+	return true
+}
+
+// PLGNDecryptEncryptedCredential decrypts an encrypted verifiable credential.
+//
+//export PLGNDecryptEncryptedCredential
+func PLGNDecryptEncryptedCredential(jsonResponse **C.char, in *C.char,
+	cfg *C.char, status **C.PLGNStatus) bool {
+	return callGenericFn(c_polygonid.DecryptEncryptedCredential, jsonResponse, in,
+		cfg, status)
+}
+
+// PLGNVerifyProof verifies a W3C credential's proofs (BJJSignature2021, etc.).
+//
+//export PLGNVerifyProof
+func PLGNVerifyProof(jsonResponse **C.char, in *C.char,
+	cfg *C.char, status **C.PLGNStatus) bool {
+	return callGenericFn(c_polygonid.VerifyProof, jsonResponse, in,
+		cfg, status)
+}
+
+// PLGNVerifyAuthResponse verifies an authentication response.
+//
+//export PLGNVerifyAuthResponse
+func PLGNVerifyAuthResponse(jsonResponse **C.char, in *C.char,
+	cfg *C.char, status **C.PLGNStatus) bool {
+	return callGenericFn(c_polygonid.VerifyAuthResponse, jsonResponse, in,
+		cfg, status)
 }
 
 type atomicQueryInputsFn func(ctx context.Context, cfg c_polygonid.EnvConfig,
