@@ -64,7 +64,7 @@ func TestIsValidAadhaarQR_Error(t *testing.T) {
 		expectedErr error
 	}{
 		{
-			name:        "Invalid QR. Not a Aadhaar QR",
+			name:        "Invalid QR. Not an Aadhaar QR",
 			inputFile:   "testdata/anon_aadhaar_invalid_qr.json",
 			expectedErr: gocircuitexternal.ErrInvalidQRData, // str: invalid QR data
 		},
