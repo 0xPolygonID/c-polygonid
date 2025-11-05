@@ -26,11 +26,11 @@ jobs:
           GOEXPERIMENT: "synctest"
     services:
       ipfs:
-        image: ipfs/kubo:v0.26.0
+        image: ipfs/kubo:v0.38.1
         ports:
           - 5001:5001
         options: >-
-          --health-cmd "curl -X POST -v -f http://localhost:5001/api/v0/version || exit 1"
+          --health-cmd "ipfs id || exit 1"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
