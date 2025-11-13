@@ -173,7 +173,7 @@ func (c *AuthStateCacheWrapper) Get(key string) (state.ResolvedState, bool) {
 }
 
 // Set stores a ResolvedState in the cache with the given key.
-func (c *AuthStateCacheWrapper) Set(key string, value state.ResolvedState, opts ...cache.SetOptions) {
+func (c *AuthStateCacheWrapper) Set(key string, value state.ResolvedState, _ ...cache.SetOptions) {
 	data, err := json.Marshal(value)
 	if err != nil {
 		return
