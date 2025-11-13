@@ -1154,6 +1154,15 @@ func PLGNVerifyAuthResponse(jsonResponse **C.char, in *C.char,
 		cfg, status)
 }
 
+// PLGNVerifyAnonAadhaarQR verifies an AnonAadhaar QR code.
+//
+//export PLGNVerifyAnonAadhaarQR
+func PLGNVerifyAnonAadhaarQR(jsonResponse **C.char, in *C.char,
+	cfg *C.char, status **C.PLGNStatus) bool {
+	return callGenericFn(c_polygonid.VerifyAnonAadhaarQR, jsonResponse, in,
+		cfg, status)
+}
+
 type atomicQueryInputsFn func(ctx context.Context, cfg c_polygonid.EnvConfig,
 	in []byte) (c_polygonid.AtomicQueryInputsResponse, error)
 

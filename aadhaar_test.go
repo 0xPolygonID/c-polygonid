@@ -1,6 +1,7 @@
 package c_polygonid
 
 import (
+	"context"
 	"encoding/json"
 	"math/big"
 	"os"
@@ -46,4 +47,41 @@ Q5I3LVZhZ3abc1uhLKNYD5GcG9i6cMTCqwrPKwm8L66YHzwClabh6fJI9QBzCU/6
 	}
 
 	require.Equal(t, want, inputs.asAnonAadhaarV1Inputs())
+}
+
+func TestIsValidAadhaarQR(t *testing.T) {
+	d, err := os.ReadFile("testdata/anon_aadhaar_valid_qr.json")
+	require.NoError(t, err)
+	r, err := VerifyAnonAadhaarQR(context.Background(), EnvConfig{}, d)
+	require.NoError(t, err)
+	require.True(t, r.IsValid)
+}
+
+func TestIsValidAadhaarQR_Error(t *testing.T) {
+	tests := []struct {
+		name        string
+		inputFile   string
+		expectedErr error
+	}{
+		{
+			name:        "Invalid QR. Not an Aadhaar QR",
+			inputFile:   "testdata/anon_aadhaar_invalid_qr.json",
+			expectedErr: gocircuitexternal.ErrInvalidQRData, // str: invalid QR data
+		},
+		{
+			name:        "Invalid QR version. Not supported version",
+			inputFile:   "testdata/anon_aadhaar_invalid_qr_version.json",
+			expectedErr: gocircuitexternal.ErrInvalidQRVersion, // str: invalid QR version
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d, err := os.ReadFile(tt.inputFile)
+			require.NoError(t, err)
+			r, err := VerifyAnonAadhaarQR(context.Background(), EnvConfig{}, d)
+			require.ErrorIs(t, err, tt.expectedErr)
+			require.False(t, r.IsValid)
+		})
+	}
 }

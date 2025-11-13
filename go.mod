@@ -3,7 +3,7 @@ module github.com/0xPolygonID/c-polygonid
 go 1.24.2
 
 require (
-	github.com/0xPolygonID/go-circuit-external v0.0.5
+	github.com/0xPolygonID/go-circuit-external v0.0.7
 	github.com/dgraph-io/badger/v4 v4.5.0
 	github.com/ethereum/go-ethereum v1.16.7
 	github.com/fxamacker/cbor/v2 v2.5.0
