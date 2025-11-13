@@ -1,6 +1,7 @@
 package c_polygonid
 
 import (
+	"encoding/json"
 	"errors"
 	"log/slog"
 	"os"
@@ -9,6 +10,8 @@ import (
 	"sync"
 
 	"github.com/dgraph-io/badger/v4"
+	"github.com/iden3/go-iden3-auth/v2/cache"
+	"github.com/iden3/go-iden3-auth/v2/state"
 )
 
 var badgerLogger badger.Logger = nil
@@ -143,4 +146,74 @@ func openDB(cacheDir string) (*badger.DB, error) {
 	}
 
 	return badger.Open(opts)
+}
+
+type AuthStateCacheWrapper struct {
+	DB *badger.DB
+}
+
+// Get retrieves a ResolvedState from the cache by key.
+// Returns the value and true if found, or zero value and false if not found.
+func (c *AuthStateCacheWrapper) Get(key string) (state.ResolvedState, bool) {
+	var result state.ResolvedState
+	err := c.DB.View(func(txn *badger.Txn) error {
+		item, err := txn.Get([]byte(key))
+		if err != nil {
+			return err
+		}
+		return item.Value(func(val []byte) error {
+			return json.Unmarshal(val, &result)
+		})
+	})
+
+	if err != nil {
+		return state.ResolvedState{}, false
+	}
+	return result, true
+}
+
+// Set stores a ResolvedState in the cache with the given key.
+func (c *AuthStateCacheWrapper) Set(key string, value state.ResolvedState, _ ...cache.SetOptions) {
+	data, err := json.Marshal(value)
+	if err != nil {
+		return
+	}
+
+	_ = c.DB.Update(func(txn *badger.Txn) error {
+		entry := badger.NewEntry([]byte(key), data)
+		return txn.SetEntry(entry)
+	})
+}
+
+// Delete removes an entry from the cache by key.
+func (c *AuthStateCacheWrapper) Delete(key string) {
+	_ = c.DB.Update(func(txn *badger.Txn) error {
+		return txn.Delete([]byte(key))
+	})
+}
+
+// Clear removes all entries from the cache.
+func (c *AuthStateCacheWrapper) Clear() {
+	_ = c.DB.DropAll()
+}
+
+// Len returns the number of entries in the cache.
+func (c *AuthStateCacheWrapper) Len() int {
+	count := 0
+	err := c.DB.View(func(txn *badger.Txn) error {
+		opts := badger.DefaultIteratorOptions
+		opts.PrefetchValues = false
+		it := txn.NewIterator(opts)
+		defer it.Close()
+
+		for it.Rewind(); it.Valid(); it.Next() {
+			count++
+		}
+		return nil
+	})
+
+	if err != nil {
+		return 0
+	}
+	return count
 }

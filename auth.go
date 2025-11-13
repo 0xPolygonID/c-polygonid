@@ -28,6 +28,26 @@ type proofVerification struct {
 	Options      proofVerificationOptions             `json:"options"`
 }
 
+func provideCacheLayer(dirPath string) (state.CacheOptions, state.CacheOptions, func(), error) {
+	db, releaseDB, err := getCacheDB(dirPath)
+	if err != nil {
+		return state.CacheOptions{}, state.CacheOptions{}, nil,
+			fmt.Errorf("failed to get cache db: %w", err)
+	}
+	cacheWrapper := &AuthStateCacheWrapper{db}
+
+	StateCacheOptions := state.CacheOptions{
+		Cache: cacheWrapper,
+	}
+	RootCacheOptions := state.CacheOptions{
+		Cache: cacheWrapper,
+	}
+
+	return StateCacheOptions, RootCacheOptions, func() {
+		releaseDB()
+	}, nil
+}
+
 // VerifyAuthResponse verifies an authorization response using the provided environment configuration.
 func VerifyAuthResponse(ctx context.Context, cfg EnvConfig, in []byte) (protocol.AuthorizationResponseMessage, error) {
 	var p proofVerification
@@ -37,11 +57,22 @@ func VerifyAuthResponse(ctx context.Context, cfg EnvConfig, in []byte) (protocol
 			fmt.Errorf("failed to unmarshal proof verification: %w", err)
 	}
 
+	// get cache directory
+	StateCacheOptions, RootCacheOptions, releaseCache, err :=
+		provideCacheLayer(cfg.CacheDir)
+	if err != nil {
+		return protocol.AuthorizationResponseMessage{},
+			fmt.Errorf("failed to provide cache layer: %w", err)
+	}
+	defer releaseCache()
+
 	resolvers := make(map[string]pubsignals.StateResolver, len(cfg.ChainConfigs))
 	for chainID, chainCfg := range cfg.ChainConfigs {
 		resolver, err := state.NewETHResolverWithOpts(
 			chainCfg.RPCUrl,
 			chainCfg.StateContractAddr.Hex(),
+			state.WithStateCacheOptions(&StateCacheOptions),
+			state.WithRootCacheOptions(&RootCacheOptions),
 		)
 		if err != nil {
 			return protocol.AuthorizationResponseMessage{},
