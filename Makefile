@@ -54,7 +54,7 @@ ios: ios-old ios-arm64 ios-simulator
 
 ios-static-xcframework: ios-arm64 ios-simulator darwin-arm64
 	# Remove .xcframework if exists
-	rm -rf $(IOS_OUT)/Iden3CLibrary.xcframework
+	rm -rf $(IOS_OUT)/libpolygonid.xcframework
 	# Create separate folder with headers for xcframework
 	mkdir -p $(IOS_OUT)/include
 	cp $(IOS_OUT)/libpolygonid.h $(IOS_OUT)/include
@@ -63,11 +63,11 @@ ios-static-xcframework: ios-arm64 ios-simulator darwin-arm64
     	-library $(IOS_OUT)/libpolygonid-ios.a -headers $(IOS_OUT)/include/ \
     	-library $(IOS_OUT)/libpolygonid-ios-simulator.a -headers $(IOS_OUT)/include/ \
     	-library $(IOS_OUT)/libpolygonid-darwin-arm64.a -headers $(IOS_OUT)/include/ \
-    	-output $(IOS_OUT)/Iden3CLibrary.xcframework
+    	-output $(IOS_OUT)/libpolygonid.xcframework
 
 ios-dynamic-xcframework: ios-arm64 ios-simulator darwin-arm64
 	# Remove .xcframework if exists
-	rm -rf $(IOS_OUT)/Iden3CLibrary.xcframework
+	rm -rf $(IOS_OUT)/libpolygonid.xcframework
 	# Create iOS .dylib
 	xcrun -sdk iphoneos clang -arch arm64 -fpic -shared -Wl,-all_load $(IOS_OUT)/libpolygonid-ios.a -framework Corefoundation -framework Security -o $(IOS_OUT)/libpolygonid-ios.dylib
 	# Create iOS sim arm64 .dylib
@@ -86,11 +86,11 @@ ios-dynamic-xcframework: ios-arm64 ios-simulator darwin-arm64
  		-library $(IOS_OUT)/libpolygonid-ios.dylib -headers $(IOS_OUT)/include/ \
  		-library $(IOS_OUT)/libpolygonid-ios-simulator.dylib -headers $(IOS_OUT)/include/ \
  		-library $(IOS_OUT)/libpolygonid-darwin-arm64.dylib -headers $(IOS_OUT)/include/ \
- 		-output $(IOS_OUT)/Iden3CLibrary.xcframework
+ 		-output $(IOS_OUT)/libpolygonid.xcframework
  	# Set @rpath
-	install_name_tool -id @rpath/libpolygonid-ios.dylib $(IOS_OUT)/Iden3CLibrary.xcframework/ios-arm64/libpolygonid-ios.dylib
-	install_name_tool -id @rpath/libpolygonid-ios-simulator.dylib $(IOS_OUT)/Iden3CLibrary.xcframework/ios-arm64_x86_64-simulator/libpolygonid-ios-simulator.dylib
-	install_name_tool -id @rpath/libpolygonid-darwin-arm64.dylib $(IOS_OUT)/Iden3CLibrary.xcframework/macos-arm64/libpolygonid-darwin-arm64.dylib
+	install_name_tool -id @rpath/libpolygonid-ios.dylib $(IOS_OUT)/libpolygonid.xcframework/ios-arm64/libpolygonid-ios.dylib
+	install_name_tool -id @rpath/libpolygonid-ios-simulator.dylib $(IOS_OUT)/libpolygonid.xcframework/ios-arm64_x86_64-simulator/libpolygonid-ios-simulator.dylib
+	install_name_tool -id @rpath/libpolygonid-darwin-arm64.dylib $(IOS_OUT)/libpolygonid.xcframework/macos-arm64/libpolygonid-darwin-arm64.dylib
 
 
 dylib:
