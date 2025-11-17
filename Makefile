@@ -105,7 +105,7 @@ android-armeabi-v7a:
 	CGO_ENABLED=1 \
 	CC=$(ANDROID_NDK_HOME)/toolchains/llvm/prebuilt/darwin-x86_64/bin/armv7a-linux-androideabi21-clang \
 	go build -tags prover_disabled -buildmode=c-shared \
-		-ldflags="-extldflags '-Wl,-z,max-page-size=0x4000'" \
+		-ldflags="-extldflags '-Wl,-soname,libpolygonid.so,-z,max-page-size=0x4000'" \
 		-o $(ANDROID_OUT)/jnilibs/armeabi-v7a/libpolygonid.so ./cmd/polygonid
 
 android-arm64-v8a:
@@ -114,7 +114,7 @@ android-arm64-v8a:
 	CGO_ENABLED=1 \
 	CC=$(ANDROID_NDK_HOME)/toolchains/llvm/prebuilt/darwin-x86_64/bin/aarch64-linux-android21-clang \
 	go build -tags prover_disabled -buildmode=c-shared \
-		-ldflags="-extldflags '-Wl,-z,max-page-size=0x4000'" \
+		-ldflags="-extldflags '-Wl,-soname,libpolygonid.so,-z,max-page-size=0x4000'" \
 		-o $(ANDROID_OUT)/jnilibs/arm64-v8a/libpolygonid.so ./cmd/polygonid
 
 android-x86:
@@ -123,7 +123,7 @@ android-x86:
 	CGO_ENABLED=1 \
 	CC=$(ANDROID_NDK_HOME)/toolchains/llvm/prebuilt/darwin-x86_64/bin/i686-linux-android21-clang \
 	go build -tags prover_disabled -buildmode=c-shared \
-		-ldflags="-extldflags '-Wl,-z,max-page-size=0x4000'" \
+		-ldflags="-extldflags '-Wl,-soname,libpolygonid.so,-z,max-page-size=0x4000'" \
 		-o $(ANDROID_OUT)/jnilibs/x86/libpolygonid.so ./cmd/polygonid
 
 android-x86-64:
@@ -132,7 +132,7 @@ android-x86-64:
 	CGO_ENABLED=1 \
 	CC=$(ANDROID_NDK_HOME)/toolchains/llvm/prebuilt/darwin-x86_64/bin/x86_64-linux-android21-clang \
 	go build -tags prover_disabled -buildmode=c-shared \
-		-ldflags="-extldflags '-Wl,-z,max-page-size=0x4000'" \
+		-ldflags="-extldflags '-Wl,-soname,libpolygonid.so,-z,max-page-size=0x4000'" \
 		-o $(ANDROID_OUT)/jnilibs/x86-64/libpolygonid.so ./cmd/polygonid
 
 android-old: android-armeabi-v7a  android-x86
