@@ -86,8 +86,8 @@ func TestVerifyAuthResponse_JWEFormat_Non_Empty_Request(t *testing.T) {
 	}
 
 	defer preserveIPFSHttpCli()()
-	cid := uploadIPFSFile(t, ipfsURL, fn("liveness_credential.json-ld"))
-	require.Equal(t, "QmcomGJQwJDCg3RE6FjsFYCjjMSTWJXY3fUWeq43Mc5CCJ", cid)
+	cid := uploadIPFSFile(t, ipfsURL, fn("operators.json-ld"))
+	require.Equal(t, "Qmb48rJ5SiQMLXjVkaLQB6fWbT7C8LK75MHsCoHv8GAc15", cid)
 
 	in, err := os.ReadFile(fn("auth_response_with_options_jwe_non_empty_request.json"))
 	require.NoError(t, err)
@@ -126,8 +126,8 @@ func TestVerifyAuthResponse_PlainFormat_Non_Empty_Request(t *testing.T) {
 	}
 
 	defer preserveIPFSHttpCli()()
-	cid := uploadIPFSFile(t, ipfsURL, fn("liveness_credential.json-ld"))
-	require.Equal(t, "QmcomGJQwJDCg3RE6FjsFYCjjMSTWJXY3fUWeq43Mc5CCJ", cid)
+	cid := uploadIPFSFile(t, ipfsURL, fn("operators.json-ld"))
+	require.Equal(t, "Qmb48rJ5SiQMLXjVkaLQB6fWbT7C8LK75MHsCoHv8GAc15", cid)
 
 	in, err := os.ReadFile(fn("auth_response_with_options_plain_text_non_empty_request.json"))
 	require.NoError(t, err)
