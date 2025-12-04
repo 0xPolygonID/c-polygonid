@@ -1632,6 +1632,13 @@ func TestW3cCredentialsFromPassportInputsJson(t *testing.T) {
 }
 
 func TestW3CCredentialToCoreClaim_no_options(t *testing.T) {
+	// We no need mock https://www.w3.org/2018/credentials/v1 is cached by default
+	defer httpmock.MockHTTPClient(t, map[string]string{
+		"https://schema.iden3.io/core/jsonld/iden3proofs.jsonld": "testdata/httpresp_iden3proofs.jsonld",
+		"https://gist.githubusercontent.com/ilya-korotya/660496c859f8d31a7d2a92ca5e970967/raw/6b5fc14fe630c17bfa52e05e08fdc8394c5ea0ce/non-merklized-non-zero-balance.jsonld": "testdata/httpresp_non-merklized-non-zero-balance.jsonld",
+		"https://schema.iden3.io/core/jsonld/displayMethod.jsonld": "testdata/httpresp_displayMethod.jsonld",
+	}, httpmock.IgnoreUntouchedURLs())()
+
 	in := []byte(`{
 "w3cCredential": {
   "id": "urn:iden3:onchain:80001:0xc84e8ac5385E0813f01aA9C698ED44C831961670:0",
@@ -1714,6 +1721,13 @@ func TestW3CCredentialToCoreClaim_no_options(t *testing.T) {
 }
 
 func TestW3CCredentialToCoreClaim_with_options(t *testing.T) {
+	// We no need mock https://www.w3.org/2018/credentials/v1 is cached by default
+	defer httpmock.MockHTTPClient(t, map[string]string{
+		"https://schema.iden3.io/core/jsonld/iden3proofs.jsonld": "testdata/httpresp_iden3proofs.jsonld",
+		"https://gist.githubusercontent.com/ilya-korotya/660496c859f8d31a7d2a92ca5e970967/raw/6b5fc14fe630c17bfa52e05e08fdc8394c5ea0ce/non-merklized-non-zero-balance.jsonld": "testdata/httpresp_non-merklized-non-zero-balance.jsonld",
+		"https://schema.iden3.io/core/jsonld/displayMethod.jsonld": "testdata/httpresp_displayMethod.jsonld",
+	}, httpmock.IgnoreUntouchedURLs())()
+
 	in := []byte(`{
 "w3cCredential": {
   "id": "urn:iden3:onchain:80001:0xc84e8ac5385E0813f01aA9C698ED44C831961670:0",
