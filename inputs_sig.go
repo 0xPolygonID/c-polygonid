@@ -1178,7 +1178,12 @@ func GenericInputsFromJson(ctx context.Context, cfg EnvConfig,
 		externalpassport.CredentialSHA224,
 		externalpassport.CredentialSHA256,
 		externalpassport.CredentialSHA384,
-		externalpassport.CredentialSHA512:
+		externalpassport.CredentialSHA512,
+		externalpassport.IDcardSHA1,
+		externalpassport.IDcardSHA224,
+		externalpassport.IDcardSHA256,
+		externalpassport.IDcardSHA384,
+		externalpassport.IDcardSHA512:
 		return PassportInputsFromJson(ctx, cfg, in)
 	}
 
