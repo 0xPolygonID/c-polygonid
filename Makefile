@@ -20,7 +20,7 @@ ios-simulator-x86_64:
 	TARGET=x86-64-apple-ios16-simulator \
 	CC=$(PWD)/clangwrap.sh \
 	CGO_CFLAGS="-fembed-bitcode -target x86_64-apple-ios16-simulator" \
-	go build -tags ios,prover_disabled -buildmode=c-archive -o $(IOS_OUT)/libpolygonid-ios-simulator-x86_64.a ./cmd/polygonid
+	go build -ldflags "-w -s" -tags ios,prover_disabled -buildmode=c-archive -o $(IOS_OUT)/libpolygonid-ios-simulator-x86_64.a ./cmd/polygonid
 	cp $(IOS_OUT)/libpolygonid-ios-simulator-x86_64.h $(IOS_OUT)/libpolygonid.h
 
 ios-simulator-arm64:
