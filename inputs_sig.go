@@ -1171,7 +1171,14 @@ func GenericInputsFromJson(ctx context.Context, cfg EnvConfig,
 	case circuits.LinkedMultiQuery10CircuitID:
 		return LinkedMultiQueryInputsFromJson(ctx, cfg, in)
 	case circuits.AuthV2CircuitID:
-		return AuthV2InputsFromJson(ctx, cfg, in)
+		authCfg := circuits.BaseConfig{}
+		return AuthInputsFromJson[circuits.AuthV2Inputs](in, authCfg)
+	case circuits.AuthV3CircuitID:
+		authCfg := circuits.BaseConfig{}
+		return AuthInputsFromJson[circuits.AuthV3Inputs](in, authCfg)
+	case circuits.AuthV3_8_32CircuitID:
+		authCfg := circuits.BaseConfig{MTLevel: 8, MTLevelOnChain: 32}
+		return AuthInputsFromJson[circuits.AuthV3Inputs](in, authCfg)
 	case gocircuitexternal.AnonAadhaarV1:
 		return AnonAadhaarInputsFromJson(ctx, cfg, in)
 	case externalpassport.CredentialSHA1,
@@ -2621,42 +2628,55 @@ func DescribeID(ctx context.Context, cfg EnvConfig,
 	}, nil
 }
 
+func repackDIDtoID(in []byte) ([]byte, error) {
+	var obj map[string]any
+	err := json.Unmarshal(in, &obj)
+	if err != nil {
+		return nil, err
+	}
+
+	didI, ok := obj["genesisDID"]
+	if !ok {
+		return nil, errors.New("no genesisDID field found")
+	}
+
+	didS, ok := didI.(string)
+	if !ok {
+		return nil, errors.New("genesisDID is not a string")
+	}
+
+	did, err := w3c.ParseDID(didS)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse genesisDID: %w", err)
+	}
+
+	id, err := core.IDFromDID(*did)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get ID from genesisDID: %w", err)
+	}
+	obj["genesisID"] = id.String()
+
+	out, err := json.Marshal(obj)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal data: %w", err)
+	}
+
+	return out, nil
+}
+
 // AuthV2InputsFromJson converts JSON input to AuthV2Inputs response.
+//
+// Deprecated: Use AuthInputsFromJson instead, which supports multiple auth
+// input versions.
 func AuthV2InputsFromJson(_ context.Context, _ EnvConfig,
 	in []byte) (AtomicQueryInputsResponse, error) {
 
 	var out AtomicQueryInputsResponse
 
-	var obj map[string]any
-	err := json.Unmarshal(in, &obj)
+	authV2InputsData, err := repackDIDtoID(in)
 	if err != nil {
-		return out, err
-	}
-
-	didI, ok := obj["genesisDID"]
-	if !ok {
-		return out, errors.New("no genesisDID field found")
-	}
-
-	didS, ok := didI.(string)
-	if !ok {
-		return out, errors.New("genesisDID is not a string")
-	}
-
-	did, err := w3c.ParseDID(didS)
-	if err != nil {
-		return out, fmt.Errorf("failed to parse genesisDID: %w", err)
-	}
-
-	id, err := core.IDFromDID(*did)
-	if err != nil {
-		return out, fmt.Errorf("failed to get ID from genesisDID: %w", err)
-	}
-	obj["genesisID"] = id.String()
-
-	authV2InputsData, err := json.Marshal(obj)
-	if err != nil {
-		return out, fmt.Errorf("failed to marshal data: %w", err)
+		return out, fmt.Errorf("failed convert genesisDID to genesisID: %w",
+			err)
 	}
 
 	var inputs circuits.AuthV2Inputs
@@ -2788,4 +2808,35 @@ func W3CCredentialToCoreClaim(ctx context.Context, cfg EnvConfig, in []byte) (Co
 	}
 
 	return resp, nil
+}
+
+func AuthInputsFromJson[T circuits.InputsMarshaller](in []byte,
+	inputsCfg circuits.BaseConfig) (AtomicQueryInputsResponse, error) {
+
+	var out AtomicQueryInputsResponse
+
+	inputsData, err := repackDIDtoID(in)
+	if err != nil {
+		return out, fmt.Errorf("failed convert genesisDID to genesisID: %w",
+			err)
+	}
+
+	var inputs T
+	err = json.Unmarshal(inputsData, &inputs)
+	if err != nil {
+		return out, fmt.Errorf("failed to unmarshal auth inputs: %w", err)
+	}
+
+	switch v := any(&inputs).(type) {
+	case *circuits.AuthV2Inputs:
+		v.BaseConfig = inputsCfg
+	case *circuits.AuthV3Inputs:
+		v.BaseConfig = inputsCfg
+	default:
+		return out, fmt.Errorf("unsupported auth inputs type %T", v)
+	}
+
+	out.Inputs = inputs
+
+	return out, nil
 }

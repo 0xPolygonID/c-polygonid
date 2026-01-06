@@ -209,9 +209,20 @@ func TestGenrateInputs(t *testing.T) {
 			"atomic_query_v3_on_chain_mtp_output.json",
 			c_polygonid.AtomicQueryV3OnChainInputsFromJson, nil, env, "")
 	})
+
 	t.Run("auth_v2_inputs", func(t *testing.T) {
 		doTest(t, "auth_v2_inputs_in.json", "auth_v2_inputs_out.json",
-			c_polygonid.AuthV2InputsFromJson, nil, env, "")
+			c_polygonid.AuthV2InputsFromJson, nil, env, "") //nolint:staticcheck
+	})
+
+	t.Run("auth_v3_inputs", func(t *testing.T) {
+		doTest(t, "auth_v3_inputs_in.json", "auth_v2_inputs_out.json",
+			c_polygonid.GenericInputsFromJson, nil, env, "")
+	})
+
+	t.Run("auth_v3_8_32_inputs", func(t *testing.T) {
+		doTest(t, "auth_v3_8_32_inputs_in.json", "auth_v3_8_32_inputs_out.json",
+			c_polygonid.GenericInputsFromJson, nil, env, "")
 	})
 
 }
