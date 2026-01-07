@@ -164,7 +164,7 @@ func readFixtureFile(name string) []byte {
 	return fileBytes
 }
 
-func TestGenrateInputs(t *testing.T) {
+func TestGenerateInputs(t *testing.T) {
 	type PrepareInputsFn func(
 		ctx context.Context, cfg c_polygonid.EnvConfig, in []byte) (
 		c_polygonid.AtomicQueryInputsResponse, error)
@@ -223,6 +223,11 @@ func TestGenrateInputs(t *testing.T) {
 	t.Run("auth_v3_8_32_inputs", func(t *testing.T) {
 		doTest(t, "auth_v3_8_32_inputs_in.json", "auth_v3_8_32_inputs_out.json",
 			c_polygonid.GenericInputsFromJson, nil, env, "")
+	})
+
+	t.Run("auth_v2_incorrect_signature_inputs", func(t *testing.T) {
+		doTest(t, "auth_v2_incorrect_sig_inputs_in.json", "",
+			c_polygonid.GenericInputsFromJson, nil, env, "invalid signature")
 	})
 }
 

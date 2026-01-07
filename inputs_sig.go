@@ -2801,13 +2801,29 @@ func AuthInputsFromJson[T circuits.InputsMarshaller](in []byte,
 		return out, fmt.Errorf("failed to unmarshal auth inputs: %w", err)
 	}
 
+	var signature *babyjub.Signature
+	var challenge *big.Int
+	var authClaim *core.Claim
+
 	switch v := any(&inputs).(type) {
 	case *circuits.AuthV2Inputs:
 		v.BaseConfig = inputsCfg
+		signature = v.Signature
+		challenge = v.Challenge
+		authClaim = v.AuthClaim
 	case *circuits.AuthV3Inputs:
 		v.BaseConfig = inputsCfg
+		signature = v.Signature
+		challenge = v.Challenge
+		authClaim = v.AuthClaim
 	default:
 		return out, fmt.Errorf("unsupported auth inputs type %T", v)
+	}
+
+	slots := authClaim.RawSlotsAsInts()
+	pubKey := &babyjub.PublicKey{X: slots[2], Y: slots[3]}
+	if !pubKey.VerifyPoseidon(challenge, signature) {
+		return out, errors.New("invalid signature")
 	}
 
 	out.Inputs = inputs
