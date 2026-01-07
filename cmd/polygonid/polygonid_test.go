@@ -164,7 +164,7 @@ func readFixtureFile(name string) []byte {
 	return fileBytes
 }
 
-func TestGenrateInputs(t *testing.T) {
+func TestGenerateInputs(t *testing.T) {
 	type PrepareInputsFn func(
 		ctx context.Context, cfg c_polygonid.EnvConfig, in []byte) (
 		c_polygonid.AtomicQueryInputsResponse, error)
@@ -209,11 +209,26 @@ func TestGenrateInputs(t *testing.T) {
 			"atomic_query_v3_on_chain_mtp_output.json",
 			c_polygonid.AtomicQueryV3OnChainInputsFromJson, nil, env, "")
 	})
+
 	t.Run("auth_v2_inputs", func(t *testing.T) {
 		doTest(t, "auth_v2_inputs_in.json", "auth_v2_inputs_out.json",
-			c_polygonid.AuthV2InputsFromJson, nil, env, "")
+			c_polygonid.GenericInputsFromJson, nil, env, "")
 	})
 
+	t.Run("auth_v3_inputs", func(t *testing.T) {
+		doTest(t, "auth_v3_inputs_in.json", "auth_v2_inputs_out.json",
+			c_polygonid.GenericInputsFromJson, nil, env, "")
+	})
+
+	t.Run("auth_v3_8_32_inputs", func(t *testing.T) {
+		doTest(t, "auth_v3_8_32_inputs_in.json", "auth_v3_8_32_inputs_out.json",
+			c_polygonid.GenericInputsFromJson, nil, env, "")
+	})
+
+	t.Run("auth_v2_incorrect_signature_inputs", func(t *testing.T) {
+		doTest(t, "auth_v2_incorrect_sig_inputs_in.json", "",
+			c_polygonid.GenericInputsFromJson, nil, env, "invalid signature")
+	})
 }
 
 func assertEqualWithoutTimestamp(t testing.TB, wantFName string,
