@@ -20,7 +20,7 @@ ios-simulator-x86_64:
 	TARGET=x86-64-apple-ios16-simulator \
 	CC=$(PWD)/clangwrap.sh \
 	CGO_CFLAGS="-fembed-bitcode -target x86_64-apple-ios16-simulator" \
-	go build -tags ios,prover_disabled -buildmode=c-archive -o $(IOS_OUT)/libpolygonid-ios-simulator-x86_64.a ./cmd/polygonid
+	go build -ldflags "-w -s" -tags ios,prover_disabled -buildmode=c-archive -o $(IOS_OUT)/libpolygonid-ios-simulator-x86_64.a ./cmd/polygonid
 	cp $(IOS_OUT)/libpolygonid-ios-simulator-x86_64.h $(IOS_OUT)/libpolygonid.h
 
 ios-simulator-arm64:
@@ -54,7 +54,7 @@ ios: ios-old ios-arm64 ios-simulator
 
 ios-static-xcframework: ios-arm64 ios-simulator darwin-arm64
 	# Remove .xcframework if exists
-	rm -rf $(IOS_OUT)/Iden3CLibrary.xcframework
+	rm -rf $(IOS_OUT)/libpolygonid.xcframework
 	# Create separate folder with headers for xcframework
 	mkdir -p $(IOS_OUT)/include
 	cp $(IOS_OUT)/libpolygonid.h $(IOS_OUT)/include
@@ -63,11 +63,11 @@ ios-static-xcframework: ios-arm64 ios-simulator darwin-arm64
     	-library $(IOS_OUT)/libpolygonid-ios.a -headers $(IOS_OUT)/include/ \
     	-library $(IOS_OUT)/libpolygonid-ios-simulator.a -headers $(IOS_OUT)/include/ \
     	-library $(IOS_OUT)/libpolygonid-darwin-arm64.a -headers $(IOS_OUT)/include/ \
-    	-output $(IOS_OUT)/Iden3CLibrary.xcframework
+    	-output $(IOS_OUT)/libpolygonid.xcframework
 
 ios-dynamic-xcframework: ios-arm64 ios-simulator darwin-arm64
 	# Remove .xcframework if exists
-	rm -rf $(IOS_OUT)/Iden3CLibrary.xcframework
+	rm -rf $(IOS_OUT)/libpolygonid.xcframework
 	# Create iOS .dylib
 	xcrun -sdk iphoneos clang -arch arm64 -fpic -shared -Wl,-all_load $(IOS_OUT)/libpolygonid-ios.a -framework Corefoundation -framework Security -o $(IOS_OUT)/libpolygonid-ios.dylib
 	# Create iOS sim arm64 .dylib
@@ -86,11 +86,11 @@ ios-dynamic-xcframework: ios-arm64 ios-simulator darwin-arm64
  		-library $(IOS_OUT)/libpolygonid-ios.dylib -headers $(IOS_OUT)/include/ \
  		-library $(IOS_OUT)/libpolygonid-ios-simulator.dylib -headers $(IOS_OUT)/include/ \
  		-library $(IOS_OUT)/libpolygonid-darwin-arm64.dylib -headers $(IOS_OUT)/include/ \
- 		-output $(IOS_OUT)/Iden3CLibrary.xcframework
+ 		-output $(IOS_OUT)/libpolygonid.xcframework
  	# Set @rpath
-	install_name_tool -id @rpath/libpolygonid-ios.dylib $(IOS_OUT)/Iden3CLibrary.xcframework/ios-arm64/libpolygonid-ios.dylib
-	install_name_tool -id @rpath/libpolygonid-ios-simulator.dylib $(IOS_OUT)/Iden3CLibrary.xcframework/ios-arm64_x86_64-simulator/libpolygonid-ios-simulator.dylib
-	install_name_tool -id @rpath/libpolygonid-darwin-arm64.dylib $(IOS_OUT)/Iden3CLibrary.xcframework/macos-arm64/libpolygonid-darwin-arm64.dylib
+	install_name_tool -id @rpath/libpolygonid-ios.dylib $(IOS_OUT)/libpolygonid.xcframework/ios-arm64/libpolygonid-ios.dylib
+	install_name_tool -id @rpath/libpolygonid-ios-simulator.dylib $(IOS_OUT)/libpolygonid.xcframework/ios-arm64_x86_64-simulator/libpolygonid-ios-simulator.dylib
+	install_name_tool -id @rpath/libpolygonid-darwin-arm64.dylib $(IOS_OUT)/libpolygonid.xcframework/macos-arm64/libpolygonid-darwin-arm64.dylib
 
 
 dylib:
@@ -105,7 +105,7 @@ android-armeabi-v7a:
 	CGO_ENABLED=1 \
 	CC=$(ANDROID_NDK_HOME)/toolchains/llvm/prebuilt/darwin-x86_64/bin/armv7a-linux-androideabi21-clang \
 	go build -tags prover_disabled -buildmode=c-shared \
-		-ldflags="-extldflags '-Wl,-z,max-page-size=0x4000'" \
+		-ldflags="-extldflags '-Wl,-soname,libpolygonid.so,-z,max-page-size=0x4000'" \
 		-o $(ANDROID_OUT)/jnilibs/armeabi-v7a/libpolygonid.so ./cmd/polygonid
 
 android-arm64-v8a:
@@ -114,7 +114,7 @@ android-arm64-v8a:
 	CGO_ENABLED=1 \
 	CC=$(ANDROID_NDK_HOME)/toolchains/llvm/prebuilt/darwin-x86_64/bin/aarch64-linux-android21-clang \
 	go build -tags prover_disabled -buildmode=c-shared \
-		-ldflags="-extldflags '-Wl,-z,max-page-size=0x4000'" \
+		-ldflags="-extldflags '-Wl,-soname,libpolygonid.so,-z,max-page-size=0x4000'" \
 		-o $(ANDROID_OUT)/jnilibs/arm64-v8a/libpolygonid.so ./cmd/polygonid
 
 android-x86:
@@ -123,7 +123,7 @@ android-x86:
 	CGO_ENABLED=1 \
 	CC=$(ANDROID_NDK_HOME)/toolchains/llvm/prebuilt/darwin-x86_64/bin/i686-linux-android21-clang \
 	go build -tags prover_disabled -buildmode=c-shared \
-		-ldflags="-extldflags '-Wl,-z,max-page-size=0x4000'" \
+		-ldflags="-extldflags '-Wl,-soname,libpolygonid.so,-z,max-page-size=0x4000'" \
 		-o $(ANDROID_OUT)/jnilibs/x86/libpolygonid.so ./cmd/polygonid
 
 android-x86-64:
@@ -132,7 +132,7 @@ android-x86-64:
 	CGO_ENABLED=1 \
 	CC=$(ANDROID_NDK_HOME)/toolchains/llvm/prebuilt/darwin-x86_64/bin/x86_64-linux-android21-clang \
 	go build -tags prover_disabled -buildmode=c-shared \
-		-ldflags="-extldflags '-Wl,-z,max-page-size=0x4000'" \
+		-ldflags="-extldflags '-Wl,-soname,libpolygonid.so,-z,max-page-size=0x4000'" \
 		-o $(ANDROID_OUT)/jnilibs/x86-64/libpolygonid.so ./cmd/polygonid
 
 android-old: android-armeabi-v7a  android-x86
