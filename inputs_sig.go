@@ -2628,68 +2628,6 @@ func DescribeID(ctx context.Context, cfg EnvConfig,
 	}, nil
 }
 
-func repackDIDtoID(in []byte) ([]byte, error) {
-	var obj map[string]any
-	err := json.Unmarshal(in, &obj)
-	if err != nil {
-		return nil, err
-	}
-
-	didI, ok := obj["genesisDID"]
-	if !ok {
-		return nil, errors.New("no genesisDID field found")
-	}
-
-	didS, ok := didI.(string)
-	if !ok {
-		return nil, errors.New("genesisDID is not a string")
-	}
-
-	did, err := w3c.ParseDID(didS)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse genesisDID: %w", err)
-	}
-
-	id, err := core.IDFromDID(*did)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get ID from genesisDID: %w", err)
-	}
-	obj["genesisID"] = id.String()
-
-	out, err := json.Marshal(obj)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal data: %w", err)
-	}
-
-	return out, nil
-}
-
-// AuthV2InputsFromJson converts JSON input to AuthV2Inputs response.
-//
-// Deprecated: Use AuthInputsFromJson instead, which supports multiple auth
-// input versions.
-func AuthV2InputsFromJson(_ context.Context, _ EnvConfig,
-	in []byte) (AtomicQueryInputsResponse, error) {
-
-	var out AtomicQueryInputsResponse
-
-	authV2InputsData, err := repackDIDtoID(in)
-	if err != nil {
-		return out, fmt.Errorf("failed convert genesisDID to genesisID: %w",
-			err)
-	}
-
-	var inputs circuits.AuthV2Inputs
-	err = json.Unmarshal(authV2InputsData, &inputs)
-	if err != nil {
-		return out, fmt.Errorf("failed to re-unmarshal authV2 inputs: %w", err)
-	}
-
-	out.Inputs = inputs
-
-	return out, nil
-}
-
 func AnonAadhaarInputsFromJson(ctx context.Context, cfg EnvConfig,
 	in []byte) (AtomicQueryInputsResponse, error) {
 
@@ -2808,6 +2746,42 @@ func W3CCredentialToCoreClaim(ctx context.Context, cfg EnvConfig, in []byte) (Co
 	}
 
 	return resp, nil
+}
+
+func repackDIDtoID(in []byte) ([]byte, error) {
+	var obj map[string]any
+	err := json.Unmarshal(in, &obj)
+	if err != nil {
+		return nil, err
+	}
+
+	didI, ok := obj["genesisDID"]
+	if !ok {
+		return nil, errors.New("no genesisDID field found")
+	}
+
+	didS, ok := didI.(string)
+	if !ok {
+		return nil, errors.New("genesisDID is not a string")
+	}
+
+	did, err := w3c.ParseDID(didS)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse genesisDID: %w", err)
+	}
+
+	id, err := core.IDFromDID(*did)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get ID from genesisDID: %w", err)
+	}
+	obj["genesisID"] = id.String()
+
+	out, err := json.Marshal(obj)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal data: %w", err)
+	}
+
+	return out, nil
 }
 
 func AuthInputsFromJson[T circuits.InputsMarshaller](in []byte,
