@@ -1,6 +1,6 @@
 module github.com/0xPolygonID/c-polygonid
 
-go 1.24.2
+go 1.25
 
 require (
 	github.com/0xPolygonID/go-circuit-external v0.0.7
@@ -8,7 +8,7 @@ require (
 	github.com/ethereum/go-ethereum v1.16.7
 	github.com/fxamacker/cbor/v2 v2.9.0
 	github.com/iden3/driver-did-iden3 v0.0.18
-	github.com/iden3/go-circuits/v2 v2.4.3
+	github.com/iden3/go-circuits/v2 v2.4.4-0.20260106150133-6663fb500f66
 	github.com/iden3/go-iden3-auth/v2 v2.7.8
 	github.com/iden3/go-iden3-core/v2 v2.4.0
 	github.com/iden3/go-iden3-crypto v0.0.17
