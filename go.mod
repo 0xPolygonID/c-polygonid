@@ -1,6 +1,6 @@
 module github.com/0xPolygonID/c-polygonid
 
-go 1.25.3
+go 1.25
 
 require (
 	github.com/0xPolygonID/go-circuit-external v0.0.7
