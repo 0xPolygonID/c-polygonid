@@ -143,10 +143,10 @@ github.com/iden3/contracts-abi/state/go/abi v1.1.0 h1:5JC3Q5UU3Ir7H+0vgSvvR79EPo
 github.com/iden3/contracts-abi/state/go/abi v1.1.0/go.mod h1:TxgIrXCvxms3sbOdsy8kTvffUCIpEEifNy0fSXdkU4w=
 github.com/iden3/driver-did-iden3 v0.0.18 h1:PU6BlHpKv7BpXehAUasqxUDurbhSj5xaRc2L3FcHdns=
 github.com/iden3/driver-did-iden3 v0.0.18/go.mod h1:KctZNQV969t1URq1a9vE5vvst9wGvAF/34zkJvL7H3c=
-github.com/iden3/go-circuits/v2 v2.4.4-0.20260106150133-6663fb500f66 h1:rPWJ2RESNUp9KLv5WpwYIcCg2/fowOFrVT1QZyTixks=
-github.com/iden3/go-circuits/v2 v2.4.4-0.20260106150133-6663fb500f66/go.mod h1:LnbASvfhsDajwOYSdPmbQ585KuzwHF/AUS7pICol5ss=
-github.com/iden3/go-iden3-auth/v2 v2.7.8 h1:VX4Ds5U52trkO5nHMbiIiJrpuCjCnewdk+O7dG7ka/s=
-github.com/iden3/go-iden3-auth/v2 v2.7.8/go.mod h1:KyRISiRVdGe/TYlzqKpFkLVgPuwLBlvzXdei6nb3bn4=
+github.com/iden3/go-circuits/v2 v2.5.0 h1:kX4APuuNWwDHb7MOyclzhAbmDqZtzH1gWx5rCw9bFRk=
+github.com/iden3/go-circuits/v2 v2.5.0/go.mod h1:LnbASvfhsDajwOYSdPmbQ585KuzwHF/AUS7pICol5ss=
+github.com/iden3/go-iden3-auth/v2 v2.8.0 h1:wtDcWWwq1B+zaUP/dGHuUw3zojCXA/iusph0WA1M/xU=
+github.com/iden3/go-iden3-auth/v2 v2.8.0/go.mod h1:f3vlV4M8Ok+bvwhfoGvqDNTllzkcxwck7AKlNrS62cs=
 github.com/iden3/go-iden3-core/v2 v2.4.0 h1:nIkYQJomg/3SNXmJsuSOSG1hewLBwSXaLSM+G/wHAKg=
 github.com/iden3/go-iden3-core/v2 v2.4.0/go.mod h1:8vmG6y8k9VS7iNoxuiKukKbRQFsMyabCc+i8er07zOs=
 github.com/iden3/go-iden3-crypto v0.0.17 h1:NdkceRLJo/pI4UpcjVah4lN/a3yzxRUGXqxbWcYh9mY=
