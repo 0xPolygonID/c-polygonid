@@ -216,12 +216,14 @@ func TestGenerateInputs(t *testing.T) {
 	})
 
 	t.Run("auth_v3_inputs", func(t *testing.T) {
-		doTest(t, "auth_v3_inputs_in.json", "auth_v2_inputs_out.json",
+		doTest(t, "auth_v3_inputs_in.json", "auth_v3_8_32_inputs_out.json",
 			c_polygonid.GenericInputsFromJson, nil, env, "")
 	})
 
 	t.Run("auth_v3_8_32_inputs", func(t *testing.T) {
-		doTest(t, "auth_v3_8_32_inputs_in.json", "auth_v3_8_32_inputs_out.json",
+		doTest(t, "auth_v3_8_32_inputs_in.json",
+			"auth_v3_8_32_inputs_out.json",
+			//"auth_v3_inputs_out.json",
 			c_polygonid.GenericInputsFromJson, nil, env, "")
 	})
 
