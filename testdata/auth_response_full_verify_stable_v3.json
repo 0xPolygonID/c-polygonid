@@ -1,0 +1,85 @@
+{
+    "authResponse": "eyJhbGciOiJncm90aDE2IiwiY2lyY3VpdElkIjoiYXV0aFYzLTgtMzIiLCJjcml0IjpbImNpcmN1aXRJZCJdLCJ0eXAiOiJhcHBsaWNhdGlvbi9pZGVuMy16a3AtanNvbiJ9.eyJpZCI6IjcwZDgxMmFkLWU2ZWItNGIyMC04NDAyLTg5Y2YzM2ZjOTMzZSIsInR5cCI6ImFwcGxpY2F0aW9uL2lkZW4zLXprcC1qc29uIiwidHlwZSI6Imh0dHBzOi8vaWRlbjMtY29tbXVuaWNhdGlvbi5pby9hdXRob3JpemF0aW9uLzEuMC9yZXNwb25zZSIsInRoaWQiOiI2NzI2NmU3MC04YzYyLTQwNWUtODFlMC0zZDE5MDhlYjI5MGUiLCJib2R5Ijp7Im1lc3NhZ2UiOiJtZXNzYWdlIiwic2NvcGUiOlt7ImlkIjoxLCJjaXJjdWl0SWQiOiJjcmVkZW50aWFsQXRvbWljUXVlcnlWMy0xNi0xNi02NCIsInByb29mIjp7InBpX2EiOlsiNDkwMDY0MzI1MTA3Mzg0ODk3NjM5NTc5NzUxMzgwMDc0NTU5NTM4NDM0NTc5OTQzMjQ1MTY4OTAxMjgxMzA2MjA4OTk4NzY3MDg5NiIsIjg0NjUzOTE5ODU3NDIyOTIzNjc0NDk1NzU2NjQ1NDYzMjkyNDk3MzY4NDY2MjQwNjYxNDMxODgxMzUzNzIyOTk0NjM4NDgwMzEzOTEiLCIxIl0sInBpX2IiOltbIjE5NjIwMjY1MDM2MjQ4MzEyMzc5NTMwMTU2Mjc0Njc3MjcwNDIzOTIyMTM4NjY2NDkwMDE5MzE5NjQ2ODgwNzgzODY3NTE0NTA4NzEzIiwiNTMwNTQ5NDY4NDQ2NzcyMjQzNjc3NzEzMjg3MTQ5Njc4Nzc1NzA5NDc1NDQ0ODk1OTE5MDQ0NTExOTM2MDY3Njc2MTE1OTI4NjExOCJdLFsiMTc1OTk3OTAzMDE1NDM0NTQwMTMzMjg4OTEwMjA0NzkyNTUzNDgxNjk5MzgzOTg5MjgyMjQ3MzY1MzcxMjc1MTgyODY5NzIyNDU3OTciLCIyMDEzOTQ1ODA3MDkxMDUzMzMyNjU5OTA5MzkxMjI2NzU0MDM2Mzc3Nzg5NzQ0MjYxMTgyNjc4MjgxOTEwOTQ2MzkyMzg3ODIwOTc1NSJdLFsiMSIsIjAiXV0sInBpX2MiOlsiOTU2ODkzMTg2NjcxMTM3MDIyOTMzODAxMDc0MzU0MzQzNjg1NzY1Mzg3NzgwODYxMjk4MDIzNDg4MzMwNDI1OTM5MDIwMjg0MTAzNiIsIjc2ODIxNjA1ODcyODA5OTg3Mzc4MzU5NjM2NDkxODA4ODA2MzY4NDIzODQ2NjExNzg5NzI0MjU2NTI2MDUwOTcxMjkzOTU5NzU1MTYiLCIxIl0sInByb3RvY29sIjoiZ3JvdGgxNiIsImN1cnZlIjoiYm4xMjgifSwicHViX3NpZ25hbHMiOlsiMCIsIjI1OTEwMTg2ODQ1OTczMzYyNTM2MjM1NTE3OTY4NzYzMjQ0ODYwNjE5MzgwMzQxNTkxNDY3NzM4NTQ2NTY0MTQzNTI1MjcwMjczIiwiOTI2NzI5NzU4ODczNDAzMzE4NjA0MzE5Mjc2NDQ0ODgzMzg2OTI5ODc5NjM0MDk3NDA2ODYxOTMzNzUwNTM5ODM0MTc5NTMwODIwNSIsIjAiLCIwIiwiMCIsIjEiLCIxIiwiMjI1ODMwNjY0MjA2Nzk1MjkwMzg2MTQ2NDg5NDY1OTQ2NzI0MDE1MzM2NDQ3MTMzMDE0NzM4MzI0NzE2NDIwMzk5NzE5NDMxNjkiLCIxIiwiMTc3NDk4NjkzMzAyNzIxMzUzOTg1NzY0NDMzMzU4NDkwMjI3NDYzOTM5ODM5MTYxNjY1Nzk1MTkyNDY4MzYxMTk2MjIxOTc5Njg5NzgiLCIxNzY5MDgzMjc0IiwiMTk4Mjg1NzI2NTEwNjg4MjAwMzM1MjA3MjczODM2MTIzMzM4Njk5IiwiMCIsIjMiLCIxIiwiOTkiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIxIiwiMjI1ODMwNjY0MjA2Nzk1MjkwMzg2MTQ2NDg5NDY1OTQ2NzI0MDE1MzM2NDQ3MTMzMDE0NzM4MzI0NzE2NDIwMzk5NzE5NDMxNjkiLCIwIl19LHsiaWQiOjIsImNpcmN1aXRJZCI6ImxpbmtlZE11bHRpUXVlcnkzIiwicHJvb2YiOnsicGlfYSI6WyIxODE4MDgxNjMyOTA4MDE0NTY2ODA4OTgxNjkxNDU5NDUyNDc5MTM5MTgyMDQ2NTcwODk2MDYzNjQyODY0MzY5OTk3NzU5Mzg0MTM2NyIsIjgxNjc4MjU3MTQyODg2NDg0Mjk5OTMyNTkxNjc5MjAyNjU2NjExNDE1ODE1MjAyNjcxOTg3NjE5NzI2NTkwNDExNTc1MDkxMzMxNjciLCIxIl0sInBpX2IiOltbIjY3NzUxODI1NDA0OTk1MDY4Nzc1MzAwNjEyMTUxMjQ4NjA1ODU0NjI2MTU3ODUzNDM2MTUyNjMxNTA0MDc2Njg2NDg1ODg1NzkzMjIiLCIzNTM4NTgxMTk4Njk2OTQ2MjIyNTI5ODY0NTQxODAzNzk0NDYwMzc0MjkyMjI1NzExMzY4NTU4MDQzOTM2MjY3NzQwNDgwMDgxMTM3Il0sWyI2NjYwMDMyNjA4Mzg5MjI4ODQ1NjI0MTM4MDAyNDE5OTExODYzNzA1NzkwNjY1MjA5NjIzNjM5OTI2MTk5MDE4NDc2NDAwNzgwMjM1IiwiMTMxMDU0NTUxOTI4Mjc4NjYzNjYxNDQ5ODM3NDkxMDU3OTY2OTI3NTUyMjg2NDA4NDcxNDkzMTcxNzA0MjA2NTQ0MDkwODExNjg2MDgiXSxbIjEiLCIwIl1dLCJwaV9jIjpbIjE4MDgzNjEwNTk4MDkyNzg3ODM4NDQ0MTE0NzQxMDc5NjIwMTI3NDEwNTU4MTIwNzI3OTM0Mjg1MDI4MTIwNDUxMDA4OTUxMDU3NjY5IiwiNDk0OTg1NzEyODMxOTc0ODk3NTIwOTYzMjEzMDkxOTY3MTgyOTEzMTg3NjUyOTY3NDYzOTc1Njc3MzA1NjU3MTM3MzM5MDY2MjAxMyIsIjEiXSwicHJvdG9jb2wiOiJncm90aDE2IiwiY3VydmUiOiJibjEyOCJ9LCJwdWJfc2lnbmFscyI6WyIyOTI4MDU3NTc5MTU0NzA4NDAzNjk2ODE0Njg5NjYwOTA1NjQ3MjY4NjcwNTEyNzkyMzI1NDI5NTQ4ODQ3OTc1OTEwOTMyODUyNjcyIiwiMSIsIjAiLCIwIiwiMCIsIjE1NTc3MTE0Nzk5MDU2OTM5NjMzNTUyODQ1NTMxMDExMDI0NjcyOTM5NDkzNDkyNzY5NjI4Mjg1NjYxMzU5NzExNjU1MjE0NTYxMTYyIiwiMTY5OTg3NjI5NjUzOTY5NDQ3ODI2Njc1NTc3NDExODU4MjgxMzY0Njc3NDc3NjI4MzAwMjgyMTcwMjc5NzM2MTczNzM4NjIzMDE5NTgiLCI5MzAyNTI2MjA4NTA3NzUzNzk5NTAxMTMwMTI4OTA4NDk0NjczNDEyNDQzNjMxNTQxNDI0NDA5NTUxMjA1Mjc3NTI5OTQ5NjYyMzk0Il19LHsiaWQiOjMsImNpcmN1aXRJZCI6ImNyZWRlbnRpYWxBdG9taWNRdWVyeVYzLTE2LTE2LTY0IiwicHJvb2YiOnsicGlfYSI6WyIxODYwNTM1Njc0NDY4NTkxOTE5MjY3NjgyNjYwNDgwMTIzMzU3MTQ1OTMyNDg5MzkxMjAxNjE4MTMzMTkyOTEwMjk0NDU2MzM2NzI3NSIsIjU5MDM3NDQ0NTMzNjIxNDE4Nzk1NzU1MDUwODg0NDMxNjkzNzE4ODk3MDMzOTkzNDIxMDcyNTE2MzQ5MDc2ODk4MTI4OTcyMjQwODAiLCIxIl0sInBpX2IiOltbIjg1ODE1MzUxODM3ODkzMTg1NzQzNjk5NjExODA0NzU3NTU2MDEyMjQwNDg4MDc4NTk5MzcxNzk3MjYyOTQzNzE4NjE2NTk3NzQzNDkiLCI1NzA3OTY4Njk0MTM2ODM1NjEyMzc3OTE1ODk1OTU4NTg5OTg1MTg0OTk3NDA5OTk3MDU5MjIyNzI1NDA3MzI3ODY5MDIxMjA4NDg2Il0sWyI5MzExMDE2ODc4Mjc4ODI5NDEzMDI1NjIzMDY1MjUyNTI5ODU5Nzg0OTIyNDAwMzEyNTgwMDg2NTEzOTUyMDgwOTY1NDkzNTMyNjc4IiwiMTM0MjY1MDY3NDUwNzQ1MTU1MDQ5NjI2MDk3ODc0OTA2ODQ2MDgwMjAwOTYyNzE2NTc4ODIxODAyNDM4MTQxMTY4ODY2MDM1NDc5ODUiXSxbIjEiLCIwIl1dLCJwaV9jIjpbIjQ3ODMwNzk3MzI1OTUzNDIyMDYyNzc1OTg2MTYwODcxNTMxNzU4NTI4NjQwNDM5NTA1MjM2MzU3NTkzNzUzMDkwNTMyNTk4OTc5NjQiLCIxODk4Njg0NDY1NDg3NzEwNDM0MjMzMjkzNzYzODUwNTI2ODgyMDc0NDUwNTMwOTQ5MTcyNjQ4MTUyNTM5Mzk2Nzc2ODA0OTc0NzAyMiIsIjEiXSwicHJvdG9jb2wiOiJncm90aDE2IiwiY3VydmUiOiJibjEyOCJ9LCJwdWJfc2lnbmFscyI6WyIxIiwiMjU5MTAxODY4NDU5NzMzNjI1MzYyMzU1MTc5Njg3NjMyNDQ4NjA2MTkzODAzNDE1OTE0Njc3Mzg1NDY1NjQxNDM1MjUyNzAyNzMiLCI5MjY3Mjk3NTg4NzM0MDMzMTg2MDQzMTkyNzY0NDQ4ODMzODY5Mjk4Nzk2MzQwOTc0MDY4NjE5MzM3NTA1Mzk4MzQxNzk1MzA4MjA1IiwiMjkyODA1NzU3OTE1NDcwODQwMzY5NjgxNDY4OTY2MDkwNTY0NzI2ODY3MDUxMjc5MjMyNTQyOTU0ODg0Nzk3NTkxMDkzMjg1MjY3MiIsIjQwNDExMDY1NDE3ODc2MzkxMjU2NjU4ODc5Mzc5MDkzMzI1NTk5MzU3NDI2NTI3Njg5OTUzNTM1OTc5NzY4NTQ0MzY0MTM1NTA4NjciLCIwIiwiMSIsIjMiLCIyMjU4MzA2NjQyMDY3OTUyOTAzODYxNDY0ODk0NjU5NDY3MjQwMTUzMzY0NDcxMzMwMTQ3MzgzMjQ3MTY0MjAzOTk3MTk0MzE2OSIsIjEiLCIxNzc0OTg2OTMzMDI3MjEzNTM5ODU3NjQ0MzMzNTg0OTAyMjc0NjM5Mzk4MzkxNjE2NjU3OTUxOTI0NjgzNjExOTYyMjE5Nzk2ODk3OCIsIjE3NjkwODMyODAiLCIyMTk1Nzg2MTcwNjQ1NDAwMTYyMzQxNjE2NDAzNzU3NTU4NjU0MTIiLCIxMjk2MzUxNzU4MjY5MDYxMTczMzE3MTA1MDQxOTY4MDY3MDc3NDUxOTE0Mzg2MDg2MjIyOTMxNTE2MTk5MTk0OTU5ODY5NDYzODgyIiwiMCIsIjEiLCIxNzAyMjUyODAwMDAwMDAwMDAwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMCIsIjAiLCIwIiwiMSIsIjIyNTgzMDY2NDIwNjc5NTI5MDM4NjE0NjQ4OTQ2NTk0NjcyNDAxNTMzNjQ0NzEzMzAxNDczODMyNDcxNjQyMDM5OTcxOTQzMTY5IiwiMTIzNDUiXX1dfSwiY3JlYXRlZF90aW1lIjoxNzY5MDgzMjgyLCJmcm9tIjoiZGlkOmlkZW4zOnBvbHlnb246YW1veTp4SHlCNDZQOExOTGZVOVI5eGkzVzJKMmFWbTJxZWdMclBWd3lvcjVMaCIsInRvIjoiZGlkOmlkZW4zOnBvbHlnb246YW1veTp4QVAyMXlOeVZ6dXNBUjN3UnJtUVBHQ0tNdlBWUjM0eVZMS0N2NkpISCJ9.eyJwcm9vZiI6eyJwaV9hIjpbIjI3NDU5ODY0NTkxODEyNTczNTU4OTc2OTkzMjE3MzcwMzAzNzI1NDA3NDAxNDU5MDczOTAyNTYzMTI2Njg3NDA5NTgzODQxMTI0MjciLCIxODgwMTMyNDM0NzAxMzc0MTA2OTc0Mzg4MDI0MzUwMzQ0NzA4NzI4Njc5NjY4OTkyMzUwNzA4ODcxNDI1MzMxMDQ2ODU0MTcxMjMyNCIsIjEiXSwicGlfYiI6W1siMTAxNTk0MDY3MDYzMjQ0NjA4MTc3NDgyNDQ3MDA3MTMwODI3ODI2MjAwMjMzOTk3MDM3Mzk1ODUxOTEyMzUzODY0ODI2ODYzMTU3NjMiLCIyODIxMzEyOTk4Mjc2NTExMDIzMzQ3NjcyMDA1MTY1ODI0MjgzNzkxNTA2MjM0NTM1ODYyNjQ0OTU2MDg2ODY5MDE4MzI0ODUzNzEyIl0sWyI3OTAyOTQ2NzIwOTE4NDU0Mjk0OTYzMTEyNTgzMzY5MjEzMDMyODQ4OTE4NTUzNDE2NjYzMzQxNjYyNDM4NTI3MjM3ODg3NTA4MjY3IiwiNTQ4Mjg4MDA2OTA2NjEwODAwMTMwOTI1MjI4OTI1ODE1NzAxNTE0MzI0Mzg2ODQ1MDMyMzQ1MTcwNTkwNTI0NTg2MDUxMzcxMzE3MyJdLFsiMSIsIjAiXV0sInBpX2MiOlsiMjAzMjIyMDE2Mjg3OTM4NDE2NjI5NzExMTExNTkzODc0OTczMjIyMzc3NzM4NjQ2MjQ0OTkwNzA2NzUwNDg4MTA3NTY3MDgwODUzMTciLCIxMjg2ODI5NDQ3MjI0MDYyNTgyOTU0MzU3NTIyNzYxMzMzNDQxMDU0MTIzODkzNTAyNzgxNDkzMTAyMzc4MzcyNzgwMzQzMDk3ODYzMiIsIjEiXSwicHJvdG9jb2wiOiJncm90aDE2IiwiY3VydmUiOiJibjEyOCJ9LCJwdWJfc2lnbmFscyI6WyIyNTkxMDE4Njg0NTk3MzM2MjUzNjIzNTUxNzk2ODc2MzI0NDg2MDYxOTM4MDM0MTU5MTQ2NzczODU0NjU2NDE0MzUyNTI3MDI3MyIsIjQyNzcxNTM1MzcyNjI0MDYyNTg4MzgyNTU5NzAzNzMzMTMyNDQxMjc1NDMyODQxNDk5MTEwMDAzMDE0MDY5MzQwNjA4MjU4MTM3NjIiLCIxMzEzODY0MjM1MzM4MjY3MjcxNDgxNDE1OTg1NDEwMzIwMDA5MDUwNTM1Mzk3NTY1ODAyMzEwMDI3MjgzMTM2MTk2ODcxMzQ4MTY1NyJdfQ",
+    "authRequest": {
+        "id": "28494007-9c49-4f1a-9694-7700c08865bf",
+        "typ": "application/iden3comm-plain-json",
+        "type": "https://iden3-communication.io/authorization/1.0/request",
+        "thid": "ee92ab12-2671-457e-aa5e-8158c205a985",
+        "body": {
+            "callbackUrl": "https://test.com/callback",
+            "reason": "reason",
+            "message": "message",
+            "scope": [
+                {
+                    "id": 1,
+                    "circuitId": "credentialAtomicQueryV3",
+                    "optional": false,
+                    "query": {
+                        "allowedIssuers": [
+                            "*"
+                        ],
+                        "context": "https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-nonmerklized.jsonld",
+                        "credentialSubject": {
+                            "documentType": {
+                                "$eq": 99
+                            }
+                        },
+                        "proofType": "BJJSignature2021",
+                        "type": "KYCAgeCredential"
+                    }
+                },
+                {
+                    "id": 2,
+                    "circuitId": "linkedMultiQuery",
+                    "optional": false,
+                    "query": {
+                        "allowedIssuers": [
+                            "*"
+                        ],
+                        "context": "https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v101.json-ld",
+                        "credentialSubject": {
+                            "documentType": {
+                                "$eq": 1
+                            },
+                            "position": {
+                                "$eq": "boss",
+                                "$ne": "employee"
+                            }
+                        },
+                        "groupId": 1,
+                        "proofType": "Iden3SparseMerkleTreeProof",
+                        "type": "KYCEmployee"
+                    }
+                },
+                {
+                    "id": 3,
+                    "circuitId": "credentialAtomicQueryV3",
+                    "params": {
+                        "nullifierSessionId": "12345"
+                    },
+                    "optional": false,
+                    "query": {
+                        "allowedIssuers": [
+                            "*"
+                        ],
+                        "context": "https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v101.json-ld",
+                        "credentialSubject": {
+                            "hireDate": {
+                                "$eq": "2023-12-11"
+                            }
+                        },
+                        "groupId": 1,
+                        "proofType": "BJJSignature2021",
+                        "type": "KYCEmployee"
+                    }
+                }
+            ]
+        },
+        "from": "did:iden3:polygon:amoy:xAP21yNyVzusAR3wRrmQPGCKMvPVR34yVLKCv6JHH",
+        "created_time": 1769076884
+    },
+    "options": {
+        "accepted_state_transition_delay": "8784h",
+        "accepted_proof_generation_delay": "8784h"
+    }
+}

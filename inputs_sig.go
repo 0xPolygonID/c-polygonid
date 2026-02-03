@@ -1209,7 +1209,7 @@ func GenericInputsFromJson(ctx context.Context, cfg EnvConfig,
 	case circuits.AuthV2CircuitID:
 		authCfg := circuits.BaseConfig{}
 		return AuthInputsFromJson[circuits.AuthV2Inputs](in, authCfg)
-	case circuits.AuthV3CircuitID, circuits.AuthV3_8_32CircuitID:
+case circuits.AuthV3CircuitID, circuits.AuthV3_8_32CircuitID:
 		return AuthInputsFromJson[circuits.AuthV3Inputs](in, circuits.BaseConfig{})
 	case gocircuitexternal.AnonAadhaarV1:
 		return AnonAadhaarInputsFromJson(ctx, cfg, in)
