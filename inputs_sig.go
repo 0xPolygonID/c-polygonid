@@ -1207,10 +1207,9 @@ func GenericInputsFromJson(ctx context.Context, cfg EnvConfig,
 	case circuits.LinkedMultiQuery10CircuitID:
 		return LinkedMultiQueryInputsFromJson(ctx, cfg, in)
 	case circuits.AuthV2CircuitID:
-		authCfg := circuits.BaseConfig{}
-		return AuthInputsFromJson[circuits.AuthV2Inputs](in, authCfg)
-case circuits.AuthV3CircuitID, circuits.AuthV3_8_32CircuitID:
-		return AuthInputsFromJson[circuits.AuthV3Inputs](in, circuits.BaseConfig{})
+		return AuthInputsFromJson[circuits.AuthV2Inputs](in)
+	case circuits.AuthV3CircuitID, circuits.AuthV3_8_32CircuitID:
+		return AuthInputsFromJson[circuits.AuthV3Inputs](in)
 	case gocircuitexternal.AnonAadhaarV1:
 		return AnonAadhaarInputsFromJson(ctx, cfg, in)
 	case externalpassport.CredentialSHA1,
@@ -2816,8 +2815,7 @@ func repackDIDtoID(in []byte) ([]byte, error) {
 	return out, nil
 }
 
-func AuthInputsFromJson[T circuits.InputsMarshaller](in []byte,
-	inputsCfg circuits.BaseConfig) (AtomicQueryInputsResponse, error) {
+func AuthInputsFromJson[T circuits.InputsMarshaller](in []byte) (AtomicQueryInputsResponse, error) {
 
 	var out AtomicQueryInputsResponse
 
@@ -2839,7 +2837,6 @@ func AuthInputsFromJson[T circuits.InputsMarshaller](in []byte,
 
 	switch v := any(&inputs).(type) {
 	case *circuits.AuthV2Inputs:
-		v.BaseConfig = inputsCfg
 		signature = v.Signature
 		challenge = v.Challenge
 		authClaim = v.AuthClaim
