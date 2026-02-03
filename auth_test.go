@@ -3,7 +3,9 @@ package c_polygonid
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
+	"strings"
 	"testing"
 
 	httpmock "github.com/0xPolygonID/c-polygonid/testing"
@@ -195,7 +197,6 @@ func TestVerifyAuthResponse_Error_ProofIsOutdated(t *testing.T) {
 }
 
 func TestVerifyAuthResponse_FullVerify_StableV3(t *testing.T) {
-	t.Skip("broken for the future")
 	fn := func(path string) string {
 		return fmt.Sprintf("testdata/%s", path)
 	}
@@ -213,6 +214,19 @@ func TestVerifyAuthResponse_FullVerify_StableV3(t *testing.T) {
 		},
 		httpmock.IgnoreUntouchedURLs(),
 	)()
+
+	// skip the test
+	data := []string{
+		`{"jsonrpc":"2.0","id":1,"method":"eth_call","params":[{"from":"0x0000000000000000000000000000000000000000","input":"0x7c1a66de1d0c354249daa7c8a164fad78db2844d9764ebf20fd9e54cece9f4e4a0afbdb9","to":"0x1a4cc30f2aa0377b0c3bc9848766d90cb4404124"},"latest"]}`,
+		`{"jsonrpc":"2.0","id":2,"method":"eth_call","params":[{"from":"0x0000000000000000000000000000000000000000","input":"0x53c87312000cc8147d1ac429f0c0cea98cc7ee758a00193c780feec6088a209b8d4b1301147d1ac429f0c0cea98cc7ee758a00193c780feec6088a209b8d4b3c544be2ad","to":"0x1a4cc30f2aa0377b0c3bc9848766d90cb4404124"},"latest"]}`,
+		`{"jsonrpc":"2.0","id":3,"method":"eth_call","params":[{"from":"0x0000000000000000000000000000000000000000","input":"0x53c87312000cc8147d1ac429f0c0cea98cc7ee758a00193c780feec6088a209b8d4b1301273e11eceffbb0fe315ec8cad57cb0a0b3b64756d2cd293f35a8563b92500052","to":"0x1a4cc30f2aa0377b0c3bc9848766d90cb4404124"},"latest"]}`,
+	}
+	for _, d := range data {
+		r, err := http.Post("https://localhost:8080", "", strings.NewReader(d))
+		require.NoError(t, err)
+		r.Body.Close()
+	}
+	t.Skip("broken for the future")
 
 	cfg := EnvConfig{
 		ChainConfigs: map[core.ChainID]ChainConfig{
