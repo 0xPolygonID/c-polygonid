@@ -224,8 +224,9 @@ func TestVerifyAuthResponse_FullVerify_StableV3(t *testing.T) {
 	for _, d := range data {
 		r, err := http.Post("https://localhost:8080", "", strings.NewReader(d))
 		require.NoError(t, err)
-		r.Body.Close()
+		_ = r.Body.Close()
 	}
+	_ = in
 	t.Skip("broken for the future")
 
 	cfg := EnvConfig{
