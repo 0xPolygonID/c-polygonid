@@ -32,10 +32,6 @@
         "from": "did:iden3:billions:test:2VxnoiNqdMPyHMtUwAEzhnWqXGkEeJpAp4ntTkL8XT",
         "to": "did:iden3:privado:main:2SZu1G6YDUtk9AAY6TZic24CcCYcZvtdyp1cQv9cig"
     },
-    "options": {
-        "accepted_state_transition_delay": "8784h",
-        "accepted_proof_generation_delay": "8784h"
-    },
     "keySet": {
         "keys": [
             {
