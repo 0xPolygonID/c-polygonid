@@ -3,10 +3,9 @@ package c_polygonid
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"os"
-	"strings"
 	"testing"
+	"testing/synctest"
 
 	httpmock "github.com/0xPolygonID/c-polygonid/testing"
 	"github.com/ethereum/go-ethereum/common"
@@ -196,51 +195,81 @@ func TestVerifyAuthResponse_Error_ProofIsOutdated(t *testing.T) {
 	require.Error(t, err, pubsignals.ErrProofGenerationOutdated)
 }
 
-func TestVerifyAuthResponse_FullVerify_StableV3(t *testing.T) {
-	fn := func(path string) string {
-		return fmt.Sprintf("testdata/%s", path)
-	}
-
-	in, err := os.ReadFile(fn("auth_response_full_verify_stable_v3.json"))
-	require.NoError(t, err)
-
-	defer httpmock.MockHTTPClient(t,
-		map[string]string{
-			`https://localhost:8080%%%{"jsonrpc":"2.0","id":1,"method":"eth_call","params":[{"from":"0x0000000000000000000000000000000000000000","input":"0x7c1a66de1d0c354249daa7c8a164fad78db2844d9764ebf20fd9e54cece9f4e4a0afbdb9","to":"0x1a4cc30f2aa0377b0c3bc9848766d90cb4404124"},"latest"]}`: fn("httpresp_eth_state_auth_input_0x7c1a66de1d0c354249daa7c8a164fad78db2844d9764ebf20fd9e54cece9f4e4a0afbdb9.json"),
-			`https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-nonmerklized.jsonld`: fn("kyc-nonmerklized.jsonld"),
-			`https://localhost:8080%%%{"jsonrpc":"2.0","id":2,"method":"eth_call","params":[{"from":"0x0000000000000000000000000000000000000000","input":"0x53c87312000cc8147d1ac429f0c0cea98cc7ee758a00193c780feec6088a209b8d4b1301147d1ac429f0c0cea98cc7ee758a00193c780feec6088a209b8d4b3c544be2ad","to":"0x1a4cc30f2aa0377b0c3bc9848766d90cb4404124"},"latest"]}`: fn("httpresp_eth_state_53c87312000cc8147d1ac429f0c0cea98cc7ee758a00193c780feec6088a209b8d4b1301147d1ac429f0c0cea98cc7ee758a00193c780feec6088a209b8d4b3c544be2ad.json"),
-			`https://localhost:8080%%%{"jsonrpc":"2.0","id":3,"method":"eth_call","params":[{"from":"0x0000000000000000000000000000000000000000","input":"0x53c87312000cc8147d1ac429f0c0cea98cc7ee758a00193c780feec6088a209b8d4b1301273e11eceffbb0fe315ec8cad57cb0a0b3b64756d2cd293f35a8563b92500052","to":"0x1a4cc30f2aa0377b0c3bc9848766d90cb4404124"},"latest"]}`: fn("httpresp_eth_state_53c87312000cc8147d1ac429f0c0cea98cc7ee758a00193c780feec6088a209b8d4b1301273e11eceffbb0fe315ec8cad57cb0a0b3b64756d2cd293f35a8563b92500052.json"),
-			`https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v101.json-ld`: fn("kyc-v101.jsonld"),
-		},
-		httpmock.IgnoreUntouchedURLs(),
-	)()
-
-	// skip the test
-	data := []string{
-		`{"jsonrpc":"2.0","id":1,"method":"eth_call","params":[{"from":"0x0000000000000000000000000000000000000000","input":"0x7c1a66de1d0c354249daa7c8a164fad78db2844d9764ebf20fd9e54cece9f4e4a0afbdb9","to":"0x1a4cc30f2aa0377b0c3bc9848766d90cb4404124"},"latest"]}`,
-		`{"jsonrpc":"2.0","id":2,"method":"eth_call","params":[{"from":"0x0000000000000000000000000000000000000000","input":"0x53c87312000cc8147d1ac429f0c0cea98cc7ee758a00193c780feec6088a209b8d4b1301147d1ac429f0c0cea98cc7ee758a00193c780feec6088a209b8d4b3c544be2ad","to":"0x1a4cc30f2aa0377b0c3bc9848766d90cb4404124"},"latest"]}`,
-		`{"jsonrpc":"2.0","id":3,"method":"eth_call","params":[{"from":"0x0000000000000000000000000000000000000000","input":"0x53c87312000cc8147d1ac429f0c0cea98cc7ee758a00193c780feec6088a209b8d4b1301273e11eceffbb0fe315ec8cad57cb0a0b3b64756d2cd293f35a8563b92500052","to":"0x1a4cc30f2aa0377b0c3bc9848766d90cb4404124"},"latest"]}`,
-	}
-	for _, d := range data {
-		r, err := http.Post("https://localhost:8080", "", strings.NewReader(d))
+func TestVerifyAuthResponse_FullVerify_StableV3_ProofDelayIn1Year(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		fn := func(path string) string {
+			return fmt.Sprintf("testdata/%s", path)
+		}
+		// Proof generated Jan 22 2026 12:01:14 GMT, options specify 1-year accepted delay.
+		// Set current time to Jan 22 2027 11:00:00 to verify proof still valid.
+		in, err := os.ReadFile(fn("auth_response_full_verify_stable_v3.json"))
 		require.NoError(t, err)
-		_ = r.Body.Close()
-	}
-	_ = in
-	t.Skip("broken for the future")
 
-	cfg := EnvConfig{
-		ChainConfigs: map[core.ChainID]ChainConfig{
-			80002: {
-				RPCUrl:            "https://localhost:8080",
-				StateContractAddr: common.HexToAddress("0x1a4cC30f2aA0377b0c3bc9848766D90cb4404124"),
+		// set current time to: Proof Generation + 1 year - 1 hour
+		sleepTill("2027-01-22T11:00:00Z")
+
+		defer httpmock.MockHTTPClient(t,
+			map[string]string{
+				`https://localhost:8080%%%{"jsonrpc":"2.0","id":1,"method":"eth_call","params":[{"from":"0x0000000000000000000000000000000000000000","input":"0x7c1a66de1d0c354249daa7c8a164fad78db2844d9764ebf20fd9e54cece9f4e4a0afbdb9","to":"0x1a4cc30f2aa0377b0c3bc9848766d90cb4404124"},"latest"]}`: fn("httpresp_eth_state_auth_input_0x7c1a66de1d0c354249daa7c8a164fad78db2844d9764ebf20fd9e54cece9f4e4a0afbdb9.json"),
+				`https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-nonmerklized.jsonld`: fn("kyc-nonmerklized.jsonld"),
+				`https://localhost:8080%%%{"jsonrpc":"2.0","id":2,"method":"eth_call","params":[{"from":"0x0000000000000000000000000000000000000000","input":"0x53c87312000cc8147d1ac429f0c0cea98cc7ee758a00193c780feec6088a209b8d4b1301147d1ac429f0c0cea98cc7ee758a00193c780feec6088a209b8d4b3c544be2ad","to":"0x1a4cc30f2aa0377b0c3bc9848766d90cb4404124"},"latest"]}`: fn("httpresp_eth_state_53c87312000cc8147d1ac429f0c0cea98cc7ee758a00193c780feec6088a209b8d4b1301147d1ac429f0c0cea98cc7ee758a00193c780feec6088a209b8d4b3c544be2ad.json"),
+				`https://localhost:8080%%%{"jsonrpc":"2.0","id":3,"method":"eth_call","params":[{"from":"0x0000000000000000000000000000000000000000","input":"0x53c87312000cc8147d1ac429f0c0cea98cc7ee758a00193c780feec6088a209b8d4b1301273e11eceffbb0fe315ec8cad57cb0a0b3b64756d2cd293f35a8563b92500052","to":"0x1a4cc30f2aa0377b0c3bc9848766d90cb4404124"},"latest"]}`: fn("httpresp_eth_state_53c87312000cc8147d1ac429f0c0cea98cc7ee758a00193c780feec6088a209b8d4b1301273e11eceffbb0fe315ec8cad57cb0a0b3b64756d2cd293f35a8563b92500052.json"),
+				`https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v101.json-ld`: fn("kyc-v101.jsonld"),
 			},
-		},
-	}
+			httpmock.IgnoreUntouchedURLs(),
+		)()
 
-	b, err := VerifyAuthResponse(context.Background(), cfg, in)
-	require.NoError(t, err)
-	require.NotEmpty(t, b)
+		cfg := EnvConfig{
+			ChainConfigs: map[core.ChainID]ChainConfig{
+				80002: {
+					RPCUrl:            "https://localhost:8080",
+					StateContractAddr: common.HexToAddress("0x1a4cC30f2aA0377b0c3bc9848766D90cb4404124"),
+				},
+			},
+		}
+
+		b, err := VerifyAuthResponse(context.Background(), cfg, in)
+		require.NoError(t, err)
+		require.NotEmpty(t, b)
+	})
+}
+
+func TestVerifyAuthResponse_FullVerify_StableV3_ProofIsOutdated(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		fn := func(path string) string {
+			return fmt.Sprintf("testdata/%s", path)
+		}
+		// the proof was generated on GMT: Jan 22 2026 12:01:14
+		// no options provided, so defaults values will be used
+		in, err := os.ReadFile(fn("auth_response_full_verify_stable_v3_no_opts.json"))
+		require.NoError(t, err)
+
+		// set current time to: Proof Generation + 1 year - 1 hour
+		sleepTill("2027-01-22T11:00:00Z")
+
+		defer httpmock.MockHTTPClient(t,
+			map[string]string{
+				`https://localhost:8080%%%{"jsonrpc":"2.0","id":1,"method":"eth_call","params":[{"from":"0x0000000000000000000000000000000000000000","input":"0x7c1a66de1d0c354249daa7c8a164fad78db2844d9764ebf20fd9e54cece9f4e4a0afbdb9","to":"0x1a4cc30f2aa0377b0c3bc9848766d90cb4404124"},"latest"]}`: fn("httpresp_eth_state_auth_input_0x7c1a66de1d0c354249daa7c8a164fad78db2844d9764ebf20fd9e54cece9f4e4a0afbdb9.json"),
+				`https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-nonmerklized.jsonld`: fn("kyc-nonmerklized.jsonld"),
+				`https://localhost:8080%%%{"jsonrpc":"2.0","id":2,"method":"eth_call","params":[{"from":"0x0000000000000000000000000000000000000000","input":"0x53c87312000cc8147d1ac429f0c0cea98cc7ee758a00193c780feec6088a209b8d4b1301147d1ac429f0c0cea98cc7ee758a00193c780feec6088a209b8d4b3c544be2ad","to":"0x1a4cc30f2aa0377b0c3bc9848766d90cb4404124"},"latest"]}`: fn("httpresp_eth_state_53c87312000cc8147d1ac429f0c0cea98cc7ee758a00193c780feec6088a209b8d4b1301147d1ac429f0c0cea98cc7ee758a00193c780feec6088a209b8d4b3c544be2ad.json"),
+				`https://localhost:8080%%%{"jsonrpc":"2.0","id":3,"method":"eth_call","params":[{"from":"0x0000000000000000000000000000000000000000","input":"0x53c87312000cc8147d1ac429f0c0cea98cc7ee758a00193c780feec6088a209b8d4b1301273e11eceffbb0fe315ec8cad57cb0a0b3b64756d2cd293f35a8563b92500052","to":"0x1a4cc30f2aa0377b0c3bc9848766d90cb4404124"},"latest"]}`: fn("httpresp_eth_state_53c87312000cc8147d1ac429f0c0cea98cc7ee758a00193c780feec6088a209b8d4b1301273e11eceffbb0fe315ec8cad57cb0a0b3b64756d2cd293f35a8563b92500052.json"),
+				`https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v101.json-ld`: fn("kyc-v101.jsonld"),
+			},
+			httpmock.IgnoreUntouchedURLs(),
+		)()
+
+		cfg := EnvConfig{
+			ChainConfigs: map[core.ChainID]ChainConfig{
+				80002: {
+					RPCUrl:            "https://localhost:8080",
+					StateContractAddr: common.HexToAddress("0x1a4cC30f2aA0377b0c3bc9848766D90cb4404124"),
+				},
+			},
+		}
+
+		_, err = VerifyAuthResponse(context.Background(), cfg, in)
+		require.ErrorIs(t, err, pubsignals.ErrProofGenerationOutdated)
+	})
 }
 
 func BenchmarkProofVerification_OnlineContract(b *testing.B) {

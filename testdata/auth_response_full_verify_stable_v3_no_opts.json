@@ -77,9 +77,5 @@
         },
         "from": "did:iden3:polygon:amoy:xAP21yNyVzusAR3wRrmQPGCKMvPVR34yVLKCv6JHH",
         "created_time": 1769076884
-    },
-    "options": {
-        "acceptedStateTransitionDelay": "8784h",
-        "acceptedProofGenerationDelay": "8784h"
     }
 }
