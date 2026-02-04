@@ -621,12 +621,16 @@ func marshalInputsResponse(
 	inputsResponse c_polygonid.AtomicQueryInputsResponse) (string, error) {
 
 	var resp struct {
-		Inputs                 json.RawMessage `json:"inputs"`
-		VerifiablePresentation any             `json:"verifiablePresentation,omitempty"`
-		PublicStatesInfo       json.RawMessage `json:"publicStatesInfo,omitempty"`
+		Inputs                 json.RawMessage    `json:"inputs"`
+		VerifiablePresentation any                `json:"verifiablePresentation,omitempty"`
+		PublicStatesInfo       json.RawMessage    `json:"publicStatesInfo,omitempty"`
+		CircuitID              circuits.CircuitID `json:"circuitId,omitempty"`
 	}
 	if inputsResponse.VerifiablePresentation != nil {
 		resp.VerifiablePresentation = inputsResponse.VerifiablePresentation
+	}
+	if inputsResponse.CircuitID != "" {
+		resp.CircuitID = inputsResponse.CircuitID
 	}
 	var err error
 	resp.Inputs, err = inputsResponse.Inputs.InputsMarshal()
