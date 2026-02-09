@@ -1434,13 +1434,15 @@ func isV2Circuit(circuitID circuits.CircuitID) bool {
 }
 
 var sdOperator = map[circuits.CircuitID]int{
-	circuits.AtomicQueryMTPV2CircuitID:        circuits.EQ,
-	circuits.AtomicQueryMTPV2OnChainCircuitID: circuits.EQ,
-	circuits.AtomicQuerySigV2CircuitID:        circuits.EQ,
-	circuits.AtomicQuerySigV2OnChainCircuitID: circuits.EQ,
-	circuits.AtomicQueryV3CircuitID:           circuits.SD,
-	circuits.AtomicQueryV3OnChainCircuitID:    circuits.SD,
-	circuits.LinkedMultiQuery10CircuitID:      circuits.SD,
+	circuits.AtomicQueryMTPV2CircuitID:           circuits.EQ,
+	circuits.AtomicQueryMTPV2OnChainCircuitID:    circuits.EQ,
+	circuits.AtomicQuerySigV2CircuitID:           circuits.EQ,
+	circuits.AtomicQuerySigV2OnChainCircuitID:    circuits.EQ,
+	circuits.AtomicQueryV3CircuitID:              circuits.SD,
+	circuits.AtomicQueryV3OnChainCircuitID:       circuits.SD,
+	circuits.LinkedMultiQuery10CircuitID:         circuits.SD,
+	circuits.AtomicQueryV3StableCircuitID:        circuits.SD,
+	circuits.AtomicQueryV3OnChainStableCircuitID: circuits.SD,
 }
 
 func opName(opID int) string {
@@ -1762,7 +1764,9 @@ func queriesFromObjMerklized(ctx context.Context,
 
 		if circuitID == circuits.AtomicQueryV3CircuitID ||
 			circuitID == circuits.AtomicQueryV3OnChainCircuitID ||
-			circuitID == circuits.LinkedMultiQuery10CircuitID {
+			circuitID == circuits.LinkedMultiQuery10CircuitID ||
+			circuitID == circuits.AtomicQueryV3StableCircuitID ||
+			circuitID == circuits.AtomicQueryV3OnChainStableCircuitID {
 			queries[0].Operator = circuits.NOOP
 			queries[0].Values = []*big.Int{}
 		} else {
