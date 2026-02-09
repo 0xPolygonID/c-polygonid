@@ -12,6 +12,7 @@ import (
 	"log/slog"
 	"math/big"
 	"runtime/trace"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -553,6 +554,7 @@ type v3OnChainInputsRequest struct {
 type AtomicQueryInputsResponse struct {
 	Inputs                 circuits.InputsMarshaller
 	VerifiablePresentation map[string]any
+	CircuitID              circuits.CircuitID
 }
 
 func AtomicQueryMtpV2InputsFromJson(ctx context.Context, cfg EnvConfig,
@@ -958,6 +960,13 @@ func AtomicQuerySigV2OnChainInputsFromJson(ctx context.Context, cfg EnvConfig,
 
 func AtomicQueryV3OnChainInputsFromJson(ctx context.Context, cfg EnvConfig,
 	in []byte) (AtomicQueryInputsResponse, error) {
+	return atomicQueryV3OnChainInputsFromJson(ctx, cfg, in,
+		[]circuits.CircuitID{circuits.AtomicQueryV3OnChainCircuitID}, false)
+}
+
+func atomicQueryV3OnChainInputsFromJson(ctx context.Context, cfg EnvConfig,
+	in []byte, validCircuitIDs []circuits.CircuitID,
+	adjustForMinCircuit bool) (AtomicQueryInputsResponse, error) {
 
 	var out AtomicQueryInputsResponse
 	var inpMarsh circuits.AtomicQueryV3OnChainInputs
@@ -1003,7 +1012,7 @@ func AtomicQueryV3OnChainInputsFromJson(ctx context.Context, cfg EnvConfig,
 	if err != nil {
 		return out, err
 	}
-	if circuitID != circuits.AtomicQueryV3OnChainCircuitID {
+	if !slices.Contains(validCircuitIDs, circuitID) {
 		return out, errors.New("wrong circuit")
 	}
 
@@ -1055,6 +1064,13 @@ func AtomicQueryV3OnChainInputsFromJson(ctx context.Context, cfg EnvConfig,
 		return out, err
 	}
 
+	if adjustForMinCircuit {
+		out.CircuitID, err = circuits.AdjustInputsForMinCircuit(&inpMarsh)
+		if err != nil {
+			return out, fmt.Errorf("failed to adjust inputs for min circuit: %w", err)
+		}
+	}
+
 	out.Inputs = inpMarsh
 
 	return out, nil
@@ -1062,6 +1078,13 @@ func AtomicQueryV3OnChainInputsFromJson(ctx context.Context, cfg EnvConfig,
 
 func AtomicQueryV3InputsFromJson(ctx context.Context, cfg EnvConfig,
 	in []byte) (AtomicQueryInputsResponse, error) {
+	return atomicQueryV3InputsFromJson(ctx, cfg, in,
+		[]circuits.CircuitID{circuits.AtomicQueryV3CircuitID}, false)
+}
+
+func atomicQueryV3InputsFromJson(ctx context.Context, cfg EnvConfig,
+	in []byte, validCircuitIDs []circuits.CircuitID,
+	adjustForMinCircuit bool) (AtomicQueryInputsResponse, error) {
 
 	var out AtomicQueryInputsResponse
 	var inpMarsh circuits.AtomicQueryV3Inputs
@@ -1084,7 +1107,7 @@ func AtomicQueryV3InputsFromJson(ctx context.Context, cfg EnvConfig,
 	if err != nil {
 		return out, err
 	}
-	if circuitID != circuits.AtomicQueryV3CircuitID {
+	if !slices.Contains(validCircuitIDs, circuitID) {
 		return out, errors.New("wrong circuit")
 	}
 
@@ -1136,6 +1159,13 @@ func AtomicQueryV3InputsFromJson(ctx context.Context, cfg EnvConfig,
 	}
 
 	inpMarsh.LinkNonce = obj.LinkNonce.BigInt()
+
+	if adjustForMinCircuit {
+		out.CircuitID, err = circuits.AdjustInputsForMinCircuit(&inpMarsh)
+		if err != nil {
+			return out, fmt.Errorf("failed to adjust inputs for min circuit: %w", err)
+		}
+	}
 
 	out.Inputs = inpMarsh
 
@@ -1168,17 +1198,18 @@ func GenericInputsFromJson(ctx context.Context, cfg EnvConfig,
 		return AtomicQueryV3InputsFromJson(ctx, cfg, in)
 	case circuits.AtomicQueryV3OnChainCircuitID:
 		return AtomicQueryV3OnChainInputsFromJson(ctx, cfg, in)
+	case circuits.AtomicQueryV3StableCircuitID:
+		return atomicQueryV3InputsFromJson(ctx, cfg, in,
+			[]circuits.CircuitID{circuits.AtomicQueryV3StableCircuitID}, true)
+	case circuits.AtomicQueryV3OnChainStableCircuitID:
+		return atomicQueryV3OnChainInputsFromJson(ctx, cfg, in,
+			[]circuits.CircuitID{circuits.AtomicQueryV3OnChainStableCircuitID}, true)
 	case circuits.LinkedMultiQuery10CircuitID:
 		return LinkedMultiQueryInputsFromJson(ctx, cfg, in)
 	case circuits.AuthV2CircuitID:
-		authCfg := circuits.BaseConfig{}
-		return AuthInputsFromJson[circuits.AuthV2Inputs](in, authCfg)
-	case circuits.AuthV3CircuitID:
-		authCfg := circuits.BaseConfig{}
-		return AuthInputsFromJson[circuits.AuthV3Inputs](in, authCfg)
-	case circuits.AuthV3_8_32CircuitID:
-		authCfg := circuits.BaseConfig{MTLevel: 8, MTLevelOnChain: 32}
-		return AuthInputsFromJson[circuits.AuthV3Inputs](in, authCfg)
+		return AuthInputsFromJson[circuits.AuthV2Inputs](in)
+	case circuits.AuthV3CircuitID, circuits.AuthV3_8_32CircuitID:
+		return AuthInputsFromJson[circuits.AuthV3Inputs](in)
 	case gocircuitexternal.AnonAadhaarV1:
 		return AnonAadhaarInputsFromJson(ctx, cfg, in)
 	case externalpassport.CredentialSHA1,
@@ -1403,13 +1434,15 @@ func isV2Circuit(circuitID circuits.CircuitID) bool {
 }
 
 var sdOperator = map[circuits.CircuitID]int{
-	circuits.AtomicQueryMTPV2CircuitID:        circuits.EQ,
-	circuits.AtomicQueryMTPV2OnChainCircuitID: circuits.EQ,
-	circuits.AtomicQuerySigV2CircuitID:        circuits.EQ,
-	circuits.AtomicQuerySigV2OnChainCircuitID: circuits.EQ,
-	circuits.AtomicQueryV3CircuitID:           circuits.SD,
-	circuits.AtomicQueryV3OnChainCircuitID:    circuits.SD,
-	circuits.LinkedMultiQuery10CircuitID:      circuits.SD,
+	circuits.AtomicQueryMTPV2CircuitID:           circuits.EQ,
+	circuits.AtomicQueryMTPV2OnChainCircuitID:    circuits.EQ,
+	circuits.AtomicQuerySigV2CircuitID:           circuits.EQ,
+	circuits.AtomicQuerySigV2OnChainCircuitID:    circuits.EQ,
+	circuits.AtomicQueryV3CircuitID:              circuits.SD,
+	circuits.AtomicQueryV3OnChainCircuitID:       circuits.SD,
+	circuits.LinkedMultiQuery10CircuitID:         circuits.SD,
+	circuits.AtomicQueryV3StableCircuitID:        circuits.SD,
+	circuits.AtomicQueryV3OnChainStableCircuitID: circuits.SD,
 }
 
 func opName(opID int) string {
@@ -1731,7 +1764,9 @@ func queriesFromObjMerklized(ctx context.Context,
 
 		if circuitID == circuits.AtomicQueryV3CircuitID ||
 			circuitID == circuits.AtomicQueryV3OnChainCircuitID ||
-			circuitID == circuits.LinkedMultiQuery10CircuitID {
+			circuitID == circuits.LinkedMultiQuery10CircuitID ||
+			circuitID == circuits.AtomicQueryV3StableCircuitID ||
+			circuitID == circuits.AtomicQueryV3OnChainStableCircuitID {
 			queries[0].Operator = circuits.NOOP
 			queries[0].Values = []*big.Int{}
 		} else {
@@ -2784,8 +2819,7 @@ func repackDIDtoID(in []byte) ([]byte, error) {
 	return out, nil
 }
 
-func AuthInputsFromJson[T circuits.InputsMarshaller](in []byte,
-	inputsCfg circuits.BaseConfig) (AtomicQueryInputsResponse, error) {
+func AuthInputsFromJson[T circuits.InputsMarshaller](in []byte) (AtomicQueryInputsResponse, error) {
 
 	var out AtomicQueryInputsResponse
 
@@ -2807,12 +2841,14 @@ func AuthInputsFromJson[T circuits.InputsMarshaller](in []byte,
 
 	switch v := any(&inputs).(type) {
 	case *circuits.AuthV2Inputs:
-		v.BaseConfig = inputsCfg
 		signature = v.Signature
 		challenge = v.Challenge
 		authClaim = v.AuthClaim
 	case *circuits.AuthV3Inputs:
-		v.BaseConfig = inputsCfg
+		out.CircuitID, err = circuits.AdjustInputsForMinCircuit(v)
+		if err != nil {
+			return out, fmt.Errorf("failed to adjust inputs for min circuit: %w", err)
+		}
 		signature = v.Signature
 		challenge = v.Challenge
 		authClaim = v.AuthClaim
