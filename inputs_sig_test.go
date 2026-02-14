@@ -212,6 +212,16 @@ func TestPrepareInputs(t *testing.T) {
 			nil, cfg, "")
 	})
 
+	t.Run("GenericInputsFromJson - IDcard", func(t *testing.T) {
+		defer httpmock.MockHTTPClient(t, map[string]string{})()
+		cfg := EnvConfig{}
+
+		doTest(t, "idcard_inputs.json",
+			"idcard_outputs.json",
+			GenericInputsFromJson,
+			nil, cfg, "")
+	})
+
 	t.Run("AtomicQueryMtpV2Onchain - no roots in identity tree store", func(t *testing.T) {
 		defer httpmock.MockHTTPClient(t, map[string]string{
 			`http://localhost:8545%%%{"jsonrpc":"2.0","method":"eth_call","params":[{"from":"0x0000000000000000000000000000000000000000","input":"0xb4bdea55000e5102b2f7a54e61db03f6c656f65062f4b11b9dd52a1702c2bfdc379d1202","to":"0x134b1be34911e39a8397ec6289782989729807a4"},"latest"]}`:                                                                 "testdata/httpresp_eth_state_2qKc2ns18nV6uDSfaR1RVd7zF1Nm9vfeNZuvuEXQ3X.json",

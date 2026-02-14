@@ -1,0 +1,12 @@
+{
+    "passportData": "615d5f1f5a4944554b52414331323334353637313c3c3c3c3c3c3c3c3c3c3c3c3c3c3c393630333039314d33353038303331554b523c3c3c3c3c3c3c3c3c3c3c314b555a4e4554534f563c3c56414c455249593c3c3c3c3c3c3c3c3c3c3c3c",
+    "credentialSubjectID": "did:iden3:privado:main:2Scn2RfosbkQDMQzQM5nCz3Nk5GnbzZCWzGCd3tc2G",
+    "credentialStatusRevocationNonce": 1257894000,
+    "credentialStatusID": "did:iden3:privado:main:2Scn2RfosbkQDMQzQM5nCz3Nk5GnbzZCWzGCd3tc2G/credentialStatus?contractAddress=80001:0x2fCE183c7Fbc4EbB5DB3B0F5a63e0e02AE9a85d2\u0026state=a1abdb9f44c7b649eb4d21b59ef34bd38e054aa3e500987575a14fc92c49f42c",
+    "issuanceDate": 1742578132,
+    "linkNonce": "1",
+    "issuerID": "did:iden3:privado:main:2Si3eZUE6XetYsmU5dyUK2Cvaxr1EEe65vdv2BML4L",
+    "request": {
+        "circuitId": "idcard_sha256"
+    }
+}
