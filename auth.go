@@ -124,6 +124,10 @@ func VerifyAuthResponse(ctx context.Context, cfg EnvConfig, in []byte) (protocol
 		return protocol.AuthorizationResponseMessage{},
 			fmt.Errorf("failed to unmarshal auth response: %w", err)
 	}
+	if authResp == nil {
+		return protocol.AuthorizationResponseMessage{},
+			errors.New("auth response is nil after unmarshaling")
+	}
 
 	err = verifier.VerifyAuthResponse(
 		ctx, *authResp, p.AuthRequest, verificationOptions...)
