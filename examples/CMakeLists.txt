@@ -59,3 +59,19 @@ endif()
 add_test(NAME JsonFunctionsTests
     COMMAND json_functions_tests
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+
+add_executable(json_functions_status_tests json_functions_status_tests.c)
+target_link_libraries(json_functions_status_tests PUBLIC ${POLYGONID})
+
+if(APPLE)
+	target_link_libraries(json_functions_status_tests PUBLIC
+		"-framework CoreServices"
+		"-framework Security"
+		"-framework CoreFoundation")
+else()
+	target_link_libraries(json_functions_status_tests PRIVATE Threads::Threads)
+endif()
+
+add_test(NAME JsonFunctionsStatusTests
+    COMMAND json_functions_status_tests
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
