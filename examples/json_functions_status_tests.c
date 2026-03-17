@@ -31,9 +31,17 @@ TEST_STATUS testCases[] = {
     .expected_status_code = PLGNSTATUSCODE_INVALID_AADHAAR_SIGNATURE,
     .cfg = "testdata/new_genesis_id_cfg.json"
   },
-  // since PLGNVerifyAnonAadhaarQR doesn't check the signature, it should succeed even with an invalid signature
+  // since pubkey was provided, the signature should be checked and the function should fail
   {
     .in = "testdata/anon_aadhaar_v1_inputs_invalid_signature.json",
+    .fn2 = &PLGNVerifyAnonAadhaarQR,
+    .expected_ok = false,
+    .expected_status_code = PLGNSTATUSCODE_INVALID_AADHAAR_SIGNATURE,
+    .cfg = "testdata/new_genesis_id_cfg.json"
+  },
+  // since pubkey was not provided, the signature should not be checked and the function should succeed
+  {
+    .in = "testdata/anon_aadhaar_v1_inputs_invalid_signature_non_pub_key.json",
     .fn2 = &PLGNVerifyAnonAadhaarQR,
     .expected_ok = true,
     .cfg = "testdata/new_genesis_id_cfg.json"
