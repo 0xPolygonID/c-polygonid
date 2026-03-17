@@ -30,6 +30,13 @@ TEST_STATUS testCases[] = {
     .expected_ok = false,
     .expected_status_code = PLGNSTATUSCODE_INVALID_AADHAAR_SIGNATURE,
     .cfg = "testdata/new_genesis_id_cfg.json"
+  },
+  // since PLGNVerifyAnonAadhaarQR doesn't check the signature, it should succeed even with an invalid signature
+  {
+    .in = "testdata/anon_aadhaar_v1_inputs_invalid_signature.json",
+    .fn2 = &PLGNVerifyAnonAadhaarQR,
+    .expected_ok = true,
+    .cfg = "testdata/new_genesis_id_cfg.json"
   }
 };
 
