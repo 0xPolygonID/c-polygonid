@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestVerifyAuthResponse_JWZFormat_Non_Empty_Request(t *testing.T) {
+func TestFullVerify_JWZFormat_Non_Empty_Request(t *testing.T) {
 	ipfsURL := os.Getenv("IPFS_URL")
 	if ipfsURL == "" {
 		t.Fatal("IPFS_URL is not set")
@@ -49,12 +49,12 @@ func TestVerifyAuthResponse_JWZFormat_Non_Empty_Request(t *testing.T) {
 		IPFSNodeURL: ipfsURL,
 	}
 
-	b, err := VerifyAuthResponse(context.Background(), cfg, in)
+	b, err := FullVerify(context.Background(), cfg, in)
 	require.NoError(t, err)
 	require.NotEmpty(t, b)
 }
 
-func TestVerifyAuthResponse_JWEFormat_Empty_Request(t *testing.T) {
+func TestFullVerify_JWEFormat_Empty_Request(t *testing.T) {
 	fn := func(path string) string {
 		return fmt.Sprintf("testdata/%s", path)
 	}
@@ -71,12 +71,12 @@ func TestVerifyAuthResponse_JWEFormat_Empty_Request(t *testing.T) {
 		},
 	}
 
-	b, err := VerifyAuthResponse(context.Background(), cfg, in)
+	b, err := FullVerify(context.Background(), cfg, in)
 	require.NoError(t, err)
 	require.NotEmpty(t, b)
 }
 
-func TestVerifyAuthResponse_JWEFormat_Non_Empty_Request(t *testing.T) {
+func TestFullVerify_JWEFormat_Non_Empty_Request(t *testing.T) {
 	ipfsURL := os.Getenv("IPFS_URL")
 	if ipfsURL == "" {
 		t.Fatal("IPFS_URL is not set")
@@ -111,12 +111,12 @@ func TestVerifyAuthResponse_JWEFormat_Non_Empty_Request(t *testing.T) {
 		IPFSNodeURL: ipfsURL,
 	}
 
-	b, err := VerifyAuthResponse(context.Background(), cfg, in)
+	b, err := FullVerify(context.Background(), cfg, in)
 	require.NoError(t, err)
 	require.NotEmpty(t, b)
 }
 
-func TestVerifyAuthResponse_PlainFormat_Non_Empty_Request(t *testing.T) {
+func TestFullVerify_PlainFormat_Non_Empty_Request(t *testing.T) {
 	ipfsURL := os.Getenv("IPFS_URL")
 	if ipfsURL == "" {
 		t.Fatal("IPFS_URL is not set")
@@ -151,12 +151,12 @@ func TestVerifyAuthResponse_PlainFormat_Non_Empty_Request(t *testing.T) {
 		IPFSNodeURL: ipfsURL,
 	}
 
-	b, err := VerifyAuthResponse(context.Background(), cfg, in)
+	b, err := FullVerify(context.Background(), cfg, in)
 	require.NoError(t, err)
 	require.NotEmpty(t, b)
 }
 
-func TestVerifyAuthResponse_Error_ProofIsOutdated(t *testing.T) {
+func TestFullVerify_Error_ProofIsOutdated(t *testing.T) {
 	ipfsURL := os.Getenv("IPFS_URL")
 	if ipfsURL == "" {
 		t.Fatal("IPFS_URL is not set")
@@ -191,11 +191,11 @@ func TestVerifyAuthResponse_Error_ProofIsOutdated(t *testing.T) {
 		IPFSNodeURL: ipfsURL,
 	}
 
-	_, err = VerifyAuthResponse(context.Background(), cfg, in)
+	_, err = FullVerify(context.Background(), cfg, in)
 	require.Error(t, err, pubsignals.ErrProofGenerationOutdated)
 }
 
-func TestVerifyAuthResponse_FullVerify_StableV3_ProofDelayIn1Year(t *testing.T) {
+func TestFullVerify_FullVerify_StableV3_ProofDelayIn1Year(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		fn := func(path string) string {
 			return fmt.Sprintf("testdata/%s", path)
@@ -228,13 +228,13 @@ func TestVerifyAuthResponse_FullVerify_StableV3_ProofDelayIn1Year(t *testing.T) 
 			},
 		}
 
-		b, err := VerifyAuthResponse(context.Background(), cfg, in)
+		b, err := FullVerify(context.Background(), cfg, in)
 		require.NoError(t, err)
 		require.NotEmpty(t, b)
 	})
 }
 
-func TestVerifyAuthResponse_FullVerify_StableV3_ProofIsOutdated(t *testing.T) {
+func TestFullVerify_StableV3_ProofIsOutdated(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		fn := func(path string) string {
 			return fmt.Sprintf("testdata/%s", path)
@@ -267,7 +267,7 @@ func TestVerifyAuthResponse_FullVerify_StableV3_ProofIsOutdated(t *testing.T) {
 			},
 		}
 
-		_, err = VerifyAuthResponse(context.Background(), cfg, in)
+		_, err = FullVerify(context.Background(), cfg, in)
 		require.ErrorIs(t, err, pubsignals.ErrProofGenerationOutdated)
 	})
 }
@@ -291,7 +291,7 @@ func BenchmarkProofVerification_OnlineContract(b *testing.B) {
 	}
 
 	for b.Loop() {
-		_, err := VerifyAuthResponse(context.Background(), cfg, in)
+		_, err := FullVerify(context.Background(), cfg, in)
 		if err != nil {
 			b.Fatal(err)
 		}

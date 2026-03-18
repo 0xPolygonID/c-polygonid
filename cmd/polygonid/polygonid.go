@@ -1156,6 +1156,15 @@ func PLGNVerifyAuthResponse(jsonResponse **C.char, in *C.char,
 		cfg, status)
 }
 
+// PLGNAuthFullVerify performs a full authentication verification (wrapper + inside proof verification).
+//
+//export PLGNAuthFullVerify
+func PLGNAuthFullVerify(jsonResponse **C.char, in *C.char,
+	cfg *C.char, status **C.PLGNStatus) bool {
+	return callGenericFn(c_polygonid.FullVerify, jsonResponse, in,
+		cfg, status)
+}
+
 // PLGNVerifyAnonAadhaarQR verifies an AnonAadhaar QR code.
 //
 //export PLGNVerifyAnonAadhaarQR
