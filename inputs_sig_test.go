@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	httpmock "github.com/0xPolygonID/c-polygonid/testing"
+	gocircuitexternal "github.com/0xPolygonID/go-circuit-external/AnonAadhaar"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/iden3/go-circuits/v2"
 	core "github.com/iden3/go-iden3-core/v2"
@@ -1519,6 +1520,16 @@ func TestNewGenesysIDFromEth(t *testing.T) {
 		IDAsInt: "18925340278420228466712879433563154448903652530982176890458034425491886594",
 	}
 	require.Equal(t, wantResp, resp)
+}
+
+func TestW3cCredentialsFromAnonAadhaarInputsJson_InvalidSignature(t *testing.T) {
+	defer httpmock.MockHTTPClient(t, map[string]string{})()
+
+	ctx := context.Background()
+	var cfg EnvConfig
+	_, err := W3cCredentialsFromAnonAadhaarInputsJson(ctx, cfg,
+		readFixtureFile("anon_aadhaar_v1_inputs_invalid_signature.json"))
+	require.ErrorIs(t, err, gocircuitexternal.ErrInvalidSignature)
 }
 
 func TestW3cCredentialsFromAnonAadhaarInputsJson(t *testing.T) {
