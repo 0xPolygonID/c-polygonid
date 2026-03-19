@@ -33,7 +33,14 @@ func VerifyAnonAadhaarQR(ctx context.Context, cfg EnvConfig, in []byte) (AnonAad
 	}
 
 	a := gocircuitexternal.AnonAadhaarDataV2{}
-	if err := a.UnmarshalQR(payload.QRData.toBitInt()); err != nil {
+
+	var unmarshalQROpts []gocircuitexternal.UnmarshalQROpt
+	if payload.PubKey != "" {
+		unmarshalQROpts = append(unmarshalQROpts,
+			gocircuitexternal.WithPublicKey(payload.PubKey))
+	}
+
+	if err := a.UnmarshalQRWithOpts(payload.QRData.toBitInt(), unmarshalQROpts...); err != nil {
 		return AnonAadhaarValidQRResponse{}, err
 	}
 

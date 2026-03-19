@@ -3,19 +3,19 @@ module github.com/0xPolygonID/c-polygonid
 go 1.25
 
 require (
-	github.com/0xPolygonID/go-circuit-external v0.0.7
+	github.com/0xPolygonID/go-circuit-external v0.0.9
 	github.com/dgraph-io/badger/v4 v4.8.0
 	github.com/ethereum/go-ethereum v1.16.7
 	github.com/fxamacker/cbor/v2 v2.9.0
 	github.com/iden3/driver-did-iden3 v0.0.18
 	github.com/iden3/go-circuits/v2 v2.5.1-0.20260130115658-23e6973afa23
-	github.com/iden3/go-iden3-auth/v2 v2.8.0
+	github.com/iden3/go-iden3-auth/v2 v2.8.1
 	github.com/iden3/go-iden3-core/v2 v2.4.0
 	github.com/iden3/go-iden3-crypto v0.0.17
 	github.com/iden3/go-merkletree-sql/v2 v2.0.6
 	github.com/iden3/go-onchain-credential-adapter v0.0.0-20240425110009-4004ac8da50c
 	github.com/iden3/go-schema-processor/v2 v2.6.6
-	github.com/iden3/iden3comm/v2 v2.12.1
+	github.com/iden3/iden3comm/v2 v2.13.0
 	github.com/iden3/merkletree-proof v1.0.1
 	github.com/lestrrat-go/jwx/v3 v3.0.10
 	github.com/piprate/json-gold v0.5.1-0.20241210232033-19254b3ec65b

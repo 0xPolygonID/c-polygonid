@@ -24,6 +24,7 @@ typedef enum
 	PLGNSTATUSCODE_ISSUER_CREDENTIAL_STATUS_MT_BUILD_ERROR,
 	PLGNSTATUSCODE_ISSUER_CREDENTIAL_STATUS_MT_STATE_ERROR,
 	PLGNSTATUSCODE_ISSUER_CREDENTIAL_STATUS_REVOKED_ERROR,
+	PLGNSTATUSCODE_INVALID_AADHAAR_SIGNATURE,
 } PLGNStatusCode;
 
 typedef struct _PLGNStatus
@@ -48,6 +49,7 @@ import (
 	"unsafe"
 
 	c_polygonid "github.com/0xPolygonID/c-polygonid"
+	gocircuitexternal "github.com/0xPolygonID/go-circuit-external/AnonAadhaar"
 	"github.com/iden3/go-circuits/v2"
 	core "github.com/iden3/go-iden3-core/v2"
 	"github.com/iden3/go-iden3-core/v2/w3c"
@@ -1158,6 +1160,15 @@ func PLGNVerifyAuthResponse(jsonResponse **C.char, in *C.char,
 		cfg, status)
 }
 
+// PLGNAuthFullVerify performs a full authentication verification (wrapper + inside proof verification).
+//
+//export PLGNAuthFullVerify
+func PLGNAuthFullVerify(jsonResponse **C.char, in *C.char,
+	cfg *C.char, status **C.PLGNStatus) bool {
+	return callGenericFn(c_polygonid.FullVerify, jsonResponse, in,
+		cfg, status)
+}
+
 // PLGNVerifyAnonAadhaarQR verifies an AnonAadhaar QR code.
 //
 //export PLGNVerifyAnonAadhaarQR
@@ -1200,8 +1211,8 @@ func prepareInputs(ctx context.Context, fn atomicQueryInputsFn,
 
 	resp, err := marshalInputsResponse(aqInpResp)
 	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR,
-			"error marshalling atomic query inputs: %v", err)
+		statusCode, errorMsg := statusFromError(err)
+		maybeCreateStatus(status, statusCode, "error marshalling atomic query inputs: '%s'", errorMsg)
 		return false
 	}
 
@@ -1260,6 +1271,9 @@ func statusFromError(err error) (C.PLGNStatusCode, string) {
 			// lint error bypass
 		}
 	}
+	if errors.Is(err, gocircuitexternal.ErrInvalidSignature) {
+		return C.PLGNSTATUSCODE_INVALID_AADHAAR_SIGNATURE, err.Error()
+	}
 
 	return C.PLGNSTATUSCODE_ERROR, err.Error()
 }
@@ -1295,7 +1309,8 @@ func callGenericFn[R any](
 	inStr := C.GoString(in)
 	resp, err := fn(ctx, envCfg, []byte(inStr))
 	if err != nil {
-		maybeCreateStatus(status, C.PLGNSTATUSCODE_ERROR, "%v", err.Error())
+		statusCode, msg := statusFromError(err)
+		maybeCreateStatus(status, statusCode, "%v", msg)
 		return false
 	}
 
