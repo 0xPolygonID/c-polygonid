@@ -1,7 +1,3 @@
-github.com/0xPolygonID/go-circuit-external v0.0.7 h1:Q8uDWosYqjHeSYniDyQ4pBHrDWEc0B7cwQtqFXWvoeY=
-github.com/0xPolygonID/go-circuit-external v0.0.7/go.mod h1:dkoNlbulXhxSwNypuGcuxtnWnrg/1Rrq1EYyZPAUK5Q=
-github.com/0xPolygonID/go-circuit-external v0.0.8 h1:WeQe4ySWwsVKgPayNfO4barI2g2u1d868wMavJ+1mF8=
-github.com/0xPolygonID/go-circuit-external v0.0.8/go.mod h1:dkoNlbulXhxSwNypuGcuxtnWnrg/1Rrq1EYyZPAUK5Q=
 github.com/0xPolygonID/go-circuit-external v0.0.9 h1:dISrW17jWqZf4qOcPyXTqNGeh0QjUdAvI0GkDIp32gg=
 github.com/0xPolygonID/go-circuit-external v0.0.9/go.mod h1:dkoNlbulXhxSwNypuGcuxtnWnrg/1Rrq1EYyZPAUK5Q=
 github.com/DataDog/zstd v1.4.5 h1:EndNeuB0l9syBZhut0wns3gV1hL8zX8LIu6ZiVHWLIQ=
@@ -147,8 +143,8 @@ github.com/iden3/contracts-abi/state/go/abi v1.1.0 h1:5JC3Q5UU3Ir7H+0vgSvvR79EPo
 github.com/iden3/contracts-abi/state/go/abi v1.1.0/go.mod h1:TxgIrXCvxms3sbOdsy8kTvffUCIpEEifNy0fSXdkU4w=
 github.com/iden3/driver-did-iden3 v0.0.18 h1:PU6BlHpKv7BpXehAUasqxUDurbhSj5xaRc2L3FcHdns=
 github.com/iden3/driver-did-iden3 v0.0.18/go.mod h1:KctZNQV969t1URq1a9vE5vvst9wGvAF/34zkJvL7H3c=
-github.com/iden3/go-circuits/v2 v2.5.0 h1:kX4APuuNWwDHb7MOyclzhAbmDqZtzH1gWx5rCw9bFRk=
-github.com/iden3/go-circuits/v2 v2.5.0/go.mod h1:LnbASvfhsDajwOYSdPmbQ585KuzwHF/AUS7pICol5ss=
+github.com/iden3/go-circuits/v2 v2.5.1 h1:YaAL3OPlfNdQuSIR4zo5mPzVg3Z7Zc7UzTGUej0QCs0=
+github.com/iden3/go-circuits/v2 v2.5.1/go.mod h1:+KRBCDOz+Oyn/1YBTODF24c7KnIDlgWA6otqkgdLWyA=
 github.com/iden3/go-iden3-auth/v2 v2.8.1 h1:weWC4HwKgHw337cCkiexX+kVx1K1Let0FT3C3RrX16Y=
 github.com/iden3/go-iden3-auth/v2 v2.8.1/go.mod h1:ep+506x8JADUfIv48xKDhg0U0TcCgEedI+WlRlpJndc=
 github.com/iden3/go-iden3-core/v2 v2.4.0 h1:nIkYQJomg/3SNXmJsuSOSG1hewLBwSXaLSM+G/wHAKg=

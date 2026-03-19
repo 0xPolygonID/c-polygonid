@@ -90,7 +90,7 @@ func TestPrepareInputs(t *testing.T) {
 
 	doTest := func(t testing.TB, inFile, wantOutFile string,
 		fn PrepareInputsFn, wantVR map[string]any, cfg EnvConfig,
-		wantErr string) {
+		wantErr string, wantCircuitID circuits.CircuitID) {
 
 		err := CleanCache("")
 		require.NoError(t, err)
@@ -110,6 +110,9 @@ func TestPrepareInputs(t *testing.T) {
 		} else {
 			require.Equal(t, wantVR, out.VerifiablePresentation)
 		}
+
+		require.Equal(t, wantCircuitID, out.CircuitID,
+			"unexpected CircuitID in response")
 	}
 
 	doTestMarsalError := func(t testing.TB, inFile string,
@@ -148,7 +151,7 @@ func TestPrepareInputs(t *testing.T) {
 		doTest(t, "atomic_query_mtp_v2_on_chain_status_inputs.json",
 			"atomic_query_mtp_v2_on_chain_status_output.json",
 			AtomicQueryMtpV2InputsFromJson,
-			nil, cfg, "")
+			nil, cfg, "", "")
 	})
 
 	t.Run("GenericInputsFromJson — AtomicQueryMtpV2Onchain", func(t *testing.T) {
@@ -174,7 +177,7 @@ func TestPrepareInputs(t *testing.T) {
 		doTest(t, "atomic_query_mtp_v2_on_chain_status_inputs.json",
 			"atomic_query_mtp_v2_on_chain_status_output.json",
 			GenericInputsFromJson,
-			nil, cfg, "")
+			nil, cfg, "", "")
 	})
 
 	t.Run("GenericInputsFromJson — AnonAadhaarV1", func(t *testing.T) {
@@ -184,7 +187,7 @@ func TestPrepareInputs(t *testing.T) {
 		doTest(t, "anon_aadhaar_v1_inputs.json",
 			"anon_aadhaar_v1_output.json",
 			GenericInputsFromJson,
-			nil, cfg, "")
+			nil, cfg, "", "")
 	})
 
 	// Check if input preparation function returns error if QR was expired.
@@ -210,7 +213,7 @@ func TestPrepareInputs(t *testing.T) {
 		doTest(t, "passport_v1_inputs.json",
 			"passport_v1_output.json",
 			GenericInputsFromJson,
-			nil, cfg, "")
+			nil, cfg, "", "")
 	})
 
 	t.Run("AtomicQueryMtpV2Onchain - no roots in identity tree store", func(t *testing.T) {
@@ -234,7 +237,7 @@ func TestPrepareInputs(t *testing.T) {
 
 		doTest(t, "atomic_query_mtp_v2_on_chain_status_inputs.json", "",
 			AtomicQueryMtpV2InputsFromJson, nil, cfg,
-			"credential status error: credential status resolve error: GetRevocationProof smart contract call [GetRevocationStatus]: roots were not saved to identity tree store")
+			"credential status error: credential status resolve error: GetRevocationProof smart contract call [GetRevocationStatus]: roots were not saved to identity tree store", "")
 	})
 
 	t.Run("AtomicQueryMtpV2InputsFromJson", func(t *testing.T) {
@@ -246,7 +249,7 @@ func TestPrepareInputs(t *testing.T) {
 
 		doTest(t, "atomic_query_mtp_v2_inputs.json",
 			"atomic_query_mtp_v2_output.json", AtomicQueryMtpV2InputsFromJson,
-			nil, EnvConfig{}, "")
+			nil, EnvConfig{}, "", "")
 	})
 
 	t.Run("AtomicQueryMtpV2InputsFromJson NonMerklized", func(t *testing.T) {
@@ -258,7 +261,7 @@ func TestPrepareInputs(t *testing.T) {
 
 		doTest(t, "atomic_query_mtp_v2_non_merklized_inputs.json",
 			"atomic_query_mtp_v2_non_merklized_output.json",
-			AtomicQueryMtpV2InputsFromJson, nil, EnvConfig{}, "")
+			AtomicQueryMtpV2InputsFromJson, nil, EnvConfig{}, "", "")
 	})
 
 	t.Run("AtomicQueryMtpV2InputsFromJson NonMerklized Disclosure",
@@ -289,7 +292,7 @@ func TestPrepareInputs(t *testing.T) {
 				"atomic_query_mtp_v2_non_merklized_disclosure_inputs.json",
 				"atomic_query_mtp_v2_non_merklized_output.json",
 				AtomicQueryMtpV2InputsFromJson, wantVerifiablePresentation,
-				EnvConfig{}, "")
+				EnvConfig{}, "", "")
 		})
 
 	t.Run("AtomicQuerySigV2InputsFromJson Disclosure", func(t *testing.T) {
@@ -319,7 +322,7 @@ func TestPrepareInputs(t *testing.T) {
 		doTest(t, "atomic_query_sig_v2_merklized_disclosure_inputs.json",
 			"atomic_query_sig_v2_merklized_output.json",
 			AtomicQuerySigV2InputsFromJson, wantVerifiablePresentation,
-			EnvConfig{}, "")
+			EnvConfig{}, "", "")
 	})
 
 	t.Run("AtomicQuerySigV2InputsFromJson", func(t *testing.T) {
@@ -332,7 +335,7 @@ func TestPrepareInputs(t *testing.T) {
 
 		doTest(t, "atomic_query_sig_v2_merklized_inputs.json",
 			"atomic_query_sig_v2_merklized_output.json",
-			AtomicQuerySigV2InputsFromJson, nil, EnvConfig{}, "")
+			AtomicQuerySigV2InputsFromJson, nil, EnvConfig{}, "", "")
 	})
 
 	t.Run("AtomicQuerySigV2InputsFromJson - ipfs", func(t *testing.T) {
@@ -357,7 +360,7 @@ func TestPrepareInputs(t *testing.T) {
 		doTest(t, "atomic_query_sig_v2_merklized_ipfs_inputs.json",
 			"atomic_query_sig_v2_merklized_output.json",
 			AtomicQuerySigV2InputsFromJson, nil,
-			EnvConfig{IPFSNodeURL: ipfsURL}, "")
+			EnvConfig{IPFSNodeURL: ipfsURL}, "", "")
 	})
 
 	t.Run("AtomicQuerySigV2InputsFromJson - noop", func(t *testing.T) {
@@ -370,7 +373,7 @@ func TestPrepareInputs(t *testing.T) {
 
 		doTest(t, "atomic_query_sig_v2_merklized_noop_inputs.json",
 			"atomic_query_sig_v2_merklized_noop_output.json",
-			AtomicQuerySigV2InputsFromJson, nil, EnvConfig{}, "")
+			AtomicQuerySigV2InputsFromJson, nil, EnvConfig{}, "", "")
 	})
 
 	t.Run("AtomicQuerySigV2InputsFromJson - revoked", func(t *testing.T) {
@@ -380,7 +383,7 @@ func TestPrepareInputs(t *testing.T) {
 
 		doTest(t, "atomic_query_sig_v2_merklized_revoked_inputs.json", "",
 			AtomicQuerySigV2InputsFromJson, nil, EnvConfig{},
-			"credential status error: credential is revoked")
+			"credential status error: credential is revoked", "")
 	})
 
 	t.Run("AtomicQuerySigV2InputsFromJson - skip revocation check",
@@ -396,7 +399,7 @@ func TestPrepareInputs(t *testing.T) {
 				"atomic_query_sig_v2_merklized_skip_revocation_check_inputs.json",
 				"atomic_query_sig_v2_merklized_skip_revocation_check_output.json",
 				AtomicQuerySigV2InputsFromJson, nil, EnvConfig{},
-				"")
+				"", "")
 		})
 
 	t.Run("AtomicQuerySigV2InputsFromJson NonMerklized", func(t *testing.T) {
@@ -409,7 +412,7 @@ func TestPrepareInputs(t *testing.T) {
 
 		doTest(t, "atomic_query_sig_v2_non_merklized_inputs.json",
 			"atomic_query_sig_v2_non_merklized_output.json",
-			AtomicQuerySigV2InputsFromJson, nil, EnvConfig{}, "")
+			AtomicQuerySigV2InputsFromJson, nil, EnvConfig{}, "", "")
 	})
 
 	t.Run("AtomicQuerySigV2InputsFromJson NonMerklized - missing credentialSubject",
@@ -420,7 +423,7 @@ func TestPrepareInputs(t *testing.T) {
 			})()
 
 			doTest(t, "atomic_query_sig_v2_non_merklized_noop_inputs.json", "",
-				AtomicQuerySigV2InputsFromJson, nil, EnvConfig{}, "credentialSubject field is not found in query")
+				AtomicQuerySigV2InputsFromJson, nil, EnvConfig{}, "credentialSubject field is not found in query", "")
 		})
 
 	t.Run("AtomicQuerySigV2InputsFromJson NonMerklized Disclosure",
@@ -452,7 +455,7 @@ func TestPrepareInputs(t *testing.T) {
 				"atomic_query_sig_v2_non_merklized_disclosure_inputs.json",
 				"atomic_query_sig_v2_non_merklized_output.json",
 				AtomicQuerySigV2InputsFromJson, wantVerifiablePresentation,
-				EnvConfig{}, "")
+				EnvConfig{}, "", "")
 		})
 
 	t.Run("AtomicQuerySigV2OnChainInputsFromJson",
@@ -467,7 +470,7 @@ func TestPrepareInputs(t *testing.T) {
 			doTest(t,
 				"atomic_query_sig_v2_on_chain_input.json",
 				"atomic_query_sig_v2_on_chain_output.json",
-				AtomicQuerySigV2OnChainInputsFromJson, nil, EnvConfig{}, "")
+				AtomicQuerySigV2OnChainInputsFromJson, nil, EnvConfig{}, "", "")
 		})
 
 	t.Run("AtomicQueryMtpV2OnChainInputsFromJson",
@@ -481,7 +484,7 @@ func TestPrepareInputs(t *testing.T) {
 			doTest(t,
 				"atomic_query_mtp_v2_on_chain_input.json",
 				"atomic_query_mtp_v2_on_chain_output.json",
-				AtomicQueryMtpV2OnChainInputsFromJson, nil, EnvConfig{}, "")
+				AtomicQueryMtpV2OnChainInputsFromJson, nil, EnvConfig{}, "", "")
 		})
 
 	t.Run("AtomicQuerySigV2InputsFromJson__RHS__empty_revocation_tree",
@@ -504,7 +507,7 @@ func TestPrepareInputs(t *testing.T) {
 			}
 			doTest(t, "atomic_query_sig_v2_merklized_rhs_inputs.json",
 				"atomic_query_sig_v2_merklized_rhs_output.json",
-				AtomicQuerySigV2InputsFromJson, nil, cfg, "")
+				AtomicQuerySigV2InputsFromJson, nil, cfg, "", "")
 		})
 
 	t.Run("AtomicQuerySigV2InputsFromJson - RHS - non-empty revocation tree",
@@ -533,7 +536,7 @@ func TestPrepareInputs(t *testing.T) {
 			}
 			doTest(t, "atomic_query_sig_v2_merklized_rhs_inputs.json",
 				"atomic_query_sig_v2_merklized_rhs_nonempty_output.json",
-				AtomicQuerySigV2InputsFromJson, nil, cfg, "")
+				AtomicQuerySigV2InputsFromJson, nil, cfg, "", "")
 		})
 
 	t.Run("AtomicQuerySigV2InputsFromJson - RHS - revoked",
@@ -558,7 +561,7 @@ func TestPrepareInputs(t *testing.T) {
 			}
 			doTest(t, "atomic_query_sig_v2_merklized_rhs_revoked_inputs.json",
 				"", AtomicQuerySigV2InputsFromJson, nil, cfg,
-				"credential status error: credential is revoked")
+				"credential status error: credential is revoked", "")
 		})
 
 	t.Run("AtomicQuerySigV2InputsFromJson Nested Disclosure", func(t *testing.T) {
@@ -603,7 +606,7 @@ func TestPrepareInputs(t *testing.T) {
 		doTest(t, "atomic_query_sig_v2_nested_selective_disclosure_inputs.json",
 			"atomic_query_sig_v2_nested_selective_disclosure_output.json",
 			AtomicQuerySigV2InputsFromJson, wantVerifiablePresentation,
-			EnvConfig{IPFSNodeURL: ipfsURL}, "")
+			EnvConfig{IPFSNodeURL: ipfsURL}, "", "")
 	})
 
 	t.Run("AtomicQueryV3InputsFromJson - MTP", func(t *testing.T) {
@@ -616,7 +619,19 @@ func TestPrepareInputs(t *testing.T) {
 
 		doTest(t, "atomic_query_v3_mtp_inputs.json",
 			"atomic_query_v3_mtp_output.json",
-			AtomicQueryV3InputsFromJson, nil, EnvConfig{}, "")
+			AtomicQueryV3InputsFromJson, nil, EnvConfig{}, "", "")
+	})
+
+	t.Run("GenericInputsFromJson - AtomicQueryV3Stable MTP", func(t *testing.T) {
+		defer httpmock.MockHTTPClient(t, map[string]string{
+			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld":                                                         "testdata/httpresp_kyc-v3.json-ld",
+			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld":                                             "testdata/httpresp_iden3credential_v2.json",
+			"http://localhost:8001/api/v1/identities/did%3Aiden3%3Apolygon%3Amumbai%3AwuQT8NtFq736wsJahUuZpbA8otTzjKGyKj4i4yWtU/claims/revocation/status/2376431481": "testdata/httpresp_rev_status_2376431481.json",
+		})()
+
+		doTest(t, "atomic_query_v3_stable_mtp_inputs.json",
+			"atomic_query_v3_stable_mtp_output.json",
+			GenericInputsFromJson, nil, EnvConfig{}, "", "credentialAtomicQueryV3-16-16-64")
 	})
 
 	t.Run("AtomicQueryV3InputsFromJson - Sig", func(t *testing.T) {
@@ -629,7 +644,7 @@ func TestPrepareInputs(t *testing.T) {
 
 		doTest(t, "atomic_query_v3_sig_inputs.json",
 			"atomic_query_v3_sig_output.json",
-			AtomicQueryV3InputsFromJson, nil, EnvConfig{}, "")
+			AtomicQueryV3InputsFromJson, nil, EnvConfig{}, "", "")
 	})
 
 	t.Run("AtomicQueryV3InputsFromJson - empty query", func(t *testing.T) {
@@ -642,7 +657,7 @@ func TestPrepareInputs(t *testing.T) {
 
 		doTest(t, "atomic_query_v3_sig_empty_query_inputs.json",
 			"atomic_query_v3_sig_empty_query_output.json",
-			AtomicQueryV3InputsFromJson, nil, EnvConfig{}, "")
+			AtomicQueryV3InputsFromJson, nil, EnvConfig{}, "", "")
 	})
 
 	// Inputs does not include proof type, but the query has both. Choose MTP.
@@ -655,7 +670,7 @@ func TestPrepareInputs(t *testing.T) {
 
 		doTest(t, "atomic_query_v3_no_proof_type_both_have_inputs.json",
 			"atomic_query_v3_mtp_output.json",
-			AtomicQueryV3InputsFromJson, nil, EnvConfig{}, "")
+			AtomicQueryV3InputsFromJson, nil, EnvConfig{}, "", "")
 	})
 
 	// Inputs does not include proof type, but the query contains Sig one.
@@ -669,7 +684,7 @@ func TestPrepareInputs(t *testing.T) {
 
 		doTest(t, "atomic_query_v3_no_proof_type_sig_only_inputs.json",
 			"atomic_query_v3_sig_output.json",
-			AtomicQueryV3InputsFromJson, nil, EnvConfig{}, "")
+			AtomicQueryV3InputsFromJson, nil, EnvConfig{}, "", "")
 	})
 
 	t.Run("AtomicQueryV3OnChainInputsFromJson - MTP", func(t *testing.T) {
@@ -681,7 +696,19 @@ func TestPrepareInputs(t *testing.T) {
 
 		doTest(t, "atomic_query_v3_on_chain_mtp_inputs.json",
 			"atomic_query_v3_on_chain_mtp_output.json",
-			AtomicQueryV3OnChainInputsFromJson, nil, EnvConfig{}, "")
+			AtomicQueryV3OnChainInputsFromJson, nil, EnvConfig{}, "", "")
+	})
+
+	t.Run("GenericInputsFromJson - AtomicQueryV3OnChainStable MTP", func(t *testing.T) {
+		defer httpmock.MockHTTPClient(t, map[string]string{
+			"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qDnyCaxj4zdYmj6LbegYMjWSnkbKAyqtq31YeuyZV/claims/revocation/status/3972757": "testdata/httpresp_rev_status_3972757.json",
+			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld":                                                           "testdata/httpresp_kyc-v3.json-ld",
+			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/iden3credential-v2.json-ld":                                               "testdata/httpresp_iden3credential_v2.json",
+		})()
+
+		doTest(t, "atomic_query_v3_on_chain_stable_mtp_inputs.json",
+			"atomic_query_v3_on_chain_stable_mtp_output.json",
+			GenericInputsFromJson, nil, EnvConfig{}, "", "credentialAtomicQueryV3OnChain-16-16-64-16-32")
 	})
 
 	t.Run("AtomicQueryV3OnChainInputsFromJson - Sig", func(t *testing.T) {
@@ -694,7 +721,7 @@ func TestPrepareInputs(t *testing.T) {
 
 		doTest(t, "atomic_query_v3_on_chain_sig_inputs.json",
 			"atomic_query_v3_on_chain_sig_output.json",
-			AtomicQueryV3OnChainInputsFromJson, nil, EnvConfig{}, "")
+			AtomicQueryV3OnChainInputsFromJson, nil, EnvConfig{}, "", "")
 	})
 
 	t.Run("AtomicQueryV3InputsFromJson - Sig - Selective Disclosure", func(t *testing.T) {
@@ -725,7 +752,7 @@ func TestPrepareInputs(t *testing.T) {
 		doTest(t, "atomic_query_v3_sig_selective_disclosure_inputs.json",
 			"atomic_query_v3_sig_selective_disclosure_output.json",
 			AtomicQueryV3InputsFromJson, wantVerifiablePresentation,
-			EnvConfig{}, "")
+			EnvConfig{}, "", "")
 	})
 
 	t.Run("AtomicQueryV3OnChainInputsFromJson - Transaction Data", func(t *testing.T) {
@@ -737,7 +764,7 @@ func TestPrepareInputs(t *testing.T) {
 
 		doTest(t, "atomic_query_v3_on_chain_tx_data_inputs.json",
 			"atomic_query_v3_on_chain_tx_data_output.json",
-			AtomicQueryV3OnChainInputsFromJson, nil, EnvConfig{}, "")
+			AtomicQueryV3OnChainInputsFromJson, nil, EnvConfig{}, "", "")
 	})
 
 	t.Run("AtomicQueryV3InputsFromJson__Sig_exists_true", func(t *testing.T) {
@@ -779,7 +806,7 @@ func TestPrepareInputs(t *testing.T) {
 
 		doTest(t, "atomic_query_v3_sig_exists_true_inputs.json",
 			"atomic_query_v3_sig_exists_true_output.json",
-			AtomicQueryV3InputsFromJson, nil, cfg, "")
+			AtomicQueryV3InputsFromJson, nil, cfg, "", "")
 	})
 
 	t.Run("AtomicQueryV3InputsFromJson__Sig_exists_false", func(t *testing.T) {
@@ -821,7 +848,7 @@ func TestPrepareInputs(t *testing.T) {
 
 		doTest(t, "atomic_query_v3_sig_exists_false_inputs.json",
 			"atomic_query_v3_sig_exists_false_output.json",
-			AtomicQueryV3InputsFromJson, nil, cfg, "")
+			AtomicQueryV3InputsFromJson, nil, cfg, "", "")
 	})
 
 	t.Run("AtomicQuerySigV2Inputs Empty roots in state", func(t *testing.T) {
@@ -853,7 +880,7 @@ func TestPrepareInputs(t *testing.T) {
 		doTest(t, "atomic_query_sig_v2_merklized_disclosure_inputs.json",
 			"atomic_query_sig_v2_merklized_output.json",
 			AtomicQuerySigV2InputsFromJson, wantVerifiablePresentation,
-			EnvConfig{}, "")
+			EnvConfig{}, "", "")
 	})
 
 	t.Run("AtomicQueryMtpV2InputsFromJson Empty roots in state",
@@ -884,7 +911,7 @@ func TestPrepareInputs(t *testing.T) {
 				"atomic_query_mtp_v2_non_merklized_disclosure_inputs.json",
 				"atomic_query_mtp_v2_non_merklized_output.json",
 				AtomicQueryMtpV2InputsFromJson, wantVerifiablePresentation,
-				EnvConfig{}, "")
+				EnvConfig{}, "", "")
 		})
 
 	t.Run("LinkedMultiQueryInputsFromJson_Merklized", func(t *testing.T) {
@@ -897,7 +924,7 @@ func TestPrepareInputs(t *testing.T) {
 
 		doTest(t, "linked_multi_query_inputs.json",
 			"linked_multi_query_output.json",
-			LinkedMultiQueryInputsFromJson, nil, EnvConfig{}, "")
+			LinkedMultiQueryInputsFromJson, nil, EnvConfig{}, "", "")
 	})
 
 	t.Run("LinkedMultiQueryInputsFromJson_NonMerklized", func(t *testing.T) {
@@ -928,7 +955,7 @@ func TestPrepareInputs(t *testing.T) {
 			"linked_multi_query_non_merklized_inputs.json",
 			"linked_multi_query_non_merklized_output.json",
 			LinkedMultiQueryInputsFromJson, wantVerifiablePresentation,
-			EnvConfig{}, "")
+			EnvConfig{}, "", "")
 	})
 
 	t.Run("Negative test - incorrect CredentialSubjectProfile", func(t *testing.T) {
