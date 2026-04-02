@@ -210,7 +210,7 @@ func TestGenerateInputs(t *testing.T) {
 			c_polygonid.AtomicQueryV3OnChainInputsFromJson, nil, env, "")
 	})
 
-t.Run("atomic_query_v3_on_chain_stable_mtp_inputs", func(t *testing.T) {
+	t.Run("atomic_query_v3_on_chain_stable_mtp_inputs", func(t *testing.T) {
 		defer httpmock.MockHTTPClient(t, map[string]string{
 			"http://localhost:8001/api/v1/identities/did%3Apolygonid%3Apolygon%3Amumbai%3A2qDnyCaxj4zdYmj6LbegYMjWSnkbKAyqtq31YeuyZV/claims/revocation/status/3972757": "../../testdata/httpresp_rev_status_3972757.json",
 			"https://raw.githubusercontent.com/iden3/claim-schema-vocab/main/schemas/json-ld/kyc-v3.json-ld":                                                           "../../testdata/httpresp_kyc-v3.json-ld",
