@@ -160,8 +160,8 @@ func (e errProofNotFound) Error() string {
 
 func checkCredentialExpiration(cred verifiable.W3CCredential) error {
 	if cred.Expiration != nil && time.Now().After(*cred.Expiration) {
-		return fmt.Errorf("%w: expiration date %v is before current time",
-			ErrCredentialExpired, cred.Expiration)
+		return fmt.Errorf("%w: expiration date %s is before current time",
+			ErrCredentialExpired, cred.Expiration.Format(time.RFC3339))
 	}
 	return nil
 }
