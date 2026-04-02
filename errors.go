@@ -80,3 +80,5 @@ func (e ErrCredentialStatusTreeState) Unwrap() error {
 }
 
 var ErrCredentialStatusRevoked = errors.New("credential is revoked")
+
+var ErrCredentialExpired = errors.New("credential is expired")

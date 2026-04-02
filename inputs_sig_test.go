@@ -1862,3 +1862,20 @@ func cfgWithCacheDir(t testing.TB, cfg EnvConfig) EnvConfig {
 	cfg.CacheDir = cacheDir
 	return cfg
 }
+
+func TestCredentialExpiration(t *testing.T) {
+	mockBadgerLog(t)
+	ctx := context.Background()
+
+	t.Run("AtomicQuerySigV2InputsFromJson - expired credential", func(t *testing.T) {
+		_, err := AtomicQuerySigV2InputsFromJson(
+			ctx, EnvConfig{}, readFixtureFile("atomic_query_sig_v2_merklized_expired_inputs.json"))
+		require.ErrorIs(t, err, ErrCredentialExpired)
+	})
+
+	t.Run("AtomicQueryMtpV2InputsFromJson - expired credential", func(t *testing.T) {
+		_, err := AtomicQueryMtpV2InputsFromJson(
+			ctx, EnvConfig{}, readFixtureFile("atomic_query_mtp_v2_expired_inputs.json"))
+		require.ErrorIs(t, err, ErrCredentialExpired)
+	})
+}

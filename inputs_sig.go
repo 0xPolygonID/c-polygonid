@@ -158,6 +158,14 @@ func (e errProofNotFound) Error() string {
 	return fmt.Sprintf("proof not found: %v", string(e))
 }
 
+func checkCredentialExpiration(cred verifiable.W3CCredential) error {
+	if cred.Expiration != nil && time.Now().After(*cred.Expiration) {
+		return fmt.Errorf("%w: expiration date %v is before current time",
+			ErrCredentialExpired, cred.Expiration)
+	}
+	return nil
+}
+
 func claimWithSigProofFromObj(ctx context.Context, cfg EnvConfig,
 	w3cCred verifiable.W3CCredential,
 	skipClaimRevocationCheck bool) (circuits.ClaimWithSigProof, error) {
@@ -593,6 +601,9 @@ func AtomicQueryMtpV2InputsFromJson(ctx context.Context, cfg EnvConfig,
 	if err != nil {
 		return out, err
 	}
+	if err = checkCredentialExpiration(w3cCred); err != nil {
+		return out, err
+	}
 
 	inpMarsh.SkipClaimRevocationCheck, err = querySkipRevocation(obj.Request)
 	if err != nil {
@@ -755,6 +766,9 @@ func AtomicQuerySigV2InputsFromJson(ctx context.Context, cfg EnvConfig,
 	if err != nil {
 		return out, err
 	}
+	if err = checkCredentialExpiration(w3cCred); err != nil {
+		return out, err
+	}
 
 	inpMarsh.SkipClaimRevocationCheck, err = querySkipRevocation(obj.Request)
 	if err != nil {
@@ -833,6 +847,9 @@ func AtomicQueryMtpV2OnChainInputsFromJson(ctx context.Context, cfg EnvConfig,
 	var w3cCred verifiable.W3CCredential
 	err = json.Unmarshal(obj.VerifiableCredentials, &w3cCred)
 	if err != nil {
+		return out, err
+	}
+	if err = checkCredentialExpiration(w3cCred); err != nil {
 		return out, err
 	}
 
@@ -933,6 +950,9 @@ func AtomicQuerySigV2OnChainInputsFromJson(ctx context.Context, cfg EnvConfig,
 	if err != nil {
 		return out, err
 	}
+	if err = checkCredentialExpiration(w3cCred); err != nil {
+		return out, err
+	}
 
 	inpMarsh.SkipClaimRevocationCheck, err = querySkipRevocation(obj.Request)
 	if err != nil {
@@ -1019,6 +1039,9 @@ func atomicQueryV3OnChainInputsFromJson(ctx context.Context, cfg EnvConfig,
 	var w3cCred verifiable.W3CCredential
 	err = json.Unmarshal(obj.VerifiableCredentials, &w3cCred)
 	if err != nil {
+		return out, err
+	}
+	if err = checkCredentialExpiration(w3cCred); err != nil {
 		return out, err
 	}
 
@@ -1114,6 +1137,9 @@ func atomicQueryV3InputsFromJson(ctx context.Context, cfg EnvConfig,
 	var w3cCred verifiable.W3CCredential
 	err = json.Unmarshal(obj.VerifiableCredentials, &w3cCred)
 	if err != nil {
+		return out, err
+	}
+	if err = checkCredentialExpiration(w3cCred); err != nil {
 		return out, err
 	}
 
@@ -1251,6 +1277,9 @@ func LinkedMultiQueryInputsFromJson(ctx context.Context, cfg EnvConfig,
 	var w3cCred verifiable.W3CCredential
 	err = json.Unmarshal(obj.VerifiableCredentials, &w3cCred)
 	if err != nil {
+		return out, err
+	}
+	if err = checkCredentialExpiration(w3cCred); err != nil {
 		return out, err
 	}
 
